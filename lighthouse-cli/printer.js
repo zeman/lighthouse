@@ -90,22 +90,16 @@ function writeFile(filePath, output, outputMode) {
  * @param {!LH.Results} results
  * @param {string} mode
  * @param {string} path
- * @return {!Promise<!LH.Results>}
+ * @return {!Promise<void>}
  */
 function write(results, mode, path) {
-  return new Promise((resolve, reject) => {
-    const outputPath = checkOutputPath(path);
-    const output = createOutput(results, mode);
+  const outputPath = checkOutputPath(path);
+  const output = createOutput(results, mode);
 
-    if (outputPath === 'stdout') {
-      return writeToStdout(output).then(_ => resolve(results));
-    }
-    return writeFile(outputPath, output, mode)
-      .then(_ => {
-        resolve(results);
-      })
-      .catch(err => reject(err));
-  });
+  if (outputPath === 'stdout') {
+    return writeToStdout(output);
+  }
+  return writeFile(outputPath, output, mode);
 }
 
 /**
