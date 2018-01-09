@@ -123,6 +123,9 @@ function saveResults(results, artifacts, flags) {
 
   if (flags.saveAssets) {
     promise = promise.then(_ => assetSaver.saveAssets(artifacts, results.audits, resolvedPath));
+  } else if (flags.gatherMode || flags.auditMode) {
+    const latestPath = path.join(cwd, 'latest-run', 'lhr.json');
+    promise = promise.then(_ => Printer.write(results, Printer.OutputMode.json, latestPath));
   }
 
   return promise.then(_ => {
