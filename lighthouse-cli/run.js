@@ -162,6 +162,12 @@ function saveResults(results, artifacts, flags) {
  * @return {!Promise<!LH.Results|void>}
  */
 function runLighthouse(url, flags, config) {
+  if (flags.reportMode) {
+    return Promise.resolve()
+        .then(_ => saveResults(assetSaver.loadResults(), {}, flags))
+        .catch(err => handleError(err));
+  }
+
   /** @type {!LH.LaunchedChrome} */
   let launchedChrome;
   const shouldGather = flags.gatherMode || flags.gatherMode === flags.auditMode;

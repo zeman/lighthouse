@@ -23,6 +23,7 @@ export interface Flags {
   listTraceCategories: boolean;
   auditMode: boolean;
   gatherMode: boolean;
+  reportMode: boolean;
   configPath?: string;
   perf: boolean;
   verbose: boolean;

@@ -55,6 +55,7 @@ function getFlags(manualArgv) {
           'save-assets', 'list-all-audits', 'list-trace-categories',
           'additional-trace-categories', 'config-path', 'chrome-flags', 'perf', 'port',
           'hostname', 'max-wait-for-load', 'enable-error-reporting', 'gather-mode', 'audit-mode',
+          'report-mode',
         ],
         'Configuration:')
       .describe({
@@ -69,6 +70,7 @@ function getFlags(manualArgv) {
         'gather-mode':
             'Collect artifacts from a connected browser and save to disk. If audit-mode is not also enabled, the run will quit early.',
         'audit-mode': 'Process saved artifacts from disk',
+        'report-mode': 'Generate report from saved Lighthouse results file',
         'save-assets': 'Save the trace contents & screenshots to disk',
         'list-all-audits': 'Prints a list of all available audits and exits',
         'list-trace-categories': 'Prints a list of all required trace categories and exits',
@@ -85,7 +87,7 @@ function getFlags(manualArgv) {
             'The timeout (in milliseconds) to wait before the page is considered done loading and the run should continue. WARNING: Very high values can lead to large traces and instability',
       })
       // set aliases
-      .alias({'gather-mode': 'G', 'audit-mode': 'A'})
+      .alias({'gather-mode': 'G', 'audit-mode': 'A', 'report-mode': 'R'})
 
       .group(['output', 'output-path', 'view'], 'Output:')
       .describe({
@@ -103,7 +105,7 @@ function getFlags(manualArgv) {
         'disable-storage-reset', 'disable-device-emulation', 'disable-cpu-throttling',
         'disable-network-throttling', 'save-assets', 'list-all-audits',
         'list-trace-categories', 'perf', 'view', 'verbose', 'quiet', 'help',
-        'gather-mode', 'audit-mode',
+        'gather-mode', 'audit-mode', 'report-mode',
       ])
       .choices('output', printer.getValidOutputOptions())
       // force as an array

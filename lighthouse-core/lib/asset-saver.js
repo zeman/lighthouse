@@ -59,6 +59,18 @@ img {
   `;
 }
 
+/**
+ * @return {!LH.Results}
+ */
+function loadResults() {
+  const filePath = path.join(latestRunPath, 'lhr.json');
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  return JSON.parse(fs.readFileSync(filePath));
+}
+
+
 const artifactsFilename = 'artifacts.json';
 const traceSuffix = '.trace.json';
 const devtoolsLogSuffix = '.devtoolslog.json';
@@ -301,6 +313,7 @@ function logAssets(artifacts, audits) {
 }
 
 module.exports = {
+  loadResults,
   saveArtifacts,
   loadArtifacts,
   saveAssets,
