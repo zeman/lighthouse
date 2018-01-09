@@ -18,8 +18,6 @@ const path = require('path');
 const URL = require('./lib/url-shim');
 const Sentry = require('./lib/sentry');
 
-const basePath = path.join(process.cwd(), 'latest-run');
-
 class Runner {
   static run(connection, opts) {
     // Clean opts input.
@@ -126,7 +124,7 @@ class Runner {
    * @return {!Promise<!Artifacts>}
    */
   static _loadArtifactsFromDisk() {
-    return assetSaver.loadArtifacts(basePath);
+    return assetSaver.loadArtifacts();
   }
 
   /**
@@ -155,7 +153,7 @@ class Runner {
    * @return {!Promise>}
    */
   static _saveArtifacts(artifacts) {
-    return assetSaver.saveArtifacts(artifacts, basePath);
+    return assetSaver.saveArtifacts(artifacts);
   }
 
   /**

@@ -15,6 +15,7 @@ const TraceParser = require('./traces/trace-parser');
 const rimraf = require('rimraf');
 const mkdirp = require('mkdirp');
 
+const latestRunPath = path.join(process.cwd(), 'latest-run');
 /**
  * Generate basic HTML page of screenshot filmstrip
  * @param {!Array<{timestamp: number, datauri: string}>} screenshots
@@ -70,7 +71,8 @@ const devtoolsLogSuffix = '.devtoolslog.json';
  */
 // Set to ignore because testing it would imply testing fs, which isn't strictly necessary.
 /* istanbul ignore next */
-function loadArtifacts(basePath) {
+function loadArtifacts() {
+  const basePath = latestRunPath;
   log.log('Reading artifacts from disk:', basePath);
 
   if (!fs.existsSync(basePath)) return Promise.reject(new Error('No saved artifacts found'));
@@ -115,7 +117,8 @@ function loadArtifacts(basePath) {
  */
 // Set to ignore because testing it would imply testing fs, which isn't strictly necessary.
 /* istanbul ignore next */
-function saveArtifacts(artifacts, basePath) {
+function saveArtifacts(artifacts) {
+  const basePath = latestRunPath;
   mkdirp.sync(basePath);
   rimraf.sync(`${basePath}/*${traceSuffix}`);
   rimraf.sync(`${basePath}/${artifactsFilename}`);
