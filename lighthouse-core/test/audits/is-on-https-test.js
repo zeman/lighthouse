@@ -17,13 +17,15 @@ describe('Security: HTTPS audit', () => {
       requestNetworkRecords: () => Promise.resolve(networkRecords),
     };
   }
+  const securityState = _ => 'secure';
+  const insecure = _ => 'insecure';
 
   it('fails when there is more than one insecure record', () => {
     return Audit.audit(getArtifacts([
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
-      {url: 'http://insecure.com/image.jpeg', scheme: 'http', domain: 'insecure.com'},
-      {url: 'http://insecure.com/image2.jpeg', scheme: 'http', domain: 'insecure.com'},
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
+      {url: 'http://insecure.com/image.jpeg', scheme: 'http', domain: 'insecure.com', securityState: insecure},
+      {url: 'http://insecure.com/image2.jpeg', scheme: 'http', domain: 'insecure.com', securityState: insecure},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
     ])).then(result => {
       assert.strictEqual(result.rawValue, false);
       assert.ok(result.displayValue.includes('requests found'));
@@ -33,9 +35,9 @@ describe('Security: HTTPS audit', () => {
 
   it('fails when there is one insecure record', () => {
     return Audit.audit(getArtifacts([
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
-      {url: 'http://insecure.com/image.jpeg', scheme: 'http', domain: 'insecure.com'},
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
+      {url: 'http://insecure.com/image.jpeg', scheme: 'http', domain: 'insecure.com', securityState: insecure},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
     ])).then(result => {
       assert.strictEqual(result.rawValue, false);
       assert.ok(result.displayValue.includes('request found'));
@@ -45,9 +47,9 @@ describe('Security: HTTPS audit', () => {
 
   it('passes when all records are secure', () => {
     return Audit.audit(getArtifacts([
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
-      {url: 'http://localhost/image.jpeg', scheme: 'http', domain: 'localhost'},
-      {url: 'https://google.com/', scheme: 'https', domain: 'google.com'},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
+      {url: 'http://localhost/image.jpeg', scheme: 'http', domain: 'localhost', securityState: insecure},
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
     ])).then(result => {
       assert.strictEqual(result.rawValue, true);
     });
@@ -55,21 +57,21 @@ describe('Security: HTTPS audit', () => {
 
   describe('#isSecureRecord', () => {
     it('correctly identifies insecure records', () => {
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: 'google.com'}), false);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: '54.33.21.23'}), false);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'ws', domain: 'my-service.com'}), false);
-      assert.strictEqual(Audit.isSecureRecord({scheme: '', domain: 'google.com'}), false);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: 'google.com', securityState: insecure}), false);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: '54.33.21.23', securityState: insecure}), false);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'ws', domain: 'my-service.com', securityState: insecure}), false);
+      assert.strictEqual(Audit.isSecureRecord({scheme: '', domain: 'google.com', securityState: insecure}), false);
     });
 
     it('correctly identifies secure records', () => {
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: 'localhost'}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'https', domain: 'google.com'}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'wss', domain: 'my-service.com'}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'data', domain: ''}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'blob', domain: ''}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: '', protocol: 'blob', domain: ''}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome', domain: ''}), true);
-      assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome-extension', domain: ''}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'http', domain: 'localhost', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'https', domain: 'google.com', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'wss', domain: 'my-service.com', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'data', domain: '', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'blob', domain: '', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: '', protocol: 'blob', domain: '', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome', domain: '', securityState}), true);
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome-extension', domain: '', securityState}), true);
     });
   });
 });
