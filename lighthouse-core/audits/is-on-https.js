@@ -31,13 +31,18 @@ class HTTPS extends Audit {
   }
 
   /**
-   * @param {{scheme: string, domain: string}} record
+   * Checks whether the resource was securely loaded.
+   * We special-case data: URLs, as they inherit the security state of their
+   * referring document url, and so are trivially "upgradeable" for mixed-content purposes.
+   *
+   * @param {{scheme: string, domain: string, protocol: string, securityState: function}} record
    * @return {boolean}
    */
   static isSecureRecord(record) {
-    return SECURE_SCHEMES.includes(record.scheme) ||
-           SECURE_SCHEMES.includes(record.protocol) ||
-           SECURE_DOMAINS.includes(record.domain);
+    return record.securityState() === 'secure' ||
+      SECURE_SCHEMES.includes(record.scheme) ||
+      SECURE_SCHEMES.includes(record.protocol) ||
+      SECURE_DOMAINS.includes(record.domain);
   }
 
   /**
