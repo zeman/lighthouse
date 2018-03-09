@@ -45,6 +45,19 @@ describe('Security: HTTPS audit', () => {
     });
   });
 
+  // Upgrade-Insecure-Requests will turn http references to https. If the requests fail, we want to know
+  it('fails when there is a failed-to-upgrade request', () => {
+    return Audit.audit(getArtifacts([
+      {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
+      {url: 'https://upgraded.com/image.jpg', scheme: 'https', domain: 'upgraded.com', securityState: insecure},
+    ])).then(result => {
+      assert.strictEqual(result.rawValue, false);
+      assert.ok(result.displayValue.includes('request found'));
+      assert.deepEqual(result.extendedInfo.value[0], {url: 'https://upgraded.com/image.jpg'});
+    });
+  });
+
+
   it('passes when all records are secure', () => {
     return Audit.audit(getArtifacts([
       {url: 'https://google.com/', scheme: 'https', domain: 'google.com', securityState},
@@ -73,5 +86,9 @@ describe('Security: HTTPS audit', () => {
       assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome', domain: '', securityState}), true);
       assert.strictEqual(Audit.isSecureRecord({scheme: 'chrome-extension', domain: '', securityState}), true);
     });
+
+    it('correctly handles failed-to-upgrade requests', () => {
+      assert.strictEqual(Audit.isSecureRecord({scheme: 'https', domain: 'upgraded.com', securityState: insecure}), false);
+    })
   });
 });
