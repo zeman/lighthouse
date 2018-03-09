@@ -9,7 +9,6 @@ const Audit = require('./audit');
 const URL = require('../lib/url-shim');
 const Util = require('../report/v2/renderer/util');
 
-const SECURE_SCHEMES = ['data', 'https', 'wss', 'blob', 'chrome', 'chrome-extension'];
 const SECURE_DOMAINS = ['localhost', '127.0.0.1'];
 
 class HTTPS extends Audit {
@@ -33,15 +32,13 @@ class HTTPS extends Audit {
   /**
    * Checks whether the resource was securely loaded.
    * We special-case data: URLs, as they inherit the security state of their
-   * referring document url, and so are trivially "upgradeable" for mixed-content purposes.
+   * referring document url. Localhost is also safelisted.
    *
    * @param {{scheme: string, domain: string, protocol: string, securityState: function}} record
    * @return {boolean}
    */
   static isSecureRecord(record) {
-    return record.securityState() === 'secure' ||
-      SECURE_SCHEMES.includes(record.scheme) ||
-      SECURE_SCHEMES.includes(record.protocol) ||
+    return record.securityState() === 'secure' || record.protocol === 'data' ||
       SECURE_DOMAINS.includes(record.domain);
   }
 
