@@ -31,8 +31,10 @@ class HTTPS extends Audit {
 
   /**
    * Checks whether the resource was securely loaded.
-   * We special-case data: URLs, as they inherit the security state of their
-   * referring document url. Localhost is also safelisted.
+   * While `Security.securityStateChanged` is broken on Android, the networkResponse.securityState
+   * property is functional, so we use that instead of checking the URL scheme.
+   * We special-case data: URLs, as they inherit the security state of their referring document url.
+   * Localhost is also safelisted.
    *
    * @param {{scheme: string, domain: string, protocol: string, securityState: function}} record
    * @return {boolean}
