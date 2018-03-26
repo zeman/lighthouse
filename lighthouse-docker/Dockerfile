@@ -23,11 +23,11 @@ RUN chmod +x /usr/local/bin/dumb-init
 # Download latest Lighthouse from npm.
 # Cache bust so we always get the latest version of LH when building the image.
 ARG CACHEBUST=1
-RUN npm i lighthouse -g
+RUN yarn global add lighthouse
 
-# Install express.
-COPY package.json .
-RUN npm i --production
+# Install npm deps (express, etc.)
+COPY package.json yarn.lock /
+RUN yarn --frozen-lockfile --no-cache --production
 
 # Add the web server.
 COPY server.js /
@@ -55,4 +55,3 @@ ENV CI=true
 EXPOSE 8080
 
 ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
-#CMD ["lighthouse", "--help"]

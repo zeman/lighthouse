@@ -17,7 +17,9 @@ Main source files:
 Fire up Docker, then run:
 
 ```bash
-npm run build
+yarn build
+# or
+# npm run build
 ```
 
 **Dockerfile image size: ~740MB.**
@@ -47,6 +49,9 @@ docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --quiet --output=json 
 
 # Print the Lighthouse version used by the container.
 docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --version
+
+# Print Lighthouse help
+docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --help
 ```
 
 ### Using the REST API web service
@@ -58,13 +63,19 @@ To run the web server, invoke `docker run` without any arguments (e.g. no `CMD`)
 
 ```bash
 docker run -dit -p 8080:8080 --rm --name lighthouse_docker --cap-add=SYS_ADMIN lighthouse_docker
+```
 
-# or
-npm run serve
+There are also npm script helpers for starting and building + restarting the server:
 
+```bash
+yarn serve
 # or
+# npm run serve
+
 # Re-build and start the server again.
-npm run restart
+yarn restart
+# or
+# npm run restart
 ```
 
 This starts a server on `8080` and exposes a REST endpoint at `http://localhost:8080/audit`.
@@ -107,7 +118,9 @@ want to use full "headful" Chrome, build the image using `Dockerfile.headful`.
 Build it:
 
 ```bash
-npm run build:headful
+yarn build:headful
+# or
+# npm run build:headful
 ```
 
 Run the CLI:
@@ -119,7 +132,9 @@ docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker_headful https://exampl
 Run the web server:
 
 ```bash
-npm run serve:headful
+yarn serve:headful
+# or
+#npm run serve:headful
 ```
 
 Everything else remains the same.
