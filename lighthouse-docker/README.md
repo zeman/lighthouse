@@ -1,16 +1,12 @@
 # Lighthouse in Docker
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/GoogleChrome/lighthouse.svg)](https://hub.docker.com/r/GoogleChrome/lighthouse/)
+
 > Run Lighthouse in a Docker container (as a CLI or a web service)
 
 This folder contains example `Dockerfile`s for running Lighthouse using
 [Headless Chrome](https://developers.google.com/web/updates/2017/04/headless-chrome)
 and full Chrome. It can be used in cloud environments like [Google App Engine Flex](https://cloud.google.com/appengine/docs/flexible/nodejs/) (Node), AWS, etc.
-
-Main source files:
-
-- [`Dockerfile`](./Dockerfile) - Dockerfile for running Lighthouse using headless Chrome.
-- [`entrypoint.sh`](./entrypoint.sh) - main entrypoint for the container.
-- [`server.js`](./server.js) - server for running Lighthouse as a REST web service (LHaas).
 
 ## Usage
 
@@ -27,7 +23,7 @@ There are two ways to run the container:
 1. As a CLI.
 - As a REST API web service.
 
-### Using the CLI
+### Run the CLI
 
 The container can be from the the CLI just like using the Lighthouse npm module. See
 Lighthouse docs for [CLI options](../#cli-options).
@@ -49,7 +45,7 @@ docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --version
 docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --help
 ```
 
-### Using the REST API web service
+### Run the REST API web service
 
 The container also bundles a web server that supports a REST API. You can
 use it to run Lighthouse return scores...in the cloud!
@@ -96,6 +92,12 @@ curl -X POST \
 ## Development
 
 > Build the image locally
+
+Main source files:
+
+- [`Dockerfile`](./Dockerfile) - Dockerfile for running Lighthouse using headless Chrome.
+- [`entrypoint.sh`](./entrypoint.sh) - main entrypoint for the container.
+- [`server.js`](./server.js) - server for running Lighthouse as a REST web service (LHaas).
 
 Fire up Docker and run:
 

@@ -1,6 +1,7 @@
 FROM node:8-slim
 
-LABEL maintainer="Eric Bidelman <ebidel@>"
+LABEL maintainer="Eric Bidelman <ebidel@>" \
+      description="Run Lighthouse in a Docker container (using headless Chrome)."
 
 # Install utilities
 RUN apt-get update --fix-missing && apt-get -y upgrade
