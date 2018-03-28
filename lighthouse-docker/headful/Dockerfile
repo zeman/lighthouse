@@ -1,4 +1,4 @@
-FROM node:9-slim
+FROM node:8-slim
 
 LABEL maintainer="Eric Bidelman <ebidel@>"
 
@@ -35,12 +35,12 @@ COPY server.js /
 RUN chmod +x /server.js
 
 # Copy the chrome-user script used to start Chrome as non-root
-COPY chromeuser-script_headful.sh /
-RUN chmod +x /chromeuser-script_headful.sh
+COPY headful/chromeuser-script.sh /
+RUN chmod +x /chromeuser-script.sh
 
 # Set the entrypoint
-COPY entrypoint_headful.sh /
-RUN chmod +x /entrypoint_headful.sh
+COPY headful/entrypoint.sh /
+RUN chmod +x /entrypoint.sh
 
 # Add a user and make it a sudo user.
 RUN groupadd -r chrome && useradd -r -m -g chrome -G audio,video chrome && \
@@ -57,4 +57,4 @@ ENV CI=true
 
 EXPOSE 8080
 
-ENTRYPOINT ["dumb-init", "--", "/entrypoint_headful.sh"]
+ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]

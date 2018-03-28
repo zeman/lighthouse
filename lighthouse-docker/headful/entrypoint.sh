@@ -25,7 +25,7 @@ export DISPLAY=:99
 
 TMP_PROFILE_DIR=$(mktemp -d -t lighthouse.XXXXXXXXXX)
 
-su chrome /chromeuser-script_headful.sh
+su chrome /chromeuser-script.sh
 
 if [ -z "$1" ]; then
   npm run start

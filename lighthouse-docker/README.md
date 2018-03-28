@@ -9,28 +9,23 @@ and full Chrome. It can be used in cloud environments like [Google App Engine Fl
 Main source files:
 
 - [`Dockerfile`](./Dockerfile) - Dockerfile for running Lighthouse using headless Chrome.
-- [`Dockerfile.headful`](./Dockerfile.headful) - Dockerfile for running Lighthouse using full Chrome and xvfb.
-- `server.js` - server for running Lighthouse as a REST web service (LHaas).
+- [`entrypoint.sh`](./entrypoint.sh) - main entrypoint for the container.
+- [`server.js`](./server.js) - server for running Lighthouse as a REST web service (LHaas).
 
-## Build it
+## Usage
 
-Fire up Docker, then run:
+Pull the pre-built image from [Dockerhub](https://hub.docker.com/):
 
 ```bash
-yarn build
-# or
-# npm run build
+docker pull GoogleChrome/lighthouse
 ```
 
-**Dockerfile image size: ~740MB.**
-**Dockerfile.headful image size: ~756MB.**
-
-## Running the container
+> **Image size: ~805MB.**
 
 There are two ways to run the container:
 
-1. Directly from the command line.
-- By starting a web server, allowing you run Lighthouse using a REST API.
+1. As a CLI.
+- As a REST API web service.
 
 ### Using the CLI
 
@@ -39,19 +34,19 @@ Lighthouse docs for [CLI options](../#cli-options).
 
 ```bash
 # Audit example.com. Lighthouse results are printed to stdout.
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker https://example.com
+docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse https://example.com
 
 # Audits example.com and saves HTML report to a file.
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --quiet https://example.com > report.html
+docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --quiet https://example.com > report.html
 
 # Audits example.com and saves JSON results to a file.
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --quiet --output=json https://example.com > report.json
+docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --quiet --output=json https://example.com > report.json
 
-# Print the Lighthouse version used by the container.
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --version
+# Print the Lighthouse version.
+docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --version
 
-# Print Lighthouse help
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker --help
+# Print Lighthouse CLI help.
+docker run -it --rm --cap-add=SYS_ADMIN GoogleChrome/lighthouse --help
 ```
 
 ### Using the REST API web service
@@ -62,23 +57,11 @@ use it to run Lighthouse return scores...in the cloud!
 To run the web server, invoke `docker run` without any arguments (e.g. no `CMD`):
 
 ```bash
-docker run -dit -p 8080:8080 --rm --name lighthouse_docker --cap-add=SYS_ADMIN lighthouse_docker
+docker run -dit -p 8080:8080 --rm --name GoogleChrome/lighthouse --cap-add=SYS_ADMIN GoogleChrome/lighthouse
 ```
 
-There are also npm script helpers for starting and building + restarting the server:
-
-```bash
-yarn serve
-# or
-# npm run serve
-
-# Re-build and start the server again.
-yarn restart
-# or
-# npm run restart
-```
-
-This starts a server on `8080` and exposes a REST endpoint at `http://localhost:8080/audit`.
+This starts a server on `8080` and exposes a REST endpoint at
+`http://localhost:8080/audit`.
 
 **Examples**
 
@@ -110,31 +93,83 @@ curl -X POST \
   http://localhost:8080/audit
 ```
 
-## Using full Chrome instead of headless Chrome
+## Development
 
-By default, the `Dockerfile` launches headless Chrome to run Lighthouse. If you
-want to use full "headful" Chrome, build the image using `Dockerfile.headful`.
+> Build the image locally
+
+Fire up Docker and run:
+
+```bash
+yarn build
+# npm run build
+```
+
+There are convenient npm scripts for that run `docker run` for you.
+
+Start the web service:
+
+```bash
+yarn serve
+# npm run serve
+```
+
+Build the image and restarts the Node server:
+
+```bash
+yarn restart
+# npm run restart
+```
+
+## Misc
+
+### Chrome version
+
+Print the User-Agent string of the Chrome version used in the container.
+
+```bash
+yarn chrome:version
+# Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/67.0.3381.0 Safari/537.36
+```
+
+### Using full Chrome instead of headless Chrome
+
+Check out the [`headful/Dockerfile`](./headful/Dockerfile) for example running
+Lighthouse with full ("headful") Chrome using xvfb as display.
+
+##### Why full Chrome instead of headless Chrome?
+
+In some cases you may want to use full Chrome with Lighthouse rather than having
+it launch headless Chrome.
+
+1. Headless Chrome doesn't support the GPU.
+- Some sites detect that the browser is being run in a headless/automation mode
+and change their behavior.
+- In some cases, there may be slight rendering differences between headless
+Chrome and full Chrome. Most of the time, these are just bugs in headless Chrome.
+
+#### Usage
 
 Build it:
 
 ```bash
-yarn build:headful
+./docker_build.sh --headful
+
 # or
+yarn build:headful
 # npm run build:headful
 ```
 
 Run the CLI:
 
 ```bash
-docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker_headful https://example.com
+docker run -it --rm --cap-add=SYS_ADMIN lighthouse_headful https://example.com
 ```
 
 Run the web server:
 
 ```bash
 yarn serve:headful
-# or
-#npm run serve:headful
+# npm run serve:headful
 ```
 
 Everything else remains the same.

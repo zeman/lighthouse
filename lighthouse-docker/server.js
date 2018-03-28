@@ -43,7 +43,7 @@ function runLH(params, req, res, next) {
     `--output-path=${outputPath}`,
     `--output=${format}`,
     '--port=9222',
-    // Note: this is a noop when using Dockerfile.headful b/c Chrome is already
+    // Note: this is a noop when using headful/Dockerfile b/c Chrome is already
     // launched when the container starts up.
     `--chrome-flags="--headless"`,
   ];
@@ -122,7 +122,7 @@ function runLighthouseAsEventStream(req, res) {
     `--output-path=${fileSavePath + file}`,
     `--output=${format}`,
     '--port=9222',
-    // Note: this is a noop when using Dockerfile.headful b/c Chrome is already launched.
+    // Note: this is a noop when using headful/Dockerfile b/c Chrome is already launched.
     `--chrome-flags="--headless"`,
   ];
   const child = spawn('lighthouse', [...args, url]);
