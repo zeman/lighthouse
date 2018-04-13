@@ -48,7 +48,6 @@ class FirstCPUIdle extends LanternConsistentlyInteractive {
       longTasks.push({start: timing.startTime, end: timing.endTime});
     }
 
-    // @ts-ignore TODO(phulce): typecheck first-interactive on refactor to real metric
     return FirstInteractive.findQuietWindow(fmpTimeInMs, Infinity, longTasks);
   }
 }

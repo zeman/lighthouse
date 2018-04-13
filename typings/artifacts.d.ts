@@ -12,6 +12,8 @@ declare global {
       UserAgent: string;
       traces: {[passName: string]: Trace};
       devtoolsLogs: {[passName: string]: DevtoolsLog};
+      // TODO(bckenny): remove this for real computed artifacts approach
+      requestTraceOfTab(trace: Trace): Promise<Artifacts.TraceOfTab>
     }
 
     module Artifacts {
