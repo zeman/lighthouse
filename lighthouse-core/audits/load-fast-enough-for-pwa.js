@@ -53,11 +53,18 @@ class LoadFastEnough4Pwa extends Audit {
     const metricComputationData = {trace, devtoolsLog, settings};
     const tti = await artifacts.requestConsistentlyInteractive(metricComputationData);
 
-    return {
-      score: Number(tti.timing <= MAXIMUM_TTI),
-      rawValue: tti.timing,
+    const score = Number(tti.timing <= MAXIMUM_TTI);
+
+    let debugString;
+    if (!score) {
       // eslint-disable-next-line max-len
-      debugString: `First Interactive was ${Util.formatMilliseconds(tti.timing)}. More details in the "Performance" section.`,
+      debugString = `First Interactive was ${Util.formatMilliseconds(tti.timing)}. More details in the "Performance" section.`;
+    }
+
+    return {
+      score,
+      debugString,
+      rawValue: tti.timing,
     };
   }
 }
