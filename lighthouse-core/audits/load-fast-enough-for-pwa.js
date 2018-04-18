@@ -44,16 +44,20 @@ class LoadFastEnough4Pwa extends Audit {
   static async audit(artifacts, context) {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+
+    // If throttling was default devtools or lantern 3G throttling, then reuse the given settings
+    // Otherwise, we'll force the usage of lantern 3G.
     const settingOverrides = {throttlingMethod: 'simulate', throttling: mobile3GThrottling};
     const settings =
       context.settings.throttlingMethod !== 'provided' &&
       isDeepEqual(context.settings.throttling, mobile3GThrottling)
         ? context.settings
         : Object.assign({}, context.settings, settingOverrides);
+
     const metricComputationData = {trace, devtoolsLog, settings};
     const tti = await artifacts.requestConsistentlyInteractive(metricComputationData);
 
-    const score = Number(tti.timing <= MAXIMUM_TTI);
+    const score = Number(tti.timing < MAXIMUM_TTI);
 
     let debugString;
     if (!score) {
