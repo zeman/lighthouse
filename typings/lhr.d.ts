@@ -33,6 +33,8 @@ declare global {
       runWarnings: string[];
       /** The User-Agent string of the browser used run Lighthouse for these results. */
       userAgent: string;
+      /** Execution timings for the Lighthouse run. */
+      timing: {total: number, [t: string]: number};
       /** Deprecated. Use fetchedAt instead. */
       generatedTime?: string;
     }
