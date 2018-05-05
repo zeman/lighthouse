@@ -235,7 +235,7 @@ describe('Config', () => {
           ],
         },
       },
-    }), 'missing an audit id at pwa[0]');
+    }), /missing an audit id at pwa\[0\]/);
   });
 
   it('throws when an accessibility audit does not have a group', () => {
@@ -269,6 +269,19 @@ describe('Config', () => {
         },
       },
     }), /unknown group missing-group/);
+  });
+
+  it('throws when a manual audit has weight', () => {
+    return assert.throws(_ => new Config({
+      audits: ['manual/pwa-cross-browser'],
+      categories: {
+        accessibility: {
+          audits: [
+            {id: 'pwa-cross-browser', weight: 10},
+          ],
+        },
+      },
+    }), /cross-browser .*has a positive weight/);
   });
 
   it('filters the config', () => {

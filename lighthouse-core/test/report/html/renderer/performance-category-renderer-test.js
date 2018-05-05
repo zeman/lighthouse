@@ -55,12 +55,10 @@ describe('PerfCategoryRenderer', () => {
   it('renders the category header', () => {
     const categoryDOM = renderer.render(category, sampleResults.reportGroups);
     const score = categoryDOM.querySelector('.lh-category-header');
-    const value = categoryDOM.querySelector('.lh-category-header  > .lh-score__value');
+    const value = categoryDOM.querySelector('.lh-category-header  .lh-gauge__percentage');
     const title = score.querySelector('.lh-category-header__title');
 
     assert.deepEqual(score, score.firstElementChild, 'first child is a score');
-    assert.ok(value.classList.contains('lh-score__value--numeric'),
-              'category score is numeric');
     const scoreInDom = Number(value.textContent);
     assert.ok(Number.isInteger(scoreInDom) && scoreInDom > 10, 'category score is rounded');
     assert.equal(title.textContent, category.name, 'title is set');
@@ -91,11 +89,14 @@ describe('PerfCategoryRenderer', () => {
     assert.equal(oppElements.length, oppAudits.length);
 
     const oppElement = oppElements[0];
+    const oppSparklineBarElement = oppElement.querySelector('.lh-sparkline__bar');
     const oppSparklineElement = oppElement.querySelector('.lh-load-opportunity__sparkline');
-    assert.ok(oppElement.querySelector('.lh-load-opportunity__title'), 'did not render title');
-    assert.ok(oppSparklineElement, 'did not render sparkline');
-    assert.ok(oppElement.querySelector('.lh-load-opportunity__stats'), 'did not render stats');
-    assert.ok(oppSparklineElement.title, 'did not render tooltip');
+    const oppTitleElement = oppElement.querySelector('.lh-load-opportunity__title');
+    const oppWastedElement = oppElement.querySelector('.lh-load-opportunity__wasted-stat');
+    assert.ok(oppTitleElement.textContent, 'did not render title');
+    assert.ok(oppSparklineBarElement.style.width, 'did not set sparkline width');
+    assert.ok(oppWastedElement.textContent, 'did not render stats');
+    assert.ok(oppSparklineElement.title, 'did not set tooltip on sparkline');
   });
 
   it('renders the performance opportunities with a debug string', () => {
@@ -132,22 +133,6 @@ describe('PerfCategoryRenderer', () => {
 
     const debugEl = categoryDOM.querySelector('.lh-load-opportunity .lh-debug');
     assert.ok(debugEl, 'did not render debug');
-  });
-
-  it('throws if a performance opportunities is missing summary.wastedMs', () => {
-    const auditWithDebug = {
-      score: 0,
-      group: 'load-opportunities',
-      result: {
-        rawValue: 100, description: 'Bug',
-        helpText: '', score: 0.32,
-      },
-    };
-
-    const fakeCategory = Object.assign({}, category, {audits: [auditWithDebug]});
-    assert.throws(_ => {
-      renderer.render(fakeCategory, sampleResults.reportGroups);
-    });
   });
 
   it('renders the failing diagnostics', () => {

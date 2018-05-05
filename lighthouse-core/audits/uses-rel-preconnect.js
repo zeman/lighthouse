@@ -7,7 +7,6 @@
 'use strict';
 
 const Audit = require('./audit');
-const Util = require('../report/html/renderer/util');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
 // Preconnect establishes a "clean" socket. Chrome's socket manager will keep an unused socket
 // around for 10s. Meaning, the time delta between processing preconnect a request should be <10s,
@@ -25,7 +24,6 @@ class UsesRelPreconnectAudit extends Audit {
     return {
       name: 'uses-rel-preconnect',
       description: 'Avoid multiple, costly round trips to any origin',
-      informative: true,
       helpText:
         'Consider adding preconnect or dns-prefetch resource hints to establish early ' +
         `connections to important third-party origins. [Learn more](https://developers.google.com/web/fundamentals/performance/resource-prioritization#preconnect).`,
@@ -158,7 +156,7 @@ class UsesRelPreconnectAudit extends Audit {
     return {
       score: UnusedBytes.scoreForWastedMs(maxWasted),
       rawValue: maxWasted,
-      displayValue: Util.formatMilliseconds(maxWasted),
+      displayValue: ['Potential savings of %10d\xa0ms', maxWasted],
       extendedInfo: {
         value: results,
       },

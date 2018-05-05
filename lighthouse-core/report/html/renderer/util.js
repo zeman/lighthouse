@@ -26,6 +26,50 @@ class Util {
     return PASS_THRESHOLD;
   }
 
+  static get MS_DISPLAY_VALUE() {
+    return `%10d${NBSP}ms`;
+  }
+
+  /**
+   * @param {string|Array<string|number>=} displayValue
+   * @return {string}
+   */
+  static formatDisplayValue(displayValue) {
+    if (typeof displayValue === 'undefined') return '';
+    if (typeof displayValue === 'string') return displayValue;
+
+    const replacementRegex = /%([0-9]*(\.[0-9]+)?d|s)/;
+    const template = /** @type {string} */ (displayValue.shift());
+    if (typeof template !== 'string') {
+      // First value should always be the format string, but we don't want to fail to build
+      // a report, return a placeholder.
+      return 'UNKNOWN';
+    }
+
+    let output = template;
+    for (const replacement of displayValue) {
+      if (!replacementRegex.test(output)) {
+        // eslint-disable-next-line no-console
+        console.warn('Too many replacements given');
+        break;
+      }
+
+      output = output.replace(replacementRegex, match => {
+        const granularity = Number(match.match(/[0-9.]+/)) || 1;
+        return match === '%s' ?
+          replacement.toLocaleString() :
+          (Math.round(Number(replacement) / granularity) * granularity).toLocaleString();
+      });
+    }
+
+    if (replacementRegex.test(output)) {
+      // eslint-disable-next-line no-console
+      console.warn('Not enough replacements given');
+    }
+
+    return output;
+  }
+
   /**
    * Convert a score to a rating label.
    * @param {number} score
@@ -70,6 +114,16 @@ class Util {
   static formatMilliseconds(ms, granularity = 10) {
     const coarseTime = Math.round(ms / granularity) * granularity;
     return `${coarseTime.toLocaleString()}${NBSP}ms`;
+  }
+
+  /**
+   * @param {number} ms
+   * @param {number=} granularity Controls how coarse the displayed value is, defaults to 0.1
+   * @return {string}
+   */
+  static formatSeconds(ms, granularity = 0.1) {
+    const coarseTime = Math.round(ms / 1000 / granularity) * granularity;
+    return `${coarseTime.toLocaleString()}${NBSP}s`;
   }
 
   /**

@@ -57,7 +57,7 @@ class ReportRenderer {
   _renderReportHeader(report) {
     const header = this._dom.cloneTemplate('#tmpl-lh-heading', this._templateContext);
     this._dom.find('.lh-config__timestamp', header).textContent =
-        Util.formatDateTime(report.fetchedAt);
+        Util.formatDateTime(report.fetchTime);
     const url = this._dom.find('.lh-metadata__url', header);
     url.href = report.url;
     url.textContent = report.url;
@@ -83,7 +83,7 @@ class ReportRenderer {
     const footer = this._dom.cloneTemplate('#tmpl-lh-footer', this._templateContext);
     this._dom.find('.lh-footer__version', footer).textContent = report.lighthouseVersion;
     this._dom.find('.lh-footer__timestamp', footer).textContent =
-        Util.formatDateTime(report.fetchedAt);
+        Util.formatDateTime(report.fetchTime);
     return footer;
   }
 
@@ -106,7 +106,7 @@ class ReportRenderer {
 
       this._dom.find('.leftnav-item__category', navItem).textContent = category.name;
       const score = this._dom.find('.leftnav-item__score', navItem);
-      score.classList.add(`lh-score__value--${Util.calculateRating(category.score)}`);
+      score.classList.add(`lh-audit--${Util.calculateRating(category.score)}`);
       score.textContent = Math.round(100 * category.score);
       nav.appendChild(navItem);
     }
@@ -207,11 +207,8 @@ if (typeof module !== 'undefined' && module.exports) {
  *     rawValue: (number|boolean|undefined),
  *     name: string,
  *     description: string,
- *     informative: (boolean|undefined),
- *     manual: (boolean|undefined),
- *     notApplicable: (boolean|undefined),
  *     debugString: (string|undefined),
- *     displayValue: string,
+ *     displayValue: (string|Array<string|number>),
  *     helpText: string,
  *     scoreDisplayMode: string,
  *     extendedInfo: Object,
@@ -257,8 +254,7 @@ ReportRenderer.GroupJSON; // eslint-disable-line no-unused-expressions
  * @typedef {{
  *     lighthouseVersion: string,
  *     userAgent: string,
- *     fetchedAt: string,
- *     generatedTime: string,
+ *     fetchTime: string,
  *     timing: {total: number},
  *     initialUrl: string,
  *     url: string,

@@ -14,7 +14,7 @@ declare global {
   module LH {
     export interface Artifacts extends ComputedArtifacts {
       // Created by by gather-runner
-      fetchedAt: string;
+      fetchTime: string;
       LighthouseRunWarnings: string[];
       UserAgent: string;
       traces: {[passName: string]: Trace};
@@ -221,14 +221,16 @@ declare global {
           left: number;
           right: number;
         };
-        networkRecord: {
+        networkRecord?: {
           url: string;
           resourceSize: number;
           startTime: number;
           endTime: number;
           responseReceivedTime: number;
           mimeType: string;
-        }
+        };
+        width?: number;
+        height?: number;
       }
 
       export interface OptimizedImage {

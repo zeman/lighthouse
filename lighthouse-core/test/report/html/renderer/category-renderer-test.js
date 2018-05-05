@@ -56,13 +56,11 @@ describe('CategoryRenderer', () => {
 
     const title = auditDOM.querySelector('.lh-audit__title');
     const description = auditDOM.querySelector('.lh-audit__description');
-    const score = auditDOM.querySelector('.lh-score__value');
 
     assert.equal(title.textContent, audit.result.description);
     assert.ok(description.querySelector('a'), 'audit help text contains coverted markdown links');
-    assert.equal(score.textContent, '0');
-    assert.ok(score.classList.contains('lh-score__value--fail'));
-    assert.ok(score.classList.contains(`lh-score__value--${audit.result.scoreDisplayMode}`));
+    assert.ok(auditDOM.classList.contains('lh-audit--fail'));
+    assert.ok(auditDOM.classList.contains(`lh-audit--${audit.result.scoreDisplayMode}`));
   });
 
   it('renders an audit debug str when appropriate', () => {
@@ -82,7 +80,7 @@ describe('CategoryRenderer', () => {
   it('renders an informative audit', () => {
     const auditDOM = renderer.renderAudit({
       id: 'informative', score: 0,
-      result: {description: 'It informs', helpText: 'help text', informative: true},
+      result: {description: 'It informs', helpText: 'help text', scoreDisplayMode: 'informative'},
     });
 
     assert.ok(auditDOM.matches('.lh-audit--informative'));
@@ -93,12 +91,10 @@ describe('CategoryRenderer', () => {
     const categoryDOM = renderer.render(category, sampleResults.reportGroups);
 
     const categoryEl = categoryDOM.querySelector('.lh-category-header');
-    const value = categoryDOM.querySelector('.lh-score__value');
+    const value = categoryDOM.querySelector('.lh-gauge__percentage');
     const title = categoryEl.querySelector('.lh-category-header__title');
 
     assert.deepEqual(categoryEl, categoryEl.firstElementChild, 'first child is a score');
-    assert.ok(value.classList.contains('lh-score__value--numeric'),
-              'category score is numeric');
     const scoreInDom = Number(value.textContent);
     assert.ok(Number.isInteger(scoreInDom) && scoreInDom > 10, 'category score is rounded');
     assert.equal(title.textContent, category.name, 'title is set');
@@ -137,7 +133,7 @@ describe('CategoryRenderer', () => {
     const pwaCategory = sampleResults.reportCategories.find(cat => cat.id === 'pwa');
     const categoryDOM = renderer.render(pwaCategory, sampleResults.reportGroups);
     assert.ok(categoryDOM.querySelector('.lh-audit-group--manual .lh-audit-group__summary'));
-    assert.equal(categoryDOM.querySelectorAll('.lh-audit--informative.lh-audit--manual').length, 3,
+    assert.equal(categoryDOM.querySelectorAll('.lh-audit--manual').length, 3,
         'score shows informative and dash icon');
 
     const perfCategory = sampleResults.reportCategories.find(cat => cat.id === 'performance');
@@ -151,9 +147,9 @@ describe('CategoryRenderer', () => {
     assert.ok(categoryDOM.querySelector('.lh-audit-group--notapplicable .lh-audit-group__summary'));
 
     const notApplicableCount = a11yCategory.audits.reduce((sum, audit) =>
-        sum += audit.result.notApplicable ? 1 : 0, 0);
+        sum += audit.result.scoreDisplayMode === 'not-applicable' ? 1 : 0, 0);
     assert.equal(
-      categoryDOM.querySelectorAll('.lh-audit-group--notapplicable .lh-audit--informative').length,
+      categoryDOM.querySelectorAll('.lh-audit-group--notapplicable .lh-audit').length,
       notApplicableCount,
       'score shows informative and dash icon'
     );
@@ -173,13 +169,11 @@ describe('CategoryRenderer', () => {
       assert.equal(gauge.textContent.trim(), '35', 'score is 0-100');
 
       const score = categoryDOM.querySelector('.lh-category-header');
-      const value = categoryDOM.querySelector('.lh-score__value');
+      const value = categoryDOM.querySelector('.lh-gauge__percentage');
       const title = score.querySelector('.lh-category-header__title');
       const description = score.querySelector('.lh-category-header__description');
 
       assert.deepEqual(score, score.firstElementChild, 'first child is a score');
-      assert.ok(value.classList.contains('lh-score__value--numeric'),
-                'category score is numeric');
       const scoreInDom = Number(value.textContent);
       assert.ok(Number.isInteger(scoreInDom) && scoreInDom > 10, 'score is rounded out of 100');
       assert.equal(title.textContent, category.name, 'title is set');
@@ -190,7 +184,7 @@ describe('CategoryRenderer', () => {
     it.skip('renders the failed audits grouped by group', () => {
       const categoryDOM = renderer.render(category, sampleResults.reportGroups);
       const failedAudits = category.audits.filter(audit => {
-        return audit.result.score !== 1 && !audit.result.notApplicable;
+        return audit.result.score !== 1 && !audit.result.scoreDisplayMode === 'not-applicable';
       });
       const failedAuditTags = new Set(failedAudits.map(audit => audit.group));
 
@@ -201,7 +195,7 @@ describe('CategoryRenderer', () => {
     it('renders the passed audits grouped by group', () => {
       const categoryDOM = renderer.render(category, sampleResults.reportGroups);
       const passedAudits = category.audits.filter(audit =>
-          !audit.result.notApplicable && audit.result.score === 1);
+          audit.result.scoreDisplayMode !== 'not-applicable' && audit.result.score === 1);
       const passedAuditTags = new Set(passedAudits.map(audit => audit.group));
 
       const passedAuditGroups = categoryDOM.querySelectorAll('.lh-passed-audits .lh-audit-group');

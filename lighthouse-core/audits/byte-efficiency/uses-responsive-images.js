@@ -27,7 +27,6 @@ class UsesResponsiveImages extends ByteEfficiencyAudit {
     return {
       name: 'uses-responsive-images',
       description: 'Properly size images',
-      informative: true,
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
       helpText:
         'Serve images that are appropriately-sized to save cellular data ' +
@@ -43,6 +42,11 @@ class UsesResponsiveImages extends ByteEfficiencyAudit {
    * @return {null|Error|LH.Audit.ByteEfficiencyResult};
    */
   static computeWaste(image, DPR) {
+    // Nothing can be done without network info.
+    if (!image.networkRecord) {
+      return null;
+    }
+
     const url = URL.elideDataURI(image.src);
     const actualPixels = image.naturalWidth * image.naturalHeight;
     const usedPixels = image.clientWidth * image.clientHeight * Math.pow(DPR, 2);

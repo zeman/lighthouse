@@ -6,7 +6,6 @@
 'use strict';
 
 const Audit = require('./audit');
-const Util = require('../report/html/renderer/util');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
 const THRESHOLD_IN_MS = 100;
 
@@ -18,7 +17,6 @@ class UsesRelPreloadAudit extends Audit {
     return {
       name: 'uses-rel-preload',
       description: 'Preload key requests',
-      informative: true,
       helpText: 'Consider using <link rel=preload> to prioritize fetching late-discovered ' +
         'resources sooner. [Learn more](https://developers.google.com/web/updates/2016/03/link-rel-preload).',
       requiredArtifacts: ['devtoolsLogs', 'traces', 'URL'],
@@ -141,55 +139,55 @@ class UsesRelPreloadAudit extends Audit {
    * @param {LH.Audit.Context} context
    * @return {Promise<LH.Audit.Product>}
    */
-  static audit(artifacts, context) {
+  static async audit(artifacts, context) {
     const trace = artifacts.traces[UsesRelPreloadAudit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[UsesRelPreloadAudit.DEFAULT_PASS];
     const URL = artifacts.URL;
     const simulatorOptions = {trace, devtoolsLog, settings: context.settings};
 
-    return Promise.all([
+    const [critChains, mainResource, graph, simulator] = await Promise.all([
       // TODO(phulce): eliminate dependency on CRC
       artifacts.requestCriticalRequestChains({devtoolsLog, URL}),
       artifacts.requestMainResource({devtoolsLog, URL}),
       artifacts.requestPageDependencyGraph({trace, devtoolsLog}),
       artifacts.requestLoadSimulator(simulatorOptions),
-    ]).then(([critChains, mainResource, graph, simulator]) => {
-      // get all critical requests 2 + mainResourceIndex levels deep
-      const mainResourceIndex = mainResource.redirects ? mainResource.redirects.length : 0;
+    ]);
 
-      const criticalRequests = UsesRelPreloadAudit._flattenRequests(critChains,
-        3 + mainResourceIndex, 2 + mainResourceIndex);
+    // get all critical requests 2 + mainResourceIndex levels deep
+    const mainResourceIndex = mainResource.redirects ? mainResource.redirects.length : 0;
 
-      /** @type {Set<string>} */
-      const urls = new Set();
-      for (const networkRecord of criticalRequests) {
-        if (!networkRecord._isLinkPreload && networkRecord.protocol !== 'data') {
-          urls.add(networkRecord._url);
-        }
+    const criticalRequests = UsesRelPreloadAudit._flattenRequests(critChains,
+      3 + mainResourceIndex, 2 + mainResourceIndex);
+
+    /** @type {Set<string>} */
+    const urls = new Set();
+    for (const networkRecord of criticalRequests) {
+      if (!networkRecord._isLinkPreload && networkRecord.protocol !== 'data') {
+        urls.add(networkRecord._url);
       }
+    }
 
-      const {results, wastedMs} = UsesRelPreloadAudit.computeWasteWithGraph(urls, graph, simulator,
-          mainResource);
-      // sort results by wastedTime DESC
-      results.sort((a, b) => b.wastedMs - a.wastedMs);
+    const {results, wastedMs} = UsesRelPreloadAudit.computeWasteWithGraph(urls, graph, simulator,
+        mainResource);
+    // sort results by wastedTime DESC
+    results.sort((a, b) => b.wastedMs - a.wastedMs);
 
-      const headings = [
-        {key: 'url', itemType: 'url', text: 'URL'},
-        {key: 'wastedMs', itemType: 'ms', text: 'Potential Savings', granularity: 10},
-      ];
-      const summary = {wastedMs};
-      const details = Audit.makeTableDetails(headings, results, summary);
+    const headings = [
+      {key: 'url', itemType: 'url', text: 'URL'},
+      {key: 'wastedMs', itemType: 'ms', text: 'Potential Savings', granularity: 10},
+    ];
+    const summary = {wastedMs};
+    const details = Audit.makeTableDetails(headings, results, summary);
 
-      return {
-        score: UnusedBytes.scoreForWastedMs(wastedMs),
-        rawValue: wastedMs,
-        displayValue: Util.formatMilliseconds(wastedMs),
-        extendedInfo: {
-          value: results,
-        },
-        details,
-      };
-    });
+    return {
+      score: UnusedBytes.scoreForWastedMs(wastedMs),
+      rawValue: wastedMs,
+      displayValue: ['Potential savings of %10d\xa0ms', wastedMs],
+      extendedInfo: {
+        value: results,
+      },
+      details,
+    };
   }
 }
 
