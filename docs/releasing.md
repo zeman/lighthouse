@@ -57,10 +57,9 @@ yarn pack
 cd ..; rm -rf tmp; mkdir tmp; cd tmp
 npm init -y
 npm install ../lighthouse-pristine/lighthouse-*.tgz
-npm explore lighthouse -- npm run smoke
-npm explore lighthouse -- npm run smokehouse
 npm explore lighthouse -- npm run chrome # try the manual launcher
 npm explore lighthouse -- npm run fast -- http://example.com
+pm explore lighthouse -- npm run start -- http://example.com
 cd ..; rm -rf ./tmp;
 
 cd lighthouse-pristine; command rm -f lighthouse-*.tgz
@@ -68,7 +67,7 @@ cd lighthouse-pristine; command rm -f lighthouse-*.tgz
 echo "Test the lighthouse-viewer build"
 # Manual test for now:
 # Start a server in lighthouse-viewer/dist/ and open the page in a tab. You should see the viewer.
-# Drop in a results.json or paste an existing gist url (e.g. https://gist.github.com/ebidel/b9fd478b5f40bf5fab174439dc18f83a).
+# Drop in a results.json or paste an existing gist url (e.g. https://gist.github.com/paulirish/4fc17df23d0996744a6acc7fcf601318).
 # Check for errors!
 
 # * Update changelog *
@@ -94,7 +93,7 @@ echo "Rebuild extension and viewer to get the latest, tagged master commit"
 yarn build-all;
 
 # zip the extension files, but remove lh-background as it's not needed
-cd lighthouse-extension; command rm -f dist/scripts/lighthouse-background.js; gulp package; cd ..
+cd lighthouse-extension; command rm -f dist/scripts/lighthouse-background.js; npx gulp package; cd ..
 echo "Go here: https://chrome.google.com/webstore/developer/edit/blipmdconlkpinefehnmjammfjpmpbjk "
 echo "Upload the package zip to CWS dev dashboard"
 
