@@ -58,8 +58,8 @@ cd ..; rm -rf tmp; mkdir tmp; cd tmp
 npm init -y
 npm install ../lighthouse-pristine/lighthouse-*.tgz
 npm explore lighthouse -- npm run chrome # try the manual launcher
-npm explore lighthouse -- npm run fast -- http://example.com
-pm explore lighthouse -- npm run start -- http://example.com
+npm explore lighthouse -- npm run fast -- http://paulirish.com
+npm explore lighthouse -- npm run start -- http://example.com
 cd ..; rm -rf ./tmp;
 
 cd lighthouse-pristine; command rm -f lighthouse-*.tgz
