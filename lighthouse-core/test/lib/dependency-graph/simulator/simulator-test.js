@@ -23,6 +23,7 @@ function request(opts) {
     transferSize: opts.transferSize || 1000,
     parsedURL: {scheme, securityOrigin: () => url},
     _timing: opts.timing,
+    priority: () => 'Medium',
   }, opts);
 }
 
