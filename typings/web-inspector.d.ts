@@ -6,6 +6,8 @@
 
 declare global {
   module LH.WebInspector {
+    export type NetworkPriority = 'VeryHigh' | 'High' | 'Medium' | 'Low';
+
     // TODO(bckenny): standardize on underscored internal API
     // externs for chrome-devtools-frontend/front_end/sdk/NetworkRequest.js
     export interface NetworkRequest {
@@ -45,7 +47,7 @@ declare global {
       _timing: Crdp.Network.ResourceTiming;
       _resourceType: ResourceType;
       _mimeType: string;
-      priority(): 'VeryHigh' | 'High' | 'Medium' | 'Low';
+      priority(): NetworkPriority;
       _responseHeaders?: {name: string, value: string}[];
 
       _fetchedViaServiceWorker?: boolean;

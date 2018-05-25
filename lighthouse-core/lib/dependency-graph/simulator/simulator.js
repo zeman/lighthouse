@@ -174,6 +174,25 @@ class Simulator {
   }
 
   /**
+   * @param {Node[]} nodes
+   * @return {Node[]}
+   */
+  _sortNodesByPriority(nodes) {
+    return nodes.slice().sort((nodeA, nodeB) => {
+      // If nodes are different type it doesn't matter
+      if (nodeA.type !== nodeB.type) return 0;
+      // If nodes are CPU nodes, just prioritize the one that actually executed first
+      if (nodeA.type === Node.TYPES.CPU) return nodeA.startTime - nodeB.startTime;
+      // Else the nodes are network nodes, prioritize by priority, then actual startTime
+      const networkA = /** @type {NetworkNode} */ (nodeA);
+      const networkB = /** @type {NetworkNode} */ (nodeB);
+      const priorityA = NetworkNode.priorityToP0Number(networkA.record.priority());
+      const priorityB = NetworkNode.priorityToP0Number(networkB.record.priority());
+      return priorityA === priorityB ? nodeA.startTime - nodeB.startTime : priorityA - priorityB;
+    });
+  }
+
+  /**
    * @param {Node} node
    * @param {number} totalElapsedTime
    */
@@ -398,7 +417,7 @@ class Simulator {
     // loop as long as we have nodes in the queue or currently in progress
     while (nodesReadyToStart.size || nodesInProgress.size) {
       // move all possible queued nodes to in progress
-      for (const node of nodesReadyToStart) {
+      for (const node of this._sortNodesByPriority(Array.from(nodesReadyToStart))) {
         this._startNodeIfPossible(node, totalElapsedTime);
       }
 
