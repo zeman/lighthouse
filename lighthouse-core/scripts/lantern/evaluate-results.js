@@ -8,6 +8,7 @@
 
 /* eslint-disable no-console */
 
+const fs = require('fs');
 const path = require('path');
 
 const GOOD_ABSOLUTE_THRESHOLD = 0.2;
@@ -15,9 +16,11 @@ const OK_ABSOLUTE_THRESHOLD = 0.5;
 
 const GOOD_RANK_THRESHOLD = 0.1;
 
-if (!process.argv[2]) throw new Error('Usage $0 <computed summary file>');
+const COMPUTATIONS_INPUT_ARG = process.argv[2] || './lantern-data/lantern-computed.json';
+const COMPUTATIONS_PATH = path.resolve(process.cwd(), COMPUTATIONS_INPUT_ARG);
 
-const COMPUTATIONS_PATH = path.resolve(process.cwd(), process.argv[2]);
+if (!fs.existsSync(COMPUTATIONS_PATH)) throw new Error('Usage $0 <computed summary file>');
+
 /** @type {{sites: LanternSiteDefinition[]}} */
 const expectations = require(COMPUTATIONS_PATH);
 

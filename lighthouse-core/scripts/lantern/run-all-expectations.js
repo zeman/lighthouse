@@ -12,11 +12,13 @@ const fs = require('fs');
 const path = require('path');
 const execFileSync = require('child_process').execFileSync;
 
-if (!process.argv[2]) throw new Error('Usage $0 <expectations file>');
-
-const RUN_ONCE_PATH = path.join(__dirname, 'run-once.js');
-const EXPECTATIONS_PATH = path.resolve(process.cwd(), process.argv[2]);
+const EXPECTATIONS_INPUT_ARG = process.argv[2] || './lantern-data/lantern-expectations.json';
+const EXPECTATIONS_PATH = path.resolve(process.cwd(), EXPECTATIONS_INPUT_ARG);
 const EXPECTATIONS_DIR = path.dirname(EXPECTATIONS_PATH);
+const RUN_ONCE_PATH = path.join(__dirname, 'run-once.js');
+
+if (!fs.existsSync(EXPECTATIONS_PATH)) throw new Error('Usage $0 <expectations file>');
+
 const expectations = require(EXPECTATIONS_PATH);
 
 for (const site of expectations.sites) {
