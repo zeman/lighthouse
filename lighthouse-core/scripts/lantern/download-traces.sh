@@ -15,6 +15,7 @@ fi
 TAR_URL="https://drive.google.com/a/chromium.org/uc?id=1_w2g6fQVLgHI62FApsyUDejZyHNXMLm0&amp;export=download"
 curl -o lantern-traces.tar.gz -L $TAR_URL
 
+rm -rf lantern-data/
 tar -xzf lantern-traces.tar.gz
-mv lantern-traces-subset lantern-data
+mv lantern-traces-subset/ lantern-data/
 rm lantern-traces.tar.gz
