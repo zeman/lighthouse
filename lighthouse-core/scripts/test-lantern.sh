@@ -24,8 +24,6 @@ fi
 printf "Lantern files affected!\n\nDownloading test set...\n"
 "$LH_ROOT/lighthouse-core/scripts/lantern/download-traces.sh"
 
-ls ./lantern-data
-
 printf "\n\nRunning all expectations...\n"
 "$LH_ROOT/lighthouse-core/scripts/lantern/run-all-expectations.js"
 
