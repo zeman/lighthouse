@@ -8,13 +8,6 @@
 const Node = require('./node');
 const WebInspector = require('../web-inspector');
 
-const NETWORK_PRIORITY_NUMBERS = {
-  VeryHigh: 0,
-  High: 1,
-  Medium: 2,
-  Low: 3,
-};
-
 class NetworkNode extends Node {
   /**
    * @param {LH.WebInspector.NetworkRequest} networkRecord
@@ -85,14 +78,6 @@ class NetworkNode extends Node {
     const node = new NetworkNode(this._record);
     node.setIsMainDocument(this._isMainDocument);
     return node;
-  }
-
-  /**
-   * @param {LH.WebInspector.NetworkPriority} priority
-   * @return {number}
-   */
-  static priorityToP0Number(priority) {
-    return NETWORK_PRIORITY_NUMBERS[priority] || 10;
   }
 }
 
