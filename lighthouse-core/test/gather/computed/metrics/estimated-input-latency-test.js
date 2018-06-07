@@ -20,8 +20,8 @@ describe('Metrics: EIL', () => {
     const settings = {throttlingMethod: 'simulate'};
     const result = await artifacts.requestEstimatedInputLatency({trace, devtoolsLog, settings});
 
-    assert.equal(Math.round(result.timing), 104);
-    assert.equal(Math.round(result.optimisticEstimate.timeInMs), 101);
+    assert.equal(Math.round(result.timing), 100);
+    assert.equal(Math.round(result.optimisticEstimate.timeInMs), 93);
     assert.equal(Math.round(result.pessimisticEstimate.timeInMs), 158);
   });
 

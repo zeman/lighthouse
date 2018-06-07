@@ -47,6 +47,7 @@ class LanternFirstCPUIdle extends LanternInteractive {
       longTasks.push({start: timing.startTime, end: timing.endTime});
     }
 
+    longTasks.sort((a, b) => a.start - b.start);
     return FirstCPUIdle.findQuietWindow(fmpTimeInMs, Infinity, longTasks);
   }
 }

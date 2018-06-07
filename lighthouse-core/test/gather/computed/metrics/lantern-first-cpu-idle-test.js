@@ -8,6 +8,7 @@
 const Runner = require('../../../../runner');
 const assert = require('assert');
 
+const LanternFCPUI = require('../../../../gather/computed/metrics/lantern-first-cpu-idle');
 const trace = require('../../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
@@ -24,5 +25,21 @@ describe('Metrics: Lantern TTFCPUI', () => {
     assert.equal(result.pessimisticEstimate.nodeTimings.size, 79);
     assert.ok(result.optimisticGraph, 'should have created optimistic graph');
     assert.ok(result.pessimisticGraph, 'should have created pessimistic graph');
+  });
+
+  describe('#getFirstCPUIdleWindowStart', () => {
+    it('should sort tasks', () => {
+      const tasks = new Map([
+        [{type: 'cpu'}, {startTime: 600, endTime: 700, duration: 100}],
+        [{type: 'cpu'}, {startTime: 300, endTime: 400, duration: 100}],
+        [{type: 'cpu'}, {startTime: 0, endTime: 100, duration: 100}],
+        [{type: 'cpu'}, {startTime: 100, endTime: 200, duration: 100}],
+        [{type: 'cpu'}, {startTime: 500, endTime: 600, duration: 100}],
+        [{type: 'cpu'}, {startTime: 200, endTime: 300, duration: 100}],
+        [{type: 'cpu'}, {startTime: 400, endTime: 500, duration: 100}],
+      ]);
+
+      assert.equal(LanternFCPUI.getFirstCPUIdleWindowStart(tasks, 0), 700);
+    });
   });
 });
