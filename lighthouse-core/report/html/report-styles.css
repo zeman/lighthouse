@@ -44,7 +44,7 @@
   --display-value-gray: hsl(216, 5%, 39%);
   --report-width: calc(60 * var(--body-font-size));
   --report-content-width: calc(var(--report-width));
-  --report-header-height: 161px;
+  --report-header-height: 150px;
   --report-header-color: #202124;
   --navitem-font-size: var(--body-font-size);
   --navitem-line-height: var(--body-line-height);
