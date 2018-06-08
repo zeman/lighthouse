@@ -186,8 +186,7 @@ class ReportRenderer {
     }
 
     // Fireworks
-    const scoresAll100 = report.reportCategories.length >= 2 &&
-        report.reportCategories.every(cat => cat.score === 1);
+    const scoresAll100 = report.reportCategories.every(cat => cat.score === 1);
     if (scoresAll100) headerContainer.classList.add('score100');
 
     if (scoreHeader) {
