@@ -187,7 +187,12 @@ class ReportRenderer {
 
     // Fireworks
     const scoresAll100 = report.reportCategories.every(cat => cat.score === 1);
-    if (scoresAll100) headerContainer.classList.add('score100');
+    if (scoresAll100) {
+      headerContainer.classList.add('score100');
+      this._dom.find('.lh-header', headerContainer).addEventListener('click', _ => {
+        headerContainer.classList.toggle('fireworks-paused');
+      });
+    }
 
     if (scoreHeader) {
       const scoreScale = this._dom.cloneTemplate('#tmpl-lh-scorescale', this._templateContext);
