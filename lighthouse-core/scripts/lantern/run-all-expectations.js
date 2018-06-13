@@ -10,7 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const execFileSync = require('child_process').execFileSync;
+const Pool = require('threads').Pool;
 
 const EXPECTATIONS_INPUT_ARG = process.argv[2] || './lantern-data/lantern-expectations.json';
 const EXPECTATIONS_PATH = path.resolve(process.cwd(), EXPECTATIONS_INPUT_ARG);
@@ -21,7 +21,35 @@ if (!fs.existsSync(EXPECTATIONS_PATH)) throw new Error('Usage $0 <expectations f
 
 const expectations = require(EXPECTATIONS_PATH);
 
+const pool = new Pool();
+pool
+  .on('done', updateSiteEntryWithLanternData)
+  .on('finished', allExpectationsComplete)
+  .on('error', (job, error) => console.error('Job errored:', job, error));
+
 for (const site of expectations.sites) {
+  pool.run(runExpectation).send({EXPECTATIONS_DIR, RUN_ONCE_PATH, site});
+}
+
+
+function allExpectationsComplete() {
+  pool.killAll();
+  const computedSummaryPath = path.join(EXPECTATIONS_DIR, 'lantern-computed.json');
+  fs.writeFileSync(computedSummaryPath, JSON.stringify(expectations, null, 2));
+}
+
+function updateSiteEntryWithLanternData(job, {lantern}) {
+  const site = job.sendArgs[0].site;
+  Object.assign(site, {lantern});
+}
+
+// This fn runs within a forked child process
+function runExpectation(input, done) {
+  const path = require('path');
+  const execFileSync = require('child_process').execFileSync;
+
+  const {EXPECTATIONS_DIR, RUN_ONCE_PATH, site} = input;
+
   const trace = path.join(EXPECTATIONS_DIR, site.tracePath);
   const log = path.join(EXPECTATIONS_DIR, site.devtoolsLogPath);
 
@@ -32,8 +60,5 @@ for (const site of expectations.sites) {
   if (!rawOutput) console.log('ERROR EMPTY OUTPUT!');
   const lantern = JSON.parse(rawOutput);
 
-  Object.assign(site, {lantern});
+  done({lantern});
 }
-
-const computedSummaryPath = path.join(EXPECTATIONS_DIR, 'lantern-computed.json');
-fs.writeFileSync(computedSummaryPath, JSON.stringify(expectations, null, 2));

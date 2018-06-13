@@ -22,6 +22,7 @@ const OUTPUT_PATH = path.join(__dirname, '../../test/fixtures/lantern-expectatio
 
 if (!fs.existsSync(COMPUTED_PATH) || process.env.FORCE) {
   if (!fs.existsSync(EXPECTATIONS_PATH)) throw new Error('Usage $0 <expectations file>');
+  console.log(RUN_ALL_SCRIPT_PATH, EXPECTATIONS_PATH);
   execFileSync(RUN_ALL_SCRIPT_PATH, [EXPECTATIONS_PATH]);
 }
 
