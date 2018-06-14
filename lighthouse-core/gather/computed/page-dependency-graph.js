@@ -34,11 +34,10 @@ class PageDependencyGraphArtifact extends ComputedArtifact {
     if (record._initiator.url) return [record._initiator.url];
     if (record._initiator.type === 'script') {
       const scriptURLs = new Set();
-      let stack = record._initiator.stack;
       for (let stack = record._initiator.stack; stack; stack = stack.parent) {
         const callFrames = stack.callFrames || [];
         for (const frame of callFrames) {
-          if (frame.url) scriptURLs.add(frame.url)
+          if (frame.url) scriptURLs.add(frame.url);
         }
       }
 
