@@ -36,6 +36,9 @@ module.exports = {
   enableRuntimeEvents() {
     return Promise.resolve();
   },
+  enableAsyncStacks() {
+    return Promise.resolve();
+  },
   evaluateScriptOnLoad() {
     return Promise.resolve();
   },

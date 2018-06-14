@@ -32,9 +32,17 @@ class PageDependencyGraphArtifact extends ComputedArtifact {
   static getNetworkInitiators(record) {
     if (!record._initiator) return [];
     if (record._initiator.url) return [record._initiator.url];
-    if (record._initiator.type === 'script' && record._initiator.stack) {
-      const frames = record._initiator.stack.callFrames;
-      return Array.from(new Set(frames.map(frame => frame.url))).filter(Boolean);
+    if (record._initiator.type === 'script') {
+      const scriptURLs = new Set();
+      let stack = record._initiator.stack;
+      for (let stack = record._initiator.stack; stack; stack = stack.parent) {
+        const callFrames = stack.callFrames || [];
+        for (const frame of callFrames) {
+          if (frame.url) scriptURLs.add(frame.url)
+        }
+      }
+
+      return Array.from(scriptURLs);
     }
 
     return [];
