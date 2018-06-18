@@ -12,18 +12,31 @@ type LanternSimulator = InstanceType<typeof _LanternSimulator>;
 
 declare global {
   module LH {
-    export interface Artifacts extends ComputedArtifacts {
-      // Created by by gather-runner
+    export interface Artifacts extends BaseArtifacts, GathererArtifacts, ComputedArtifacts {}
+
+    /** Artifacts always created by GatherRunner. */
+    export interface BaseArtifacts {
+      /** The ISO-8601 timestamp of when the test page was fetched and artifacts collected. */
       fetchTime: string;
+      /** A set of warnings about unexpected things encountered while loading and testing the page. */
       LighthouseRunWarnings: string[];
+      /** The user agent string of the version of Chrome that was used by Lighthouse. */
       UserAgent: string;
+      /** A set of page-load traces, keyed by passName. */
       traces: {[passName: string]: Trace};
+      /** A set of DevTools debugger protocol records, keyed by passName. */
       devtoolsLogs: {[passName: string]: DevtoolsLog};
+      /** An object containing information about the testing configuration used by Lighthouse. */
       settings: Config.Settings;
       /** The URL initially requested and the post-redirects URL that was actually loaded. */
       URL: {requestedUrl: string, finalUrl: string};
+    }
 
-      // Remaining are provided by default gatherers.
+    /**
+     * Artifacts provided by the default gatherers. Augment this interface when adding additional
+     * gatherers.
+     */
+    export interface GathererArtifacts {
       /** The results of running the aXe accessibility tests on the page. */
       Accessibility: Artifacts.Accessibility;
       /** Information on all anchors in the page that aren't nofollow or noreferrer. */
@@ -44,8 +57,6 @@ declare global {
       DOMStats: Artifacts.DOMStats;
       /** Relevant attributes and child properties of all <object>s, <embed>s and <applet>s in the page. */
       EmbeddedContent: Artifacts.EmbeddedContentInfo[];
-      /** Information on all event listeners in the page. */
-      EventListeners: {url: string, type: string, handler?: {description?: string}, objectName: string, line: number, col: number}[];
       /** Information for font faces used in the page. */
       Fonts: Artifacts.Font[];
       /** Information on poorly sized font usage and the text affected by it. */

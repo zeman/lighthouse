@@ -156,7 +156,7 @@ describe('GatherRunner', function() {
       createEmulationCheck('calledCpuEmulation')
     );
 
-    return GatherRunner.setupDriver(driver, {}, {
+    return GatherRunner.setupDriver(driver, {
       settings: {},
     }).then(_ => {
       assert.ok(tests.calledDeviceEmulation, 'did not call device emulation');
@@ -183,7 +183,7 @@ describe('GatherRunner', function() {
       createEmulationCheck('calledCpuEmulation', true)
     );
 
-    return GatherRunner.setupDriver(driver, {}, {
+    return GatherRunner.setupDriver(driver, {
       settings: {
         disableDeviceEmulation: true,
         throttlingMethod: 'devtools',
@@ -212,7 +212,7 @@ describe('GatherRunner', function() {
       createEmulationCheck('calledCpuEmulation')
     );
 
-    return GatherRunner.setupDriver(driver, {}, {
+    return GatherRunner.setupDriver(driver, {
       settings: {
         throttlingMethod: 'provided',
       },
@@ -241,7 +241,7 @@ describe('GatherRunner', function() {
       createEmulationCheck('calledCpuEmulation')
     );
 
-    return GatherRunner.setupDriver(driver, {}, {
+    return GatherRunner.setupDriver(driver, {
       settings: {
         throttlingMethod: 'devtools',
         throttling: {
@@ -283,10 +283,9 @@ describe('GatherRunner', function() {
       clearDataForOrigin: createCheck('calledClearStorage'),
       blockUrlPatterns: asyncFunc,
       setExtraHTTPHeaders: asyncFunc,
-      getUserAgent: () => Promise.resolve('Fake user agent'),
     };
 
-    return GatherRunner.setupDriver(driver, {}, {settings: {}}).then(_ => {
+    return GatherRunner.setupDriver(driver, {settings: {}}).then(_ => {
       assert.equal(tests.calledCleanBrowserCaches, false);
       assert.equal(tests.calledClearStorage, true);
     });
@@ -343,10 +342,9 @@ describe('GatherRunner', function() {
       clearDataForOrigin: createCheck('calledClearStorage'),
       blockUrlPatterns: asyncFunc,
       setExtraHTTPHeaders: asyncFunc,
-      getUserAgent: () => Promise.resolve('Fake user agent'),
     };
 
-    return GatherRunner.setupDriver(driver, {}, {
+    return GatherRunner.setupDriver(driver, {
       settings: {disableStorageReset: true},
     }).then(_ => {
       assert.equal(tests.calledCleanBrowserCaches, false);
@@ -829,8 +827,6 @@ describe('GatherRunner', function() {
           Promise.reject(someOtherError),
           Promise.resolve(1729),
         ],
-
-        LighthouseRunWarnings: [],
       };
 
       return GatherRunner.collectArtifacts(gathererResults, {}).then(artifacts => {
@@ -848,11 +844,11 @@ describe('GatherRunner', function() {
         'warning2',
       ];
 
-      const gathererResults = {
+      const baseArtifacts = {
         LighthouseRunWarnings,
       };
 
-      return GatherRunner.collectArtifacts(gathererResults, {}).then(artifacts => {
+      return GatherRunner.collectArtifacts({}, baseArtifacts).then(artifacts => {
         assert.deepStrictEqual(artifacts.LighthouseRunWarnings, LighthouseRunWarnings);
       });
     });
@@ -1027,21 +1023,5 @@ describe('GatherRunner', function() {
           assert.ok(true);
         });
     });
-  });
-
-  it('issues a lighthouseRunWarnings if running an old version of Headless', () => {
-    const gathererResults = {
-      LighthouseRunWarnings: [],
-    };
-
-    const userAgent = 'Mozilla/5.0 AppleWebKit/537.36 HeadlessChrome/63.0.3239.0 Safari/537.36';
-    GatherRunner.warnOnHeadless(userAgent, gathererResults);
-    assert.strictEqual(gathererResults.LighthouseRunWarnings.length, 0);
-
-    const oldUserAgent = 'Mozilla/5.0 AppleWebKit/537.36 HeadlessChrome/62.0.3239.0 Safari/537.36';
-    GatherRunner.warnOnHeadless(oldUserAgent, gathererResults);
-    assert.strictEqual(gathererResults.LighthouseRunWarnings.length, 1);
-    const warning = gathererResults.LighthouseRunWarnings[0];
-    assert.ok(/Headless Chrome/.test(warning));
   });
 });
