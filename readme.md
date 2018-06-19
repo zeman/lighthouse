@@ -56,7 +56,7 @@ Configuration:
 
                                  Environment variables:
                                  CHROME_PATH: Explicit path of intended Chrome binary. If set must point to an executable of a build of
-                                 Chromium version 54.0 or later. By default, any detected Chrome Canary or Chrome (stable) will be launched.
+                                 Chromium version 66.0 or later. By default, any detected Chrome Canary or Chrome (stable) will be launched.
                                                                                                                                        [default: ""]
   --port                         The port to use for the debugging protocol. Use 0 for a random port                                    [default: 0]
   --preset                       Use a built-in configuration.                                            [choices: "full", "perf", "mixed-content"]
@@ -282,6 +282,7 @@ Other awesome open source projects that use Lighthouse.
 * **[lighthouse-lambda](https://github.com/joytocode/lighthouse-lambda)** - Run Lighthouse on AWS Lambda with prebuilt stable desktop Headless Chrome.
 * **[lighthouse-security](https://github.com/voorhoede/lighthouse-security#readme)** - Run a set of security audits along with Lighthouse.
 * **[Garie](https://github.com/boyney123/garie)** — An open source tool for monitoring performance using Lighthouse,  PageSpeed Insights, [Prometheus](https://prometheus.io/), [Grafana](https://grafana.com/) and [Docker](https://www.docker.com/).
+* **[lighthouse-ci](https://github.com/andreasonny83/lighthouse-ci)** - Run Lighthouse and assert scores satisfy your custom thresholds.
 
 ## FAQ
 
