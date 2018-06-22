@@ -308,6 +308,8 @@ class Config {
    * @param {LH.Flags=} flags
    */
   constructor(configJSON, flags) {
+    const status = {msg: 'Create config', id: 'config-create'};
+    log.time(status, 'verbose');
     let configPath = flags && flags.configPath;
 
     if (!configJSON) {
@@ -360,6 +362,7 @@ class Config {
     // TODO(bckenny): until tsc adds @implements support, assert that Config is a ConfigJson.
     /** @type {LH.Config.Json} */
     const configJson = this; // eslint-disable-line no-unused-vars
+    log.timeEnd(status);
   }
 
   /**

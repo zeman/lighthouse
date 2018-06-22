@@ -29,8 +29,9 @@ class Runner {
    */
   static async run(connection, opts) {
     try {
-      const startTime = Date.now();
       const settings = opts.config.settings;
+      const runnerStatus = {msg: 'Runner setup', id: 'lh:runner:run'};
+      log.time(runnerStatus, 'verbose');
 
       /**
        * List of top-level warnings for this Lighthouse run.
@@ -67,6 +68,7 @@ class Runner {
         if (opts.url && opts.url !== requestedUrl) {
           throw new Error('Cannot run audit mode on different URL');
         }
+        log.timeEnd(runnerStatus);
       } else {
         if (typeof opts.url !== 'string' || opts.url.length === 0) {
           throw new Error(`You must provide a url to the runner. '${opts.url}' provided.`);
@@ -79,6 +81,7 @@ class Runner {
           throw new Error('The url provided should have a proper protocol and hostname.');
         }
 
+        log.timeEnd(runnerStatus);
         artifacts = await Runner._gatherArtifactsFromBrowser(requestedUrl, opts, connection);
         // -G means save these to ./latest-run, etc.
         if (settings.gatherMode) {
@@ -97,7 +100,8 @@ class Runner {
       const auditResults = await Runner._runAudits(settings, opts.config.audits, artifacts);
 
       // LHR construction phase
-      log.log('status', 'Generating results...');
+      const status = {msg: 'Generating results...', id: 'lh:runner:generate'};
+      log.time(status);
 
       if (artifacts.LighthouseRunWarnings) {
         lighthouseRunWarnings.push(...artifacts.LighthouseRunWarnings);
@@ -119,6 +123,11 @@ class Runner {
         categories = ReportScoring.scoreAllCategories(opts.config.categories, resultsById);
       }
 
+      log.timeEnd(status);
+      // Summarize all the timings and drop onto the LHR
+      artifacts.Timing = artifacts.Timing || {entries: [], gatherEntries: []};
+      artifacts.Timing.entries.push(...log.marky.getEntries());
+
       /** @type {LH.Result} */
       const lhr = {
         userAgent: artifacts.UserAgent,
@@ -131,10 +140,11 @@ class Runner {
         configSettings: settings,
         categories,
         categoryGroups: opts.config.groups || undefined,
-        timing: {total: Date.now() - startTime},
+        timing: artifacts.Timing,
       };
 
       const report = generateReport(lhr, settings.output);
+      log.timeEnd(status);
       return {lhr, artifacts, report};
     } catch (err) {
       // @ts-ignore TODO(bckenny): Sentry type checking
@@ -162,6 +172,8 @@ class Runner {
       settings: runnerOpts.config.settings,
     };
     const artifacts = await GatherRunner.run(runnerOpts.config.passes, gatherOpts);
+    artifacts.Timing = {entries: [], gatherEntries: log.marky.getEntries()};
+    log.marky.clear();
     return artifacts;
   }
 
@@ -173,7 +185,7 @@ class Runner {
    * @return {Promise<Array<LH.Audit.Result>>}
    */
   static async _runAudits(settings, audits, artifacts) {
-    log.log('status', 'Analyzing and running audits...');
+    log.time({msg: 'Analyzing and running audits...', id: 'lh:runner:auditing'});
     artifacts = Object.assign({}, Runner.instantiateComputedArtifacts(), artifacts);
 
     if (artifacts.settings) {
@@ -194,6 +206,7 @@ class Runner {
       auditResults.push(auditResult);
     }
 
+    log.timeEnd({msg: 'Analyzing and running audits...', id: 'lh:runner:auditing'});
     return auditResults;
   }
 
@@ -208,9 +221,12 @@ class Runner {
    */
   static async _runAudit(auditDefn, artifacts, settings) {
     const audit = auditDefn.implementation;
-    const status = `Evaluating: ${audit.meta.description}`;
+    const status = {
+      msg: `Evaluating: ${audit.meta.description}`,
+      id: `lh:audit:${audit.meta.name}`,
+    };
+    log.time(status);
 
-    log.log('status', status);
     let auditResult;
     try {
       // Return an early error if an artifact required for the audit is missing or an error.
@@ -271,7 +287,7 @@ class Runner {
       auditResult = Audit.generateErrorAuditResult(audit, errorMessage);
     }
 
-    log.verbose('statusEnd', status);
+    log.timeEnd(status);
     return auditResult;
   }
 

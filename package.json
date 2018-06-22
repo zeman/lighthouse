@@ -57,6 +57,7 @@
     "deploy-viewer": "cd lighthouse-viewer && gulp deploy",
     "bundlesize": "bundlesize",
     "plots-smoke": "bash plots/test/smoke.sh",
+    "timing": "node lighthouse-core/scripts/generate-lh-timing-trace.js",
     "changelog": "conventional-changelog --config ./build/changelog-generator/index.js --infile changelog.md --same-file",
     "type-check": "tsc -p . && cd ./lighthouse-viewer && yarn type-check",
     "update:sample-artifacts": "node lighthouse-core/scripts/update-report-fixtures.js -G",

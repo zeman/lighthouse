@@ -109,8 +109,11 @@ class Driver {
   /**
    * @return {Promise<void>}
    */
-  connect() {
-    return this._connection.connect();
+  async connect() {
+    const status = {msg: 'Connecting to browser', id: 'lh:init:connect'};
+    log.time(status);
+    await this._connection.connect();
+    log.timeEnd(status);
   }
 
   /**
