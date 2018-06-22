@@ -39,37 +39,17 @@ async function lighthouse(url, flags, configJSON) {
   flags.logLevel = flags.logLevel || 'error';
   log.setLevel(flags.logLevel);
 
-  const overallStatus = {msg: 'Overall', id: 'lh:index'};
-  log.time(overallStatus, 'verbose');
-
   // Use ConfigParser to generate a valid config file
   const config = new Config(configJSON, flags);
   const connection = new ChromeProtocol(flags.port, flags.hostname);
 
   // kick off a lighthouse run
-  const runnerResult = await Runner.run(connection, {url, config});
-
-  const totalEntry = log.timeEnd(overallStatus);
-  finalizeEndTime(totalEntry, runnerResult);
-  return runnerResult;
+  return await Runner.run(connection, {url, config});
 }
 
 lighthouse.getAuditList = Runner.getAuditList;
 lighthouse.traceCategories = require('./gather/driver').traceCategories;
 lighthouse.Audit = require('./audits/audit');
 lighthouse.Gatherer = require('./gather/gatherers/gatherer');
-
-
-/**
- * Add timing entry for the overall LH run
- */
-function finalizeEndTime(totalEntry, runnerResult) {
-  if (!runnerResult) return;
-  runnerResult.lhr.timing = runnerResult.lhr.timing || {};
-  runnerResult.lhr.timing.entries = runnerResult.lhr.timing.entries || [];
-  // preserve lhr.timing.total for backcompatibility
-  runnerResult.lhr.timing.total = totalEntry.duration;
-}
-
 
 module.exports = lighthouse;

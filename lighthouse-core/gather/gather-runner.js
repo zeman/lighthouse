@@ -417,6 +417,7 @@ class GatherRunner {
       devtoolsLogs: {},
       settings: options.settings,
       URL: {requestedUrl: options.requestedUrl, finalUrl: ''},
+      Timing: {entries: [], gatherEntries: []},
     };
   }
 

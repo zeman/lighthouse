@@ -219,6 +219,7 @@ class Log {
 }
 
 Log.events = new Emitter();
-Log.marky = marky;
+Log.clearEntries = _ => marky.clear();
+Log.getEntries = _ => marky.getEntries();
 
 module.exports = Log;

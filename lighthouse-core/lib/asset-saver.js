@@ -118,6 +118,9 @@ async function loadArtifacts(basePath) {
     });
   });
   await Promise.all(promises);
+  // Move entries to separate array, so they can be rendered in parallel
+  artifacts.Timing.gatherEntries = artifacts.Timing.entries;
+  artifacts.Timing.entries = [];
 
   return artifacts;
 }

@@ -30,6 +30,8 @@ declare global {
       settings: Config.Settings;
       /** The URL initially requested and the post-redirects URL that was actually loaded. */
       URL: {requestedUrl: string, finalUrl: string};
+
+      Timing: {entries: PerformanceEntry[], gatherEntries: PerformanceEntry[]};
     }
 
     /**

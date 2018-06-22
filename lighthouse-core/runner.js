@@ -125,8 +125,7 @@ class Runner {
 
       log.timeEnd(status);
       // Summarize all the timings and drop onto the LHR
-      artifacts.Timing = artifacts.Timing || {entries: [], gatherEntries: []};
-      artifacts.Timing.entries.push(...log.marky.getEntries());
+      artifacts.Timing.entries.push(...log.getEntries());
 
       /** @type {LH.Result} */
       const lhr = {
@@ -172,8 +171,8 @@ class Runner {
       settings: runnerOpts.config.settings,
     };
     const artifacts = await GatherRunner.run(runnerOpts.config.passes, gatherOpts);
-    artifacts.Timing = {entries: [], gatherEntries: log.marky.getEntries()};
-    log.marky.clear();
+    artifacts.Timing.entries = log.getEntries();
+    log.clearEntries();
     return artifacts;
   }
 
