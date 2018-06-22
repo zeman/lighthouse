@@ -308,7 +308,7 @@ class Config {
    * @param {LH.Flags=} flags
    */
   constructor(configJSON, flags) {
-    const status = {msg: 'Create config', id: 'config-create'};
+    const status = {msg: 'Create config', id: 'lh:init:config'};
     log.time(status, 'verbose');
     let configPath = flags && flags.configPath;
 

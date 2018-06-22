@@ -79,30 +79,30 @@ function saveTraceOfEvents(events, traceFilePath) {
     traceFilePath = path.resolve(process.cwd(), 'run-timing.trace.json');
   }
   fs.writeFileSync(traceFilePath, jsonStr, 'utf8');
-  process.stdout.write(`
+  // eslint-disable-next-line no-console
+  console.log(`
   > Timing trace file saved to: ${traceFilePath}
   > Open this file in chrome://tracing
-
 `);
 }
+
+/**
+ * @param {!string} msg
+ */
+function printErrorAndQuit(msg) {
+  // eslint-disable-next-line no-console
+  console.error(`ERROR:
+  > ${msg}
+  > Example:
+  >     yarn timing results.json
+  `)
+  process.exit(1);
+};
 
 /**
  * Takes filename of LHR object. The primary entrypoint on CLI
  */
 function saveTraceFromCLI() {
-  /**
-   * @param {!string} msg
-   */
-  const printErrorAndQuit = (msg) => {
-    process.stderr.write(`ERROR:
-  > ${msg}
-  > Example:
-  >     yarn timing results.json
-
-`);
-    process.exit(1);
-  };
-
   if (!process.argv[2]) {
     printErrorAndQuit('Lighthouse JSON results path not provided');
   }

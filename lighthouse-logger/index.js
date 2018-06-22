@@ -219,7 +219,10 @@ class Log {
 }
 
 Log.events = new Emitter();
-Log.clearEntries = _ => marky.clear();
-Log.getEntries = _ => marky.getEntries();
+Log.getEntries = _ => {
+  const entries = marky.getEntries();
+  marky.clear();
+  return entries;
+}
 
 module.exports = Log;
