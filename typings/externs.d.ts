@@ -160,8 +160,8 @@ declare global {
         frame?: string;
         name?: string;
       };
-      pid: number;
-      tid: number;
+      pid: number|string;
+      tid: number|string;
       ts: number;
       dur: number;
       ph: 'B'|'b'|'D'|'E'|'e'|'F'|'I'|'M'|'N'|'n'|'O'|'R'|'S'|'T'|'X';

@@ -30,9 +30,10 @@ function checkEventOverlap(entry, prevEntries) {
  * Generates a chromium trace file from user timing measures
  * Adapted from https://github.com/tdresser/performance-observer-tracing
  * @param {!Array<PerformanceEntry>} entries user timing entries
+ * @param {string=} threadName
  */
-function generateTraceEvents(entries) {
-  const currentTrace = [];
+function generateTraceEvents(entries, threadName = 'measures') {
+  const currentTrace = /** @type {!LH.TraceEvent[]} */ ([]);
   let id = 0;
 
   entries.sort((a, b) => a.startTime - b.startTime);
@@ -44,31 +45,18 @@ function generateTraceEvents(entries) {
       cat: entry.entryType,
       ts: entry.startTime * 1000,
       dur: entry.duration * 1000,
+      args: {},
+      pid: 'Lighthouse',
+      tid: threadName,
+      ph: 'X',
+      id: '0x' + (id++).toString(16),
     };
 
     if (entry.entryType !== 'measure') throw new Error('Unexpected entryType!');
-    traceEvent.pid = 'Lighthouse';
-    traceEvent.tid = 'measures';
-
     if (entry.duration === 0) {
       traceEvent.ph = 'n';
       traceEvent.s = 't';
-    } else {
-      traceEvent.ph = 'X';
     }
-
-    traceEvent.id = '0x' + id.toString(16);
-    id++;
-
-    const args = {};
-    for (const key of Object.keys(entry)) {
-      const value = entry[key];
-      if (key === 'entryType' || key === 'name' || key === 'toJSON') {
-        continue;
-      }
-      args[key] = value;
-    }
-    traceEvent.args = args;
 
     currentTrace.push(traceEvent);
   });
@@ -78,12 +66,10 @@ function generateTraceEvents(entries) {
 
 /**
  * Writes a trace file to disk
- * @param {!Array<PerformanceEntry>} entries user timing entries
+ * @param {LH.TraceEvent[]} events trace events
  * @param {?string} traceFilePath where to save the trace file
  */
-function saveTraceOfTimings(entries, traceFilePath) {
-  const events = generateTraceEvents(entries);
-
+function saveTraceOfEvents(events, traceFilePath) {
   const jsonStr = `
   { "traceEvents": [
     ${events.map(evt => JSON.stringify(evt)).join(',\n')}
@@ -104,7 +90,10 @@ function saveTraceOfTimings(entries, traceFilePath) {
  * Takes filename of LHR object. The primary entrypoint on CLI
  */
 function saveTraceFromCLI() {
-  const printErrorAndQuit = msg => {
+  /**
+   * @param {!string} msg
+   */
+  const printErrorAndQuit = (msg) => {
     process.stderr.write(`ERROR:
   > ${msg}
   > Example:
@@ -124,11 +113,14 @@ function saveTraceFromCLI() {
 
   const lhrObject = JSON.parse(fs.readFileSync(filename, 'utf8'));
   const traceFilePath = `${filename}.run-timing.trace.json`;
-  saveTraceOfTimings(lhrObject.timing.entries, traceFilePath);
+
+  const gatherEvents = generateTraceEvents(lhrObject.timing.gatherEntries, 'gather');
+  const events = generateTraceEvents(lhrObject.timing.entries);
+  saveTraceOfEvents([...gatherEvents, ...events], traceFilePath);
 }
 
 if (require.main === module) {
   saveTraceFromCLI();
 } else {
-  module.exports = {generateTraceEvents, saveTraceOfTimings, saveTraceFromCLI};
+  module.exports = {generateTraceEvents, saveTraceOfEvents, saveTraceFromCLI};
 }
