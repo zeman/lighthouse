@@ -26,10 +26,12 @@ function checkEventOverlap(entry, prevEntries) {
 /**
  * Generates a chromium trace file from user timing measures
  * Adapted from https://github.com/tdresser/performance-observer-tracing
- * @param {!Array<PerformanceEntry>} entries user timing entries
+ * @param {!Array<PerformanceEntry>=} entries user timing entries
  * @param {string=} threadName
  */
 function generateTraceEvents(entries, threadName = 'measures') {
+  if (!Array.isArray(entries)) return [];
+
   const currentTrace = /** @type {!LH.TraceEvent[]} */ ([]);
   let id = 0;
 
@@ -76,9 +78,8 @@ function createTraceString(lhr) {
     ${events.map(evt => JSON.stringify(evt)).join(',\n')}
   ]}`;
 
- return jsonStr;
+  return jsonStr;
 }
-
 
 
 module.exports = {generateTraceEvents, createTraceString};

@@ -125,6 +125,7 @@ class Runner {
 
       log.timeEnd(status);
       // Summarize all the timings and drop onto the LHR
+      artifacts.Timing = artifacts.Timing || {entries: []};
       artifacts.Timing.entries.push(...log.getEntries());
 
       /** @type {LH.Result} */

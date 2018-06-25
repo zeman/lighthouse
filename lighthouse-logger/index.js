@@ -223,6 +223,6 @@ Log.getEntries = _ => {
   const entries = marky.getEntries();
   marky.clear();
   return entries;
-}
+};
 
 module.exports = Log;

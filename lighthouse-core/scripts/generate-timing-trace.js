@@ -18,9 +18,9 @@ function printErrorAndQuit(msg) {
   > ${msg}
   > Example:
   >     yarn timing results.json
-  `)
+  `);
   process.exit(1);
-};
+}
 
 /**
  * Takes filename of LHR object. The primary entrypoint on CLI
