@@ -119,9 +119,8 @@ async function loadArtifacts(basePath) {
   });
   await Promise.all(promises);
   if (artifacts.Timing) {
-    // Move entries to separate array, so they can be rendered in parallel
-    artifacts.Timing.gatherEntries = artifacts.Timing.entries;
-    artifacts.Timing.entries = [];
+    // Tag existing entries, so they can be rendered in parallel
+    artifacts.Timing.forEach(entry => (entry.gather = true));
   }
 
   return artifacts;

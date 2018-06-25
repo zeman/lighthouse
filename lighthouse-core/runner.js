@@ -180,7 +180,7 @@ class Runner {
       settings: runnerOpts.config.settings,
     };
     const artifacts = await GatherRunner.run(runnerOpts.config.passes, gatherOpts);
-    artifacts.Timing.entries = log.getEntries();
+    artifacts.Timing = log.getEntries();
     return artifacts;
   }
 

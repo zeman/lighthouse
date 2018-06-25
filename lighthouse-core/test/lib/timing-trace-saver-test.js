@@ -6,11 +6,7 @@
 'use strict';
 /* eslint-env mocha */
 const assert = require('assert');
-const {
-  generateTraceEvents,
-  createTraceString,
-} = require('../../lib/timing-trace-saver');
-
+const {generateTraceEvents, createTraceString} = require('../../lib/timing-trace-saver');
 
 const mockEntries = [{
   startTime: 650,
@@ -44,8 +40,8 @@ const expectedTrace = {
     ts: 650000,
     dur: 210000,
     args: {},
-    pid: 'Lighthouse',
-    tid: 'measures',
+    pid: 0,
+    tid: 50,
     ph: 'X',
     id: '0x0',
   },
@@ -55,8 +51,8 @@ const expectedTrace = {
     ts: 870000,
     dur: 120000,
     args: {},
-    pid: 'Lighthouse',
-    tid: 'measures',
+    pid: 0,
+    tid: 50,
     ph: 'X',
     id: '0x1',
   },
@@ -66,8 +62,8 @@ const expectedTrace = {
     ts: 990000,
     dur: 750000,
     args: {},
-    pid: 'Lighthouse',
-    tid: 'measures',
+    pid: 0,
+    tid: 50,
     ph: 'X',
     id: '0x2',
   },
@@ -77,8 +73,8 @@ const expectedTrace = {
     ts: 1010000,
     dur: 10000,
     args: {},
-    pid: 'Lighthouse',
-    tid: 'measures',
+    pid: 0,
+    tid: 50,
     ph: 'X',
     id: '0x3',
   },
@@ -88,8 +84,8 @@ const expectedTrace = {
 
 describe('generateTraceEvents', () => {
   it('generates a single trace event', () => {
-    const event = generateTraceEvents(mockEntries.slice(0, 1));
-    assert.deepStrictEqual(event, expectedTrace.traceEvents.slice(0, 1));
+    const event = generateTraceEvents(mockEntries);
+    assert.deepStrictEqual(event.slice(0, 1), expectedTrace.traceEvents.slice(0, 1));
   });
 
   it('doesn\'t allow overlapping events', () => {
@@ -118,6 +114,7 @@ describe('createTraceString', () => {
       },
     });
     const traceJson = JSON.parse(jsonStr);
-    assert.deepStrictEqual(traceJson, expectedTrace);
+    const eventsWithoutMetadata = traceJson.traceEvents.filter(e => e.cat !== '__metadata');
+    assert.deepStrictEqual(eventsWithoutMetadata, expectedTrace.traceEvents);
   });
 });

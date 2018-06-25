@@ -30,8 +30,8 @@ declare global {
       settings: Config.Settings;
       /** The URL initially requested and the post-redirects URL that was actually loaded. */
       URL: {requestedUrl: string, finalUrl: string};
-
-      Timing: {entries: PerformanceEntry[], gatherEntries: PerformanceEntry[]};
+      /** Holds the timing instrumentation of a gather-only run */
+      Timing: Artifacts.MeasureEntry[];
     }
 
     /**
@@ -336,6 +336,15 @@ declare global {
           failureText: string;
           passing: boolean;
         }[];
+      }
+
+      export interface MeasureEntry {
+        name: string;
+        startTime: number;
+        duration: number;
+        entryType: string;
+        gather?: boolean;
+        toJSON: any;
       }
 
       export interface MetricComputationDataInput {

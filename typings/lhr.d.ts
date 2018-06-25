@@ -34,7 +34,7 @@ declare global {
       /** The User-Agent string of the browser used run Lighthouse for these results. */
       userAgent: string;
       /** Execution timings for the Lighthouse run */
-      timing: {entries: PerformanceEntry[], gatherEntries: PerformanceEntry[]};
+      timing: {entries: Artifacts.MeasureEntry[], total: number};
     }
 
     // Result namespace

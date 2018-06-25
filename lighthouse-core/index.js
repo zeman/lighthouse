@@ -44,7 +44,7 @@ async function lighthouse(url, flags, configJSON) {
   const connection = new ChromeProtocol(flags.port, flags.hostname);
 
   // kick off a lighthouse run
-  return await Runner.run(connection, {url, config});
+  return Runner.run(connection, {url, config});
 }
 
 lighthouse.getAuditList = Runner.getAuditList;

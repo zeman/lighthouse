@@ -9,8 +9,8 @@
  * Technically, it's fine for usertiming measures to overlap, however non-async events make
  * for a much clearer UI in traceviewer. We do this check to make sure we aren't passing off
  * async-like measures as non-async.
- * @param {!PerformanceEntry} entry user timing entry
- * @param {!Array<PerformanceEntry>} prevEntries user timing entries
+ * @param {!LH.Artifacts.MeasureEntry} entry user timing entry
+ * @param {LH.Artifacts.MeasureEntry[]} prevEntries user timing entries
  */
 function checkEventOverlap(entry, prevEntries) {
   for (const prevEntry of prevEntries) {
@@ -26,10 +26,10 @@ function checkEventOverlap(entry, prevEntries) {
 /**
  * Generates a chromium trace file from user timing measures
  * Adapted from https://github.com/tdresser/performance-observer-tracing
- * @param {!Array<PerformanceEntry>=} entries user timing entries
- * @param {string=} threadName
+ * @param {LH.Artifacts.MeasureEntry[]} entries user timing entries
+ * @param {string=} trackName
  */
-function generateTraceEvents(entries, threadName = 'measures') {
+function generateTraceEvents(entries, trackName = 'measures') {
   if (!Array.isArray(entries)) return [];
 
   const currentTrace = /** @type {!LH.TraceEvent[]} */ ([]);
@@ -45,8 +45,8 @@ function generateTraceEvents(entries, threadName = 'measures') {
       ts: entry.startTime * 1000,
       dur: entry.duration * 1000,
       args: {},
-      pid: 'Lighthouse',
-      tid: threadName,
+      pid: 0,
+      tid: trackName === 'measures' ? 50 : 75,
       ph: 'X',
       id: '0x' + (id++).toString(16),
     };
@@ -60,6 +60,20 @@ function generateTraceEvents(entries, threadName = 'measures') {
     currentTrace.push(traceEvent);
   });
 
+  // Add labels
+  const metaEvtBase = {
+    pid: 0,
+    tid: trackName === 'measures' ? 50 : 75,
+    ts: 0,
+    dur: 0,
+    ph: 'M',
+    cat: '__metadata',
+    name: 'process_labels',
+    args: {labels: 'Default'},
+  };
+  currentTrace.push(Object.assign({}, metaEvtBase, {args: {labels: 'Lighthouse Timing'}}));
+  currentTrace.push(Object.assign({}, metaEvtBase, {name: 'thread_name', args: {name: trackName}}));
+
   return currentTrace;
 }
 
@@ -69,9 +83,12 @@ function generateTraceEvents(entries, threadName = 'measures') {
  * @return {!string};
  */
 function createTraceString(lhr) {
-  const gatherEvents = generateTraceEvents(lhr.timing.gatherEntries, 'gather');
-  const auditEvents = generateTraceEvents(lhr.timing.entries);
-  const events = [...gatherEvents, ...auditEvents];
+  const gatherEntries = lhr.timing.entries.filter(entry => entry.gather);
+  const entries = lhr.timing.entries.filter(entry => !gatherEntries.includes(entry));
+
+  const auditEvents = generateTraceEvents(entries);
+  const gatherEvents = generateTraceEvents(gatherEntries, 'gather');
+  const events = [...auditEvents, ...gatherEvents];
 
   const jsonStr = `
   { "traceEvents": [
@@ -81,6 +98,4 @@ function createTraceString(lhr) {
   return jsonStr;
 }
 
-
 module.exports = {generateTraceEvents, createTraceString};
-

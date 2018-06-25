@@ -159,12 +159,13 @@ declare global {
         };
         frame?: string;
         name?: string;
+        labels?: string;
       };
-      pid: number|string;
-      tid: number|string;
+      pid: number;
+      tid: number;
       ts: number;
       dur: number;
-      ph: 'B'|'b'|'D'|'E'|'e'|'F'|'I'|'M'|'N'|'n'|'O'|'R'|'S'|'T'|'X';
+      ph: string; // one of 'B'|'b'|'D'|'E'|'e'|'F'|'I'|'M'|'N'|'n'|'O'|'R'|'S'|'T'|'X';
       s?: 't';
     }
 
