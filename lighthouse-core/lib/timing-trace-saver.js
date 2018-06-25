@@ -1,12 +1,9 @@
 /**
- * @license Copyright 2016 Google Inc. All Rights Reserved.
+ * @license Copyright 2018 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
 'use strict';
-
-const fs = require('fs');
-const path = require('path');
 
 /**
  * Technically, it's fine for usertiming measures to overlap, however non-async events make
@@ -66,61 +63,23 @@ function generateTraceEvents(entries, threadName = 'measures') {
 
 /**
  * Writes a trace file to disk
- * @param {LH.TraceEvent[]} events trace events
- * @param {?string} traceFilePath where to save the trace file
+ * @param {LH.Result} lhr
+ * @return {!string};
  */
-function saveTraceOfEvents(events, traceFilePath) {
+function createTraceString(lhr) {
+  const gatherEvents = generateTraceEvents(lhr.timing.gatherEntries, 'gather');
+  const auditEvents = generateTraceEvents(lhr.timing.entries);
+  const events = [...gatherEvents, ...auditEvents];
+
   const jsonStr = `
   { "traceEvents": [
     ${events.map(evt => JSON.stringify(evt)).join(',\n')}
   ]}`;
 
-  if (!traceFilePath) {
-    traceFilePath = path.resolve(process.cwd(), 'run-timing.trace.json');
-  }
-  fs.writeFileSync(traceFilePath, jsonStr, 'utf8');
-  // eslint-disable-next-line no-console
-  console.log(`
-  > Timing trace file saved to: ${traceFilePath}
-  > Open this file in chrome://tracing
-`);
+ return jsonStr;
 }
 
-/**
- * @param {!string} msg
- */
-function printErrorAndQuit(msg) {
-  // eslint-disable-next-line no-console
-  console.error(`ERROR:
-  > ${msg}
-  > Example:
-  >     yarn timing results.json
-  `)
-  process.exit(1);
-};
 
-/**
- * Takes filename of LHR object. The primary entrypoint on CLI
- */
-function saveTraceFromCLI() {
-  if (!process.argv[2]) {
-    printErrorAndQuit('Lighthouse JSON results path not provided');
-  }
-  const filename = path.resolve(process.cwd(), process.argv[2]);
-  if (!fs.existsSync(filename)) {
-    printErrorAndQuit('Lighthouse JSON results not found.');
-  }
 
-  const lhrObject = JSON.parse(fs.readFileSync(filename, 'utf8'));
-  const traceFilePath = `${filename}.run-timing.trace.json`;
+module.exports = {generateTraceEvents, createTraceString};
 
-  const gatherEvents = generateTraceEvents(lhrObject.timing.gatherEntries, 'gather');
-  const events = generateTraceEvents(lhrObject.timing.entries);
-  saveTraceOfEvents([...gatherEvents, ...events], traceFilePath);
-}
-
-if (require.main === module) {
-  saveTraceFromCLI();
-} else {
-  module.exports = {generateTraceEvents, saveTraceOfEvents, saveTraceFromCLI};
-}
