@@ -30,6 +30,8 @@ class Runner {
   static async run(connection, opts) {
     try {
       const settings = opts.config.settings;
+      const totalStatus = {msg: 'Total', id: 'total'};
+      log.time(totalStatus, 'verbose');
       const runnerStatus = {msg: 'Runner setup', id: 'lh:runner:run'};
       log.time(runnerStatus, 'verbose');
 
@@ -100,8 +102,8 @@ class Runner {
       const auditResults = await Runner._runAudits(settings, opts.config.audits, artifacts);
 
       // LHR construction phase
-      const status = {msg: 'Generating results...', id: 'lh:runner:generate'};
-      log.time(status);
+      const resultsStatus = {msg: 'Generating results...', id: 'lh:runner:generate'};
+      log.time(resultsStatus);
 
       if (artifacts.LighthouseRunWarnings) {
         lighthouseRunWarnings.push(...artifacts.LighthouseRunWarnings);
@@ -123,10 +125,7 @@ class Runner {
         categories = ReportScoring.scoreAllCategories(opts.config.categories, resultsById);
       }
 
-      log.timeEnd(status);
-      // Summarize all the timings and drop onto the LHR
-      artifacts.Timing = artifacts.Timing || {entries: []};
-      artifacts.Timing.entries.push(...log.getEntries());
+      log.timeEnd(resultsStatus);
 
       /** @type {LH.Result} */
       const lhr = {
@@ -140,11 +139,20 @@ class Runner {
         configSettings: settings,
         categories,
         categoryGroups: opts.config.groups || undefined,
-        timing: artifacts.Timing,
+        timing: {entries: artifacts.Timing || [], total: 0},
       };
 
+      // Summarize all the timings and drop onto the LHR
+      log.timeEnd(totalStatus);
+      lhr.timing.entries.push(...log.getEntries());
+      const totalEntry = log.getEntries().find(e => e.name === 'total');
+      if (totalEntry) {
+        lhr.timing.total = totalEntry.duration;
+      }
+
+      // Create the HTML, JSON, or CSV string
       const report = generateReport(lhr, settings.output);
-      log.timeEnd(status);
+
       return {lhr, artifacts, report};
     } catch (err) {
       // @ts-ignore TODO(bckenny): Sentry type checking
