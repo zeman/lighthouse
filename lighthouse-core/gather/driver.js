@@ -101,9 +101,13 @@ class Driver {
   /**
    * @return {Promise<string>}
    */
-  getUserAgent() {
+  async getUserAgent() {
+    const status = {msg: 'Getting userAgent', id: 'lh:gather:getUserAgent'};
+    log.time(status, 'verbose');
     // FIXME: use Browser.getVersion instead
-    return this.evaluateAsync('navigator.userAgent');
+    const userAgent = await this.evaluateAsync('navigator.userAgent');
+    log.timeEnd(status);
+    return userAgent;
   }
 
   /**

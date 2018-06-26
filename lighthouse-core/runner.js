@@ -30,8 +30,6 @@ class Runner {
   static async run(connection, opts) {
     try {
       const settings = opts.config.settings;
-      const totalStatus = {msg: 'Total', id: 'total'};
-      log.time(totalStatus, 'verbose');
       const runnerStatus = {msg: 'Runner setup', id: 'lh:runner:run'};
       log.time(runnerStatus, 'verbose');
 
@@ -70,7 +68,6 @@ class Runner {
         if (opts.url && opts.url !== requestedUrl) {
           throw new Error('Cannot run audit mode on different URL');
         }
-        log.timeEnd(runnerStatus);
       } else {
         if (typeof opts.url !== 'string' || opts.url.length === 0) {
           throw new Error(`You must provide a url to the runner. '${opts.url}' provided.`);
@@ -83,7 +80,6 @@ class Runner {
           throw new Error('The url provided should have a proper protocol and hostname.');
         }
 
-        log.timeEnd(runnerStatus);
         artifacts = await Runner._gatherArtifactsFromBrowser(requestedUrl, opts, connection);
         // -G means save these to ./latest-run, etc.
         if (settings.gatherMode) {
@@ -143,11 +139,11 @@ class Runner {
       };
 
       // Summarize all the timings and drop onto the LHR
-      log.timeEnd(totalStatus);
+      log.timeEnd(runnerStatus);
       lhr.timing.entries.push(...log.getEntries());
-      const totalEntry = log.getEntries().find(e => e.name === 'total');
-      if (totalEntry) {
-        lhr.timing.total = totalEntry.duration;
+      const runnerEntry = log.getEntries().find(e => e.name === 'lh:runner:run');
+      if (runnerEntry) {
+        lhr.timing.total = runnerEntry.duration;
       }
 
       // Create the HTML, JSON, or CSV string

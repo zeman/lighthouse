@@ -700,6 +700,8 @@ class Config {
    * @return {Config['audits']}
    */
   static requireAudits(audits, configPath) {
+    const status = {msg: 'Requiring audits', id: 'lh:config:requireAudits'};
+    log.time(status);
     const expandedAudits = Config.expandAuditShorthand(audits);
     if (!expandedAudits) {
       return null;
@@ -731,6 +733,7 @@ class Config {
 
     const mergedAuditDefns = mergeOptionsOfItems(auditDefns);
     mergedAuditDefns.forEach(audit => assertValidAudit(audit.implementation, audit.path));
+    log.timeEnd(status);
     return mergedAuditDefns;
   }
 
@@ -772,6 +775,8 @@ class Config {
     if (!passes) {
       return null;
     }
+    const status = {msg: 'Requiring gatherers', id: 'lh:config:requireGatherers'};
+    log.time(status);
 
     const coreList = Runner.getGathererList();
     const fullPasses = passes.map(pass => {
@@ -805,7 +810,7 @@ class Config {
 
       return Object.assign(pass, {gatherers: mergedDefns});
     });
-
+    log.timeEnd(status);
     return fullPasses;
   }
 }
