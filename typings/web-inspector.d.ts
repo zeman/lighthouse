@@ -10,12 +10,10 @@ declare global {
     // externs for old chrome-devtools-frontend/front_end/sdk/NetworkRequest.js
     export interface NetworkRequest {
       requestId: string;
-      _requestId: string;
       connectionId: string;
       connectionReused: boolean;
 
       url: string;
-      _url: string;
       protocol: string;
       parsedURL: ParsedURL;
       isSecure: boolean;
@@ -23,13 +21,13 @@ declare global {
 
       startTime: number;
       endTime: number;
-      _responseReceivedTime: number;
+      responseReceivedTime: number;
 
       transferSize: number;
       /** Should use a default of 0 if not defined */
-      _resourceSize?: number;
-      _fromDiskCache?: boolean;
-      _fromMemoryCache?: boolean;
+      resourceSize?: number;
+      fromDiskCache?: boolean;
+      fromMemoryCache?: boolean;
 
       finished: boolean;
       requestMethod: string;
@@ -40,17 +38,17 @@ declare global {
       failed?: boolean;
       localizedFailDescription?: string;
 
-      _initiator: Crdp.Network.Initiator;
-      _timing?: Crdp.Network.ResourceTiming;
-      _resourceType?: Crdp.Page.ResourceType;
-      _mimeType: string;
+      initiator: Crdp.Network.Initiator;
+      timing?: Crdp.Network.ResourceTiming;
+      resourceType?: Crdp.Page.ResourceType;
+      mimeType: string;
       priority(): Crdp.Network.ResourcePriority;
       initiatorRequest(): NetworkRequest | undefined;
-      _responseHeaders?: HeaderValue[];
+      responseHeaders?: HeaderValue[];
 
-      _fetchedViaServiceWorker?: boolean;
-      _frameId?: Crdp.Page.FrameId;
-      _isLinkPreload?: boolean;
+      fetchedViaServiceWorker?: boolean;
+      frameId?: Crdp.Page.FrameId;
+      isLinkPreload?: boolean;
     }
 
     export interface HeaderValue {

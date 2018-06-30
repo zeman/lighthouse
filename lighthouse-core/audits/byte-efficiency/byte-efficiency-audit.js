@@ -79,14 +79,14 @@ class UnusedBytes extends Audit {
       // roughly the size of the content gzipped.
       // See https://discuss.httparchive.org/t/file-size-and-compression-savings/145 for multipliers
       return Math.round(totalBytes * compressionRatio);
-    } else if (networkRecord._resourceType === resourceType) {
+    } else if (networkRecord.resourceType === resourceType) {
       // This was a regular standalone asset, just use the transfer size.
       return networkRecord.transferSize || 0;
     } else {
       // This was an asset that was inlined in a different resource type (e.g. HTML document).
       // Use the compression ratio of the resource to estimate the total transferred bytes.
       const transferSize = networkRecord.transferSize || 0;
-      const resourceSize = networkRecord._resourceSize;
+      const resourceSize = networkRecord.resourceSize;
       const compressionRatio = resourceSize !== undefined ? (transferSize / resourceSize) : 1;
       return Math.round(totalBytes * compressionRatio);
     }

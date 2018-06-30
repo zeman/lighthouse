@@ -30,7 +30,7 @@ class NetworkThroughput extends ComputedArtifact {
       }
 
       totalBytes += record.transferSize;
-      boundaries.push({time: record._responseReceivedTime, isStart: true});
+      boundaries.push({time: record.responseReceivedTime, isStart: true});
       boundaries.push({time: record.endTime, isStart: false});
       return boundaries;
     }, /** @type {Array<{time: number, isStart: boolean}>} */([])).sort((a, b) => a.time - b.time);

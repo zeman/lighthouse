@@ -77,7 +77,7 @@ class NetworkAnalyzer {
       let originEstimates = [];
 
       for (const record of originRecords) {
-        const timing = record._timing;
+        const timing = record.timing;
         if (!timing) continue;
 
         const value = iteratee({
@@ -327,7 +327,7 @@ class NetworkAnalyzer {
    */
   static findMainDocument(records) {
     // TODO(phulce): handle more edge cases like client redirects, or plumb through finalUrl
-    const documentRequests = records.filter(record => record._resourceType ===
+    const documentRequests = records.filter(record => record.resourceType ===
         NetworkRequest.TYPES.Document);
     return documentRequests.sort((a, b) => a.startTime - b.startTime)[0];
   }

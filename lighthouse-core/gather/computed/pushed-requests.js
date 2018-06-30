@@ -20,7 +20,7 @@ class PushedRequests extends ComputedArtifact {
    */
   compute_(devtoolsLog, artifacts) {
     return artifacts.requestNetworkRecords(devtoolsLog).then(records => {
-      const pushedRecords = records.filter(r => r._timing && !!r._timing.pushStart);
+      const pushedRecords = records.filter(r => r.timing && !!r.timing.pushStart);
       return pushedRecords;
     });
   }

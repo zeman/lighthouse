@@ -39,10 +39,10 @@ describe('network recorder', function() {
     const redirectURLs = mainDocument.redirects.map(request => request.url);
     assert.deepStrictEqual(redirectURLs, [redirectA.url, redirectB.url, redirectC.url]);
 
-    assert.equal(redirectA._resourceType, undefined);
-    assert.equal(redirectB._resourceType, undefined);
-    assert.equal(redirectC._resourceType, undefined);
-    assert.equal(mainDocument._resourceType, 'Document');
+    assert.equal(redirectA.resourceType, undefined);
+    assert.equal(redirectB.resourceType, undefined);
+    assert.equal(redirectC.resourceType, undefined);
+    assert.equal(mainDocument.resourceType, 'Document');
   });
 
   describe('#findNetworkQuietPeriods', () => {
@@ -121,8 +121,8 @@ describe('network recorder', function() {
     it('should handle QUIC requests', () => {
       const quicRequest = {
         finished: false,
-        _responseHeaders: [{name: 'ALT-SVC', value: 'hq=":49288";quic="1,1abadaba,51303334,0"'}],
-        _timing: {receiveHeadersEnd: 1.28},
+        responseHeaders: [{name: 'ALT-SVC', value: 'hq=":49288";quic="1,1abadaba,51303334,0"'}],
+        timing: {receiveHeadersEnd: 1.28},
       };
 
       const records = [

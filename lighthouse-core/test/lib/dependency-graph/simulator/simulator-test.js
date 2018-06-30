@@ -22,7 +22,7 @@ function request(opts) {
     url,
     transferSize: opts.transferSize || 1000,
     parsedURL: {scheme, securityOrigin: () => url},
-    _timing: opts.timing,
+    timing: opts.timing,
   }, opts);
 }
 
@@ -92,8 +92,8 @@ describe('DependencyGraph/Simulator', () => {
     });
 
     it('should simulate cached network graphs', () => {
-      const nodeA = new NetworkNode(request({startTime: 0, endTime: 1, _fromDiskCache: true}));
-      const nodeB = new NetworkNode(request({startTime: 0, endTime: 3, _fromDiskCache: true}));
+      const nodeA = new NetworkNode(request({startTime: 0, endTime: 1, fromDiskCache: true}));
+      const nodeB = new NetworkNode(request({startTime: 0, endTime: 3, fromDiskCache: true}));
       nodeA.addDependent(nodeB);
 
       const simulator = new Simulator({serverResponseTimeByOrigin});

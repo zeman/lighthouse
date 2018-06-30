@@ -35,13 +35,11 @@ const RESOURCE_TYPES = {
 module.exports = class NetworkRequest {
   constructor() {
     this.requestId = '';
-    this._requestId = '';
     // TODO(phulce): remove default DevTools connectionId
     this.connectionId = '0';
     this.connectionReused = false;
 
     this.url = '';
-    this._url = '';
     this.protocol = '';
     this.isSecure = false;
     this.parsedURL = /** @type {LH.WebInspector.ParsedURL} */ ({scheme: ''});
@@ -51,12 +49,12 @@ module.exports = class NetworkRequest {
     /** @type {number} */
     this.endTime = -1;
     /** @type {number} */
-    this._responseReceivedTime = -1;
+    this.responseReceivedTime = -1;
 
     this.transferSize = 0;
-    this._resourceSize = 0;
-    this._fromDiskCache = false;
-    this._fromMemoryCache = false;
+    this.resourceSize = 0;
+    this.fromDiskCache = false;
+    this.fromMemoryCache = false;
 
     this.finished = false;
     this.requestMethod = '';
@@ -70,22 +68,22 @@ module.exports = class NetworkRequest {
     this.failed = false;
     this.localizedFailDescription = '';
 
-    this._initiator = /** @type {LH.Crdp.Network.Initiator} */ ({type: 'other'});
+    this.initiator = /** @type {LH.Crdp.Network.Initiator} */ ({type: 'other'});
     /** @type {LH.Crdp.Network.ResourceTiming|undefined} */
-    this._timing = undefined;
+    this.timing = undefined;
     /** @type {LH.Crdp.Page.ResourceType|undefined} */
-    this._resourceType = undefined;
-    this._mimeType = '';
+    this.resourceType = undefined;
+    this.mimeType = '';
     this.priority = () => /** @type {LH.Crdp.Network.ResourcePriority} */ ('Low');
     /** @type {() => NetworkRequest|undefined} */
     this.initiatorRequest = () => undefined;
     /** @type {LH.WebInspector.HeaderValue[]} */
-    this._responseHeaders = [];
+    this.responseHeaders = [];
 
-    this._fetchedViaServiceWorker = false;
+    this.fetchedViaServiceWorker = false;
     /** @type {string|undefined} */
-    this._frameId = '';
-    this._isLinkPreload = false;
+    this.frameId = '';
+    this.isLinkPreload = false;
 
     // Make sure we're compatible with old WebInspector.NetworkRequest
     // eslint-disable-next-line no-unused-vars
@@ -104,11 +102,9 @@ module.exports = class NetworkRequest {
    */
   onRequestWillBeSent(data) {
     this.requestId = data.requestId;
-    this._requestId = data.requestId;
 
     const url = new URL(data.request.url);
     this.url = data.request.url;
-    this._url = data.request.url;
     this.documentURL = data.documentURL;
     this.parsedURL = {
       scheme: url.protocol.split(':')[0],
@@ -122,16 +118,16 @@ module.exports = class NetworkRequest {
 
     this.requestMethod = data.request.method;
 
-    this._initiator = data.initiator;
-    this._resourceType = data.type && RESOURCE_TYPES[data.type];
+    this.initiator = data.initiator;
+    this.resourceType = data.type && RESOURCE_TYPES[data.type];
     this.priority = () => data.request.initialPriority;
 
-    this._frameId = data.frameId;
-    this._isLinkPreload = data.initiator.type === 'preload' || !!data.request.isLinkPreload;
+    this.frameId = data.frameId;
+    this.isLinkPreload = data.initiator.type === 'preload' || !!data.request.isLinkPreload;
   }
 
   onRequestServedFromCache() {
-    this._fromMemoryCache = true;
+    this.fromMemoryCache = true;
   }
 
   /**
@@ -139,14 +135,14 @@ module.exports = class NetworkRequest {
    */
   onResponseReceived(data) {
     this._onResponse(data.response, data.timestamp, data.type);
-    this._frameId = data.frameId;
+    this.frameId = data.frameId;
   }
 
   /**
    * @param {LH.Crdp.Network.DataReceivedEvent} data
    */
   onDataReceived(data) {
-    this._resourceSize += data.dataLength;
+    this.resourceSize += data.dataLength;
     if (data.encodedDataLength !== -1) {
       this.transferSize += data.encodedDataLength;
     }
@@ -179,7 +175,7 @@ module.exports = class NetworkRequest {
     this.endTime = data.timestamp;
 
     this.failed = true;
-    this._resourceType = data.type && RESOURCE_TYPES[data.type];
+    this.resourceType = data.type && RESOURCE_TYPES[data.type];
     this.localizedFailDescription = data.errorText;
 
     this._updateResponseReceivedTimeIfNecessary();
@@ -198,7 +194,7 @@ module.exports = class NetworkRequest {
   onRedirectResponse(data) {
     if (!data.redirectResponse) throw new Error('Missing redirectResponse data');
     this._onResponse(data.redirectResponse, data.timestamp, data.type);
-    this._resourceType = undefined;
+    this.resourceType = undefined;
     this.finished = true;
     this.endTime = data.timestamp;
 
@@ -212,29 +208,28 @@ module.exports = class NetworkRequest {
    */
   _onResponse(response, timestamp, resourceType) {
     this.url = response.url;
-    this._url = response.url;
 
     this.connectionId = String(response.connectionId);
     this.connectionReused = response.connectionReused;
 
     if (response.protocol) this.protocol = response.protocol;
 
-    this._responseReceivedTime = timestamp;
+    this.responseReceivedTime = timestamp;
 
     this.transferSize = response.encodedDataLength;
-    if (typeof response.fromDiskCache === 'boolean') this._fromDiskCache = response.fromDiskCache;
+    if (typeof response.fromDiskCache === 'boolean') this.fromDiskCache = response.fromDiskCache;
 
     this.statusCode = response.status;
 
-    this._timing = response.timing;
-    if (resourceType) this._resourceType = RESOURCE_TYPES[resourceType];
-    this._mimeType = response.mimeType;
-    this._responseHeaders = NetworkRequest._headersDictToHeadersArray(response.headers);
+    this.timing = response.timing;
+    if (resourceType) this.resourceType = RESOURCE_TYPES[resourceType];
+    this.mimeType = response.mimeType;
+    this.responseHeaders = NetworkRequest._headersDictToHeadersArray(response.headers);
 
-    this._fetchedViaServiceWorker = !!response.fromServiceWorker;
+    this.fetchedViaServiceWorker = !!response.fromServiceWorker;
 
-    if (this._fromMemoryCache) this._timing = undefined;
-    if (this._timing) this._recomputeTimesWithResourceTiming(this._timing);
+    if (this.fromMemoryCache) this.timing = undefined;
+    if (this.timing) this._recomputeTimesWithResourceTiming(this.timing);
   }
 
   /**
@@ -247,13 +242,13 @@ module.exports = class NetworkRequest {
     // Timing's requestTime is a baseline in seconds, rest of the numbers there are ticks in millis.
     this.startTime = timing.requestTime;
     const headersReceivedTime = timing.requestTime + timing.receiveHeadersEnd / 1000;
-    if (!this._responseReceivedTime || this._responseReceivedTime < 0) {
-      this._responseReceivedTime = headersReceivedTime;
+    if (!this.responseReceivedTime || this.responseReceivedTime < 0) {
+      this.responseReceivedTime = headersReceivedTime;
     }
 
-    this._responseReceivedTime = Math.min(this._responseReceivedTime, headersReceivedTime);
-    this._responseReceivedTime = Math.max(this._responseReceivedTime, this.startTime);
-    this.endTime = Math.max(this.endTime, this._responseReceivedTime);
+    this.responseReceivedTime = Math.min(this.responseReceivedTime, headersReceivedTime);
+    this.responseReceivedTime = Math.max(this.responseReceivedTime, this.startTime);
+    this.endTime = Math.max(this.endTime, this.responseReceivedTime);
   }
 
   /**
@@ -261,7 +256,7 @@ module.exports = class NetworkRequest {
    * A response can't be received after the entire request finished.
    */
   _updateResponseReceivedTimeIfNecessary() {
-    this._responseReceivedTime = Math.min(this.endTime, this._responseReceivedTime);
+    this.responseReceivedTime = Math.min(this.endTime, this.responseReceivedTime);
   }
 
   /**

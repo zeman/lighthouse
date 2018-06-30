@@ -266,7 +266,7 @@ class Simulator {
     if (networkNode.fromDiskCache) {
       // Rough access time for seeking to location on disk and reading sequentially
       // @see http://norvig.com/21-days.html#answers
-      const sizeInMb = (networkNode.record._resourceSize || 0) / 1024 / 1024;
+      const sizeInMb = (networkNode.record.resourceSize || 0) / 1024 / 1024;
       timeElapsed = 8 + 20 * sizeInMb - timingData.timeElapsed;
     } else {
       // If we're estimating time remaining, we already acquired a connection for this record, definitely non-null

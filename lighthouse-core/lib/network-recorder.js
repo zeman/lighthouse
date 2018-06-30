@@ -93,9 +93,9 @@ class NetworkRecorder extends EventEmitter {
    * @return {boolean}
    */
   static _isQUICAndFinished(record) {
-    const isQUIC = record._responseHeaders && record._responseHeaders
+    const isQUIC = record.responseHeaders && record.responseHeaders
         .some(header => header.name.toLowerCase() === 'alt-svc' && /quic/.test(header.value));
-    const receivedHeaders = record._timing && record._timing.receiveHeadersEnd > 0;
+    const receivedHeaders = record.timing && record.timing.receiveHeadersEnd > 0;
     return !!(isQUIC && receivedHeaders && record.endTime);
   }
 
@@ -207,7 +207,7 @@ class NetworkRecorder extends EventEmitter {
       ...data,
       // Copy over the initiator as well to match DevTools behavior
       // TODO(phulce): abandon this DT hack and update Lantern graph to handle it
-      initiator: originalRequest._initiator,
+      initiator: originalRequest.initiator,
       requestId: `${originalRequest.requestId}:redirect`,
     };
     const redirectedRequest = new NetworkRequest();
@@ -342,8 +342,8 @@ class NetworkRecorder extends EventEmitter {
 
     // set the initiator and redirects array
     for (const record of records) {
-      const stackFrames = (record._initiator.stack && record._initiator.stack.callFrames) || [];
-      const initiatorURL = record._initiator.url || (stackFrames[0] && stackFrames[0].url);
+      const stackFrames = (record.initiator.stack && record.initiator.stack.callFrames) || [];
+      const initiatorURL = record.initiator.url || (stackFrames[0] && stackFrames[0].url);
       const initiator = recordsByURL.get(initiatorURL) || record.redirectSource;
       if (initiator) {
         record.setInitiatorRequest(initiator);

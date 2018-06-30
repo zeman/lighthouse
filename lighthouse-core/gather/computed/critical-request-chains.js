@@ -26,13 +26,13 @@ class CriticalRequestChains extends ComputedArtifact {
     assert.ok(mainResource, 'mainResource not provided');
 
     // Treat any preloaded resource as non-critical
-    if (request._isLinkPreload) {
+    if (request.isLinkPreload) {
       return false;
     }
 
     // Iframes are considered High Priority but they are not render blocking
-    const isIframe = request._resourceType === NetworkRequest.TYPES.Document
-      && request._frameId !== mainResource._frameId;
+    const isIframe = request.resourceType === NetworkRequest.TYPES.Document
+      && request.frameId !== mainResource.frameId;
     // XHRs are fetched at High priority, but we exclude them, as they are unlikely to be critical
     // Images are also non-critical.
     // Treat any missed images, primarily favicons, as non-critical resources
@@ -42,9 +42,9 @@ class CriticalRequestChains extends ComputedArtifact {
       NetworkRequest.TYPES.Fetch,
       NetworkRequest.TYPES.EventSource,
     ];
-    if (nonCriticalResourceTypes.includes(request._resourceType || 'Other') ||
+    if (nonCriticalResourceTypes.includes(request.resourceType || 'Other') ||
         isIframe ||
-        request._mimeType && request._mimeType.startsWith('image/')) {
+        request.mimeType && request.mimeType.startsWith('image/')) {
       return false;
     }
 

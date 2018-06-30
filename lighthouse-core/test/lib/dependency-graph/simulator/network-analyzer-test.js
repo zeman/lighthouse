@@ -36,7 +36,7 @@ describe('DependencyGraph/Simulator/NetworkAnalyzer', () => {
         transferSize: 0,
         protocol: 'http/1.1',
         parsedURL: {scheme: url.match(/https?/)[0], securityOrigin: () => url.match(/.*\.com/)[0]},
-        _timing: opts.timing || null,
+        timing: opts.timing || null,
       },
       opts
     );
