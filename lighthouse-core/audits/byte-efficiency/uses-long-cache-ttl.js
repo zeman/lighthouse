@@ -128,7 +128,7 @@ class CacheHeaders extends Audit {
    *
    * TODO: Investigate impact in HTTPArchive, experiment with this policy to see what changes.
    *
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static isCacheableAsset(record) {

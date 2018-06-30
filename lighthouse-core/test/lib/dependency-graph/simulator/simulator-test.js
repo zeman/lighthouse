@@ -21,7 +21,7 @@ function request(opts) {
     requestId: opts.requestId || nextRequestId++,
     url,
     transferSize: opts.transferSize || 1000,
-    parsedURL: {scheme, securityOrigin: () => url},
+    parsedURL: {scheme, securityOrigin: url},
     timing: opts.timing,
   }, opts);
 }

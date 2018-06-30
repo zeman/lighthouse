@@ -29,7 +29,7 @@ const textResourceTypes = [
 
 class ResponseCompression extends Gatherer {
   /**
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {LH.Artifacts['ResponseCompression']}
    */
   static filterUnoptimizedResponses(networkRecords) {

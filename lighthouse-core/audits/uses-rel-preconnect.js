@@ -34,7 +34,7 @@ class UsesRelPreconnectAudit extends Audit {
 
   /**
    * Check if record has valid timing
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static hasValidTiming(record) {
@@ -43,7 +43,7 @@ class UsesRelPreconnectAudit extends Audit {
 
   /**
    * Check is the connection is already open
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static hasAlreadyConnectedToOrigin(record) {
@@ -56,8 +56,8 @@ class UsesRelPreconnectAudit extends Audit {
 
   /**
    * Check is the connection has started before the socket idle time
-   * @param {LH.WebInspector.NetworkRequest} record
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {boolean}
    */
   static socketStartTimeIsBelowThreshold(record, mainResource) {
@@ -83,7 +83,7 @@ class UsesRelPreconnectAudit extends Audit {
 
     const {rtt, additionalRttByOrigin} = loadSimulator.getOptions();
 
-    /** @type {Map<string, LH.WebInspector.NetworkRequest[]>}  */
+    /** @type {Map<string, LH.Artifacts.NetworkRequest[]>}  */
     const origins = new Map();
     networkRecords
       .forEach(record => {
@@ -93,9 +93,9 @@ class UsesRelPreconnectAudit extends Audit {
           // filter out all resources that are loaded by the document
           record.initiator.url === mainResource.url ||
           // filter out urls that do not have an origin (data, ...)
-          !record.parsedURL || !record.parsedURL.securityOrigin() ||
+          !record.parsedURL || !record.parsedURL.securityOrigin ||
           // filter out all resources that have the same origin
-          mainResource.parsedURL.securityOrigin() === record.parsedURL.securityOrigin() ||
+          mainResource.parsedURL.securityOrigin === record.parsedURL.securityOrigin ||
           // filter out all resources where origins are already resolved
           UsesRelPreconnectAudit.hasAlreadyConnectedToOrigin(record) ||
           // make sure the requests are below the PRECONNECT_SOCKET_MAX_IDLE (15s) mark
@@ -104,7 +104,7 @@ class UsesRelPreconnectAudit extends Audit {
           return;
         }
 
-        const securityOrigin = record.parsedURL.securityOrigin();
+        const securityOrigin = record.parsedURL.securityOrigin;
         const records = origins.get(securityOrigin) || [];
         records.push(record);
         origins.set(securityOrigin, records);
@@ -122,7 +122,7 @@ class UsesRelPreconnectAudit extends Audit {
       // Skip the origin if we don't have timing information
       if (!firstRecordOfOrigin.timing) return;
 
-      const securityOrigin = firstRecordOfOrigin.parsedURL.securityOrigin();
+      const securityOrigin = firstRecordOfOrigin.parsedURL.securityOrigin;
 
       // Approximate the connection time with the duration of TCP (+potentially SSL) handshake
       // DNS time can be large but can also be 0 if a commonly used origin that's cached, so make

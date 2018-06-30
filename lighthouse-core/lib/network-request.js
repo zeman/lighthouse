@@ -15,6 +15,19 @@ const URL = require('./url-shim');
 
 const SECURE_SCHEMES = ['data', 'https', 'wss', 'blob', 'chrome', 'chrome-extension', 'about'];
 
+/**
+ * @typedef HeaderEntry
+ * @property {string} name
+ * @property {string} value
+ */
+
+/**
+ * @typedef ParsedURL
+ * @property {string} scheme
+ * @property {string} host
+ * @property {string} securityOrigin
+ */
+
 /** @type {Record<LH.Crdp.Page.ResourceType, LH.Crdp.Page.ResourceType>} */
 const RESOURCE_TYPES = {
   XHR: 'XHR',
@@ -42,7 +55,7 @@ module.exports = class NetworkRequest {
     this.url = '';
     this.protocol = '';
     this.isSecure = false;
-    this.parsedURL = /** @type {LH.WebInspector.ParsedURL} */ ({scheme: ''});
+    this.parsedURL = /** @type {ParsedURL} */ ({scheme: ''});
     this.documentURL = '';
 
     this.startTime = -1;
@@ -74,27 +87,24 @@ module.exports = class NetworkRequest {
     /** @type {LH.Crdp.Page.ResourceType|undefined} */
     this.resourceType = undefined;
     this.mimeType = '';
-    this.priority = () => /** @type {LH.Crdp.Network.ResourcePriority} */ ('Low');
-    /** @type {() => NetworkRequest|undefined} */
-    this.initiatorRequest = () => undefined;
-    /** @type {LH.WebInspector.HeaderValue[]} */
+    /** @type {LH.Crdp.Network.ResourcePriority} */
+    this.priority = 'Low';
+    /** @type {NetworkRequest|undefined} */
+    this.initiatorRequest = undefined;
+    /** @type {HeaderEntry[]} */
     this.responseHeaders = [];
 
     this.fetchedViaServiceWorker = false;
     /** @type {string|undefined} */
     this.frameId = '';
     this.isLinkPreload = false;
-
-    // Make sure we're compatible with old WebInspector.NetworkRequest
-    // eslint-disable-next-line no-unused-vars
-    const record = /** @type {LH.WebInspector.NetworkRequest} */ (this);
   }
 
   /**
    * @param {NetworkRequest} initiator
    */
   setInitiatorRequest(initiator) {
-    this.initiatorRequest = () => initiator;
+    this.initiatorRequest = initiator;
   }
 
   /**
@@ -110,7 +120,7 @@ module.exports = class NetworkRequest {
       scheme: url.protocol.split(':')[0],
       // Intentional, DevTools uses different terminology
       host: url.hostname,
-      securityOrigin: () => url.origin,
+      securityOrigin: url.origin,
     };
     this.isSecure = SECURE_SCHEMES.includes(this.parsedURL.scheme);
 
@@ -120,7 +130,7 @@ module.exports = class NetworkRequest {
 
     this.initiator = data.initiator;
     this.resourceType = data.type && RESOURCE_TYPES[data.type];
-    this.priority = () => data.request.initialPriority;
+    this.priority = data.request.initialPriority;
 
     this.frameId = data.frameId;
     this.isLinkPreload = data.initiator.type === 'preload' || !!data.request.isLinkPreload;
@@ -185,7 +195,7 @@ module.exports = class NetworkRequest {
    * @param {LH.Crdp.Network.ResourceChangedPriorityEvent} data
    */
   onResourceChangedPriority(data) {
-    this.priority = () => data.newPriority;
+    this.priority = data.newPriority;
   }
 
   /**
@@ -273,7 +283,7 @@ module.exports = class NetworkRequest {
    * Based on DevTools NetworkManager.
    * @see https://github.com/ChromeDevTools/devtools-frontend/blob/3415ee28e86a3f4bcc2e15b652d22069938df3a6/front_end/sdk/NetworkManager.js#L285-L297
    * @param {LH.Crdp.Network.Headers} headersDict
-   * @return {Array<LH.WebInspector.HeaderValue>}
+   * @return {Array<HeaderEntry>}
    */
   static _headersDictToHeadersArray(headersDict) {
     const result = [];

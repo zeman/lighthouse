@@ -40,7 +40,7 @@ class BootupTime extends Audit {
   }
 
   /**
-   * @param {LH.WebInspector.NetworkRequest[]} records
+   * @param {LH.Artifacts.NetworkRequest[]} records
    */
   static getJavaScriptURLs(records) {
     /** @type {Set<string>} */

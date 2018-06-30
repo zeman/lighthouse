@@ -74,7 +74,7 @@ function getOptimizedNumBytes(url) {
 class OptimizedImages extends Gatherer {
   /**
    * @param {string} pageUrl
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {Array<SimplifiedNetworkRecord>}
    */
   static filterImageRequests(pageUrl, networkRecords) {

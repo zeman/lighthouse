@@ -93,7 +93,7 @@ function collectTagsThatBlockFirstPaint() {
 
 class TagsBlockingFirstPaint extends Gatherer {
   /**
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    */
   static _filteredAndIndexedByUrl(networkRecords) {
     /** @type {Object<string, {isLinkPreload: boolean, transferSize: number, startTime: number, endTime: number}>} */
@@ -128,7 +128,7 @@ class TagsBlockingFirstPaint extends Gatherer {
 
   /**
    * @param {Driver} driver
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    */
   static findBlockingTags(driver, networkRecords) {
     const scriptSrc = `(${collectTagsThatBlockFirstPaint.toString()}())`;

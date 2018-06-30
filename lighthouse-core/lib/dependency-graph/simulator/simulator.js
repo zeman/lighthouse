@@ -74,7 +74,7 @@ class Simulator {
    * @param {Node} graph
    */
   _initializeConnectionPool(graph) {
-    /** @type {LH.WebInspector.NetworkRequest[]} */
+    /** @type {LH.Artifacts.NetworkRequest[]} */
     const records = [];
     graph.getRootNode().traverse(node => {
       if (node.type === BaseNode.TYPES.NETWORK) {
@@ -169,7 +169,7 @@ class Simulator {
   }
 
   /**
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {?TcpConnection}
    */
   _acquireConnection(record) {

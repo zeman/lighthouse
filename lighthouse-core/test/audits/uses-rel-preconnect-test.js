@@ -14,7 +14,7 @@ const assert = require('assert');
 const mainResource = {
   url: 'https://www.example.com/',
   parsedURL: {
-    securityOrigin: () => 'https://www.example.com',
+    securityOrigin: 'https://www.example.com',
   },
   endTime: 1,
 };
@@ -37,7 +37,7 @@ describe('Performance: uses-rel-preconnect audit', () => {
       {
         url: 'https://www.example.com/request',
         parsedURL: {
-          securityOrigin: () => 'https://www.example.com',
+          securityOrigin: 'https://www.example.com',
         },
       },
     ];
@@ -153,7 +153,7 @@ describe('Performance: uses-rel-preconnect audit', () => {
         initiator: {},
         parsedURL: {
           scheme: 'https',
-          securityOrigin: () => 'https://cdn.example.com',
+          securityOrigin: 'https://cdn.example.com',
         },
         startTime: 2,
         timing: {
@@ -167,7 +167,7 @@ describe('Performance: uses-rel-preconnect audit', () => {
         initiator: {},
         parsedURL: {
           scheme: 'https',
-          securityOrigin: () => 'https://cdn.example.com',
+          securityOrigin: 'https://cdn.example.com',
         },
         startTime: 3,
         timing: {
@@ -200,7 +200,7 @@ describe('Performance: uses-rel-preconnect audit', () => {
         initiator: {},
         parsedURL: {
           scheme: 'http',
-          securityOrigin: () => 'http://cdn.example.com',
+          securityOrigin: 'http://cdn.example.com',
         },
         startTime: 2,
         timing: {
@@ -214,7 +214,7 @@ describe('Performance: uses-rel-preconnect audit', () => {
         initiator: {},
         parsedURL: {
           scheme: 'https',
-          securityOrigin: () => 'https://othercdn.example.com',
+          securityOrigin: 'https://othercdn.example.com',
         },
         startTime: 1.2,
         timing: {

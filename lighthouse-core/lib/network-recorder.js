@@ -89,7 +89,7 @@ class NetworkRecorder extends EventEmitter {
   /**
    * QUIC network requests don't always "finish" even when they're done loading data, use recievedHeaders
    * @see https://github.com/GoogleChrome/lighthouse/issues/5254
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static _isQUICAndFinished(record) {
@@ -102,7 +102,7 @@ class NetworkRecorder extends EventEmitter {
   /**
    * Finds all time periods where the number of inflight requests is less than or equal to the
    * number of allowed concurrent requests.
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @param {number} allowedConcurrentRequests
    * @param {number=} endTime
    * @return {Array<{start: number, end: number}>}
@@ -323,7 +323,7 @@ class NetworkRecorder extends EventEmitter {
   /**
    * Construct network records from a log of devtools protocol messages.
    * @param {LH.DevtoolsLog} devtoolsLog
-   * @return {Array<LH.WebInspector.NetworkRequest>}
+   * @return {Array<LH.Artifacts.NetworkRequest>}
    */
   static recordsFromLogs(devtoolsLog) {
     const networkRecorder = new NetworkRecorder();

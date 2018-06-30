@@ -23,16 +23,16 @@ describe('network recorder', function() {
     assert.equal(records.length, 25);
 
     const [redirectA, redirectB, redirectC, mainDocument] = records.slice(0, 4);
-    assert.equal(redirectA.initiatorRequest(), undefined);
+    assert.equal(redirectA.initiatorRequest, undefined);
     assert.equal(redirectA.redirectSource, undefined);
     assert.equal(redirectA.redirectDestination, redirectB);
-    assert.equal(redirectB.initiatorRequest(), redirectA);
+    assert.equal(redirectB.initiatorRequest, redirectA);
     assert.equal(redirectB.redirectSource, redirectA);
     assert.equal(redirectB.redirectDestination, redirectC);
-    assert.equal(redirectC.initiatorRequest(), redirectB);
+    assert.equal(redirectC.initiatorRequest, redirectB);
     assert.equal(redirectC.redirectSource, redirectB);
     assert.equal(redirectC.redirectDestination, mainDocument);
-    assert.equal(mainDocument.initiatorRequest(), redirectC);
+    assert.equal(mainDocument.initiatorRequest, redirectC);
     assert.equal(mainDocument.redirectSource, redirectC);
     assert.equal(mainDocument.redirectDestination, undefined);
 

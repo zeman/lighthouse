@@ -18,8 +18,8 @@ class CriticalRequestChains extends ComputedArtifact {
    * For now, we use network priorities as a proxy for "render-blocking"/critical-ness.
    * It's imperfect, but there is not a higher-fidelity signal available yet.
    * @see https://docs.google.com/document/d/1bCDuq9H1ih9iNjgzyAL0gpwNFiEP4TZS-YLRp_RuMlc
-   * @param {LH.WebInspector.NetworkRequest} request
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} request
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {boolean}
    */
   static isCritical(request, mainResource) {
@@ -48,26 +48,26 @@ class CriticalRequestChains extends ComputedArtifact {
       return false;
     }
 
-    return ['VeryHigh', 'High', 'Medium'].includes(request.priority());
+    return ['VeryHigh', 'High', 'Medium'].includes(request.priority);
   }
 
   /**
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {LH.Artifacts.CriticalRequestNode}
    */
   static extractChain(networkRecords, mainResource) {
     networkRecords = networkRecords.filter(req => req.finished);
 
     // Build a map of requestID -> Node.
-    /** @type {Map<string, LH.WebInspector.NetworkRequest>} */
+    /** @type {Map<string, LH.Artifacts.NetworkRequest>} */
     const requestIdToRequests = new Map();
     for (const request of networkRecords) {
       requestIdToRequests.set(request.requestId, request);
     }
 
     // Get all the critical requests.
-    /** @type {Array<LH.WebInspector.NetworkRequest>} */
+    /** @type {Array<LH.Artifacts.NetworkRequest>} */
     const criticalRequests = networkRecords.filter(request =>
       CriticalRequestChains.isCritical(request, mainResource));
 
@@ -80,7 +80,7 @@ class CriticalRequestChains extends ComputedArtifact {
       // during this phase.
       /** @type {Array<string>} */
       const ancestors = [];
-      let ancestorRequest = request.initiatorRequest();
+      let ancestorRequest = request.initiatorRequest;
       /** @type {LH.Artifacts.CriticalRequestNode|undefined} */
       let node = criticalRequestChains;
       while (ancestorRequest) {
@@ -98,7 +98,7 @@ class CriticalRequestChains extends ComputedArtifact {
           break;
         }
         ancestors.push(ancestorRequest.requestId);
-        ancestorRequest = ancestorRequest.initiatorRequest();
+        ancestorRequest = ancestorRequest.initiatorRequest;
       }
 
       // With the above array we can work from back to front, i.e. A, B, C, and during this process

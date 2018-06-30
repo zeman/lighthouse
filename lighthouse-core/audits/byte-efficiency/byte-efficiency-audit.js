@@ -67,7 +67,7 @@ class UnusedBytes extends Audit {
    * Estimates the number of bytes this network record would have consumed on the network based on the
    * uncompressed size (totalBytes). Uses the actual transfer size from the network record if applicable.
    *
-   * @param {LH.WebInspector.NetworkRequest=} networkRecord
+   * @param {LH.Artifacts.NetworkRequest=} networkRecord
    * @param {number} totalBytes Uncompressed size of the resource
    * @param {LH.Crdp.Page.ResourceType=} resourceType
    * @param {number=} compressionRatio
@@ -220,7 +220,7 @@ class UnusedBytes extends Audit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @param {LH.Audit.Context} context
    * @return {ByteEfficiencyProduct|Promise<ByteEfficiencyProduct>}
    */

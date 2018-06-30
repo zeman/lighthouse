@@ -24,7 +24,7 @@ class TTFBMetric extends Audit {
   }
 
   /**
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    */
   static caclulateTTFB(record) {
     const timing = record.timing;

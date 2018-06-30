@@ -50,8 +50,8 @@ class Interactive extends MetricArtifact {
       return (
         !isImage &&
         (isScript ||
-          node.record.priority() === 'High' ||
-          node.record.priority() === 'VeryHigh')
+          node.record.priority === 'High' ||
+          node.record.priority === 'VeryHigh')
       );
     });
   }

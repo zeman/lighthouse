@@ -120,7 +120,7 @@ function convertNodeTimingsToTrace(nodeTimings) {
   }
 
   /**
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @param {LH.Gatherer.Simulation.NodeTiming} timing
    * @return {LH.TraceEvent[]}
    */
@@ -140,7 +140,7 @@ function convertNodeTimingsToTrace(nodeTimings) {
       ...requestData,
       requestMethod: record.requestMethod,
       url: record.url,
-      priority: record.priority(),
+      priority: record.priority,
     };
 
     const receiveResponseData = {

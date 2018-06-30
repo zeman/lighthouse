@@ -10,7 +10,7 @@ const NetworkRequest = require('../network-request');
 
 class NetworkNode extends BaseNode {
   /**
-   * @param {LH.WebInspector.NetworkRequest} networkRecord
+   * @param {LH.Artifacts.NetworkRequest} networkRecord
    */
   constructor(networkRecord) {
     super(networkRecord.requestId);
@@ -37,7 +37,7 @@ class NetworkNode extends BaseNode {
   }
 
   /**
-   * @return {LH.WebInspector.NetworkRequest}
+   * @return {LH.Artifacts.NetworkRequest}
    */
   get record() {
     return this._record;
@@ -61,7 +61,7 @@ class NetworkNode extends BaseNode {
    * @return {boolean}
    */
   hasRenderBlockingPriority() {
-    const priority = this._record.priority();
+    const priority = this._record.priority;
     const isScript = this._record.resourceType === NetworkRequest.TYPES.Script;
     const isDocument = this._record.resourceType === NetworkRequest.TYPES.Document;
     const isBlockingScript = priority === 'High' && isScript;
