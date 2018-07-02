@@ -20,6 +20,7 @@ const fakeImageStats = {
 const traceData = {
   networkRecords: [
     {
+      requestId: '1',
       url: 'http://google.com/image.jpg',
       mimeType: 'image/jpeg',
       resourceSize: 10000,
@@ -28,6 +29,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://google.com/transparent.png',
       mimeType: 'image/png',
       resourceSize: 11000,
@@ -36,6 +38,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://google.com/image.bmp',
       mimeType: 'image/bmp',
       resourceSize: 12000,
@@ -44,6 +47,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://google.com/image.bmp',
       mimeType: 'image/bmp',
       resourceSize: 12000,
@@ -52,6 +56,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://google.com/vector.svg',
       mimeType: 'image/svg+xml',
       resourceSize: 13000,
@@ -60,6 +65,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://gmail.com/image.jpg',
       mimeType: 'image/jpeg',
       resourceSize: 15000,
@@ -68,6 +74,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'data: image/jpeg ; base64 ,SgVcAT32587935321...',
       mimeType: 'image/jpeg',
       resourceType: 'Image',
@@ -76,6 +83,7 @@ const traceData = {
       finished: true,
     },
     {
+      requestId: '1',
       url: 'http://google.com/big-image.bmp',
       mimeType: 'image/bmp',
       resourceType: 'Image',
@@ -84,6 +92,7 @@ const traceData = {
       finished: false, // ignore for not finishing
     },
     {
+      requestId: '1',
       url: 'http://google.com/not-an-image.bmp',
       mimeType: 'image/bmp',
       resourceType: 'Document', // ignore for not really being an image
