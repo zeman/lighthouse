@@ -18,12 +18,13 @@ const URL = require('./lib/url-shim');
 const Sentry = require('./lib/sentry');
 const generateReport = require('./report/report-generator').generateReport;
 
-const Connection = require('./gather/connections/connection.js'); // eslint-disable-line no-unused-vars
+/** @typedef {import('./gather/connections/connection.js')} Connection */
+/** @typedef {import('./config/config.js')} Config */
 
 class Runner {
   /**
    * @param {Connection} connection
-   * @param {{config: LH.Config, url?: string, driverMock?: Driver}} opts
+   * @param {{config: Config, url?: string, driverMock?: Driver}} opts
    * @return {Promise<LH.RunnerResult|undefined>}
    */
   static async run(connection, opts) {
@@ -145,7 +146,7 @@ class Runner {
   /**
    * Establish connection, load page and collect all required artifacts
    * @param {string} requestedUrl
-   * @param {{config: LH.Config, driverMock?: Driver}} runnerOpts
+   * @param {{config: Config, driverMock?: Driver}} runnerOpts
    * @param {Connection} connection
    * @return {Promise<LH.Artifacts>}
    */
@@ -207,7 +208,7 @@ class Runner {
    */
   static async _runAudit(auditDefn, artifacts, settings) {
     const audit = auditDefn.implementation;
-    const status = `Evaluating: ${audit.meta.description}`;
+    const status = `Evaluating: ${audit.meta.title}`;
 
     log.log('status', status);
     let auditResult;
@@ -222,7 +223,7 @@ class Runner {
 
         if (noArtifact || noTrace) {
           log.warn('Runner',
-              `${artifactName} gatherer, required by audit ${audit.meta.name}, did not run.`);
+              `${artifactName} gatherer, required by audit ${audit.meta.id}, did not run.`);
           throw new Error(`Required ${artifactName} gatherer did not run.`);
         }
 
@@ -239,7 +240,7 @@ class Runner {
             level: 'error',
           });
 
-          log.warn('Runner', `${artifactName} gatherer, required by audit ${audit.meta.name},` +
+          log.warn('Runner', `${artifactName} gatherer, required by audit ${audit.meta.id},` +
             ` encountered an error: ${artifactError.message}`);
 
           // Create a friendlier display error and mark it as expected to avoid duplicates in Sentry
@@ -256,13 +257,13 @@ class Runner {
       const product = await audit.audit(artifacts, {options: auditOptions, settings: settings});
       auditResult = Audit.generateAuditResult(audit, product);
     } catch (err) {
-      log.warn(audit.meta.name, `Caught exception: ${err.message}`);
+      log.warn(audit.meta.id, `Caught exception: ${err.message}`);
       if (err.fatal) {
         throw err;
       }
 
       // @ts-ignore TODO(bckenny): Sentry type checking
-      Sentry.captureException(err, {tags: {audit: audit.meta.name}, level: 'error'});
+      Sentry.captureException(err, {tags: {audit: audit.meta.id}, level: 'error'});
       // Non-fatal error become error audit result.
       const errorMessage = err.friendlyMessage ?
         `${err.friendlyMessage} (${err.message})` :
@@ -291,6 +292,7 @@ class Runner {
     const fileList = [
       ...fs.readdirSync(path.join(__dirname, './audits')),
       ...fs.readdirSync(path.join(__dirname, './audits/dobetterweb')).map(f => `dobetterweb/${f}`),
+      ...fs.readdirSync(path.join(__dirname, './audits/metrics')).map(f => `metrics/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/seo')).map(f => `seo/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/seo/manual')).map(f => `seo/manual/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/accessibility'))

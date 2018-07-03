@@ -6,7 +6,7 @@
 'use strict';
 
 const Audit = require('./audit');
-const WebInspector = require('../lib/web-inspector');
+const NetworkRequest = require('../lib/network-request');
 const allowedFontFaceDisplays = ['block', 'fallback', 'optional', 'swap'];
 
 class FontDisplay extends Audit {
@@ -15,10 +15,10 @@ class FontDisplay extends Audit {
    */
   static get meta() {
     return {
-      name: 'font-display',
-      description: 'All text remains visible during webfont loads',
-      failureDescription: 'Text is invisible while webfonts are loading',
-      helpText: 'Leverage the font-display CSS feature to ensure text is user-visible while ' +
+      id: 'font-display',
+      title: 'All text remains visible during webfont loads',
+      failureTitle: 'Text is invisible while webfonts are loading',
+      description: 'Leverage the font-display CSS feature to ensure text is user-visible while ' +
         'webfonts are loading. ' +
         '[Learn more](https://developers.google.com/web/updates/2016/02/font-display).',
       requiredArtifacts: ['devtoolsLogs', 'Fonts'],
@@ -40,7 +40,7 @@ class FontDisplay extends Audit {
 
     return artifacts.requestNetworkRecords(devtoolsLogs).then((networkRecords) => {
       const results = networkRecords.filter(record => {
-        const isFont = record._resourceType === WebInspector.resourceTypes.Font;
+        const isFont = record.resourceType === NetworkRequest.TYPES.Font;
 
         return isFont;
       })

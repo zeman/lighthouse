@@ -5,21 +5,21 @@
  */
 'use strict';
 
-const Audit = require('./audit');
-const Util = require('../report/html/renderer/util');
+const Audit = require('../audit');
+const Util = require('../../report/html/renderer/util');
 
-class FirstMeaningfulPaint extends Audit {
+class SpeedIndex extends Audit {
   /**
    * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'first-meaningful-paint',
-      description: 'First Meaningful Paint',
-      helpText: 'First Meaningful Paint measures when the primary content of a page is visible. ' +
-          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/first-meaningful-paint).',
+      id: 'speed-index',
+      title: 'Speed Index',
+      description: 'Speed Index shows how quickly the contents of a page are visibly populated. ' +
+          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/speed-index).',
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      requiredArtifacts: ['traces'],
+      requiredArtifacts: ['traces', 'devtoolsLogs'],
     };
   }
 
@@ -30,16 +30,15 @@ class FirstMeaningfulPaint extends Audit {
     return {
       // 75th and 95th percentiles HTTPArchive -> median and PODR
       // https://bigquery.cloud.google.com/table/httparchive:lighthouse.2018_04_01_mobile?pli=1
-      // see https://www.desmos.com/calculator/2t1ugwykrl
-      scorePODR: 2000,
-      scoreMedian: 4000,
+      // see https://www.desmos.com/calculator/orvoyu9ygq
+      scorePODR: 2900,
+      scoreMedian: 5800,
     };
   }
 
   /**
-   * Audits the page to give a score for First Meaningful Paint.
-   * @see https://github.com/GoogleChrome/lighthouse/issues/26
-   * @see https://docs.google.com/document/d/1BR94tJdZLsin5poeet0XoTW60M0SjvOJQttKT-JK8HI/view
+   * Audits the page to give a score for the Speed Index.
+   * @see https://github.com/GoogleChrome/lighthouse/issues/197
    * @param {LH.Artifacts} artifacts The artifacts from the gather phase.
    * @param {LH.Audit.Context} context
    * @return {Promise<LH.Audit.Product>}
@@ -48,7 +47,7 @@ class FirstMeaningfulPaint extends Audit {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
     const metricComputationData = {trace, devtoolsLog, settings: context.settings};
-    const metricResult = await artifacts.requestFirstMeaningfulPaint(metricComputationData);
+    const metricResult = await artifacts.requestSpeedIndex(metricComputationData);
 
     return {
       score: Audit.computeLogNormalScore(
@@ -62,4 +61,4 @@ class FirstMeaningfulPaint extends Audit {
   }
 }
 
-module.exports = FirstMeaningfulPaint;
+module.exports = SpeedIndex;

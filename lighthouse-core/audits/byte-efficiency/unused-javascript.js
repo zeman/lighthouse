@@ -15,10 +15,10 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unused-javascript',
-      description: 'Unused JavaScript',
+      id: 'unused-javascript',
+      title: 'Unused JavaScript',
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Remove unused JavaScript to reduce bytes consumed by network activity.',
+      description: 'Remove unused JavaScript to reduce bytes consumed by network activity.',
       requiredArtifacts: ['JsUsage', 'devtoolsLogs'],
     };
   }
@@ -61,7 +61,7 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
 
   /**
    * @param {Array<{unusedLength: number, contentLength: number}>} wasteData
-   * @param {LH.WebInspector.NetworkRequest} networkRecord
+   * @param {LH.Artifacts.NetworkRequest} networkRecord
    * @return {LH.Audit.ByteEfficiencyItem}
    */
   static mergeWaste(wasteData, networkRecord) {
@@ -73,7 +73,7 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, contentLength,
-        'script');
+        'Script');
     const wastedRatio = (unusedLength / contentLength) || 0;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -87,7 +87,7 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {

@@ -5,20 +5,19 @@
  */
 'use strict';
 
-const Audit = require('./audit');
+const Audit = require('../audit');
+const Util = require('../../report/html/renderer/util');
 
-class EstimatedInputLatency extends Audit {
+class FirstMeaningfulPaint extends Audit {
   /**
    * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'estimated-input-latency',
-      description: 'Estimated Input Latency',
-      helpText: 'The score above is an estimate of how long your app takes to respond to user ' +
-          'input, in milliseconds, during the busiest 5s window of page load. If your ' +
-          'latency is higher than 50 ms, users may perceive your app as laggy. ' +
-          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/estimated-input-latency).',
+      id: 'first-meaningful-paint',
+      title: 'First Meaningful Paint',
+      description: 'First Meaningful Paint measures when the primary content of a page is ' +
+          'visible. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/first-meaningful-paint).',
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
       requiredArtifacts: ['traces'],
     };
@@ -29,17 +28,19 @@ class EstimatedInputLatency extends Audit {
    */
   static get defaultOptions() {
     return {
-      // see https://www.desmos.com/calculator/srv0hqhf7d
-      scorePODR: 50,
-      scoreMedian: 100,
+      // 75th and 95th percentiles HTTPArchive -> median and PODR
+      // https://bigquery.cloud.google.com/table/httparchive:lighthouse.2018_04_01_mobile?pli=1
+      // see https://www.desmos.com/calculator/2t1ugwykrl
+      scorePODR: 2000,
+      scoreMedian: 4000,
     };
   }
 
   /**
-   * Audits the page to estimate input latency.
-   * @see https://github.com/GoogleChrome/lighthouse/issues/28
-   *
-   * @param {LH.Artifacts} artifacts
+   * Audits the page to give a score for First Meaningful Paint.
+   * @see https://github.com/GoogleChrome/lighthouse/issues/26
+   * @see https://docs.google.com/document/d/1BR94tJdZLsin5poeet0XoTW60M0SjvOJQttKT-JK8HI/view
+   * @param {LH.Artifacts} artifacts The artifacts from the gather phase.
    * @param {LH.Audit.Context} context
    * @return {Promise<LH.Audit.Product>}
    */
@@ -47,7 +48,7 @@ class EstimatedInputLatency extends Audit {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
     const metricComputationData = {trace, devtoolsLog, settings: context.settings};
-    const metricResult = await artifacts.requestEstimatedInputLatency(metricComputationData);
+    const metricResult = await artifacts.requestFirstMeaningfulPaint(metricComputationData);
 
     return {
       score: Audit.computeLogNormalScore(
@@ -56,9 +57,9 @@ class EstimatedInputLatency extends Audit {
         context.options.scoreMedian
       ),
       rawValue: metricResult.timing,
-      displayValue: ['%d\xa0ms', metricResult.timing],
+      displayValue: [Util.MS_DISPLAY_VALUE, metricResult.timing],
     };
   }
 }
 
-module.exports = EstimatedInputLatency;
+module.exports = FirstMeaningfulPaint;

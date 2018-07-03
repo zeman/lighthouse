@@ -5,12 +5,14 @@
  */
 'use strict';
 
-const Node = require('../node');
-const NetworkNode = require('../network-node'); // eslint-disable-line no-unused-vars
-const CpuNode = require('../cpu-node'); // eslint-disable-line no-unused-vars
+const BaseNode = require('../base-node');
 const TcpConnection = require('./tcp-connection');
 const ConnectionPool = require('./connection-pool');
 const mobile3G = require('../../../config/constants').throttling.mobile3G;
+
+/** @typedef {BaseNode.Node} Node */
+/** @typedef {import('../network-node')} NetworkNode */
+/** @typedef {import('../cpu-node')} CpuNode */
 
 // see https://cs.chromium.org/search/?q=kDefaultMaxNumDelayableRequestsPerClient&sq=package:chromium&type=cs
 const DEFAULT_MAXIMUM_CONCURRENT_REQUESTS = 10;
@@ -72,11 +74,11 @@ class Simulator {
    * @param {Node} graph
    */
   _initializeConnectionPool(graph) {
-    /** @type {LH.WebInspector.NetworkRequest[]} */
+    /** @type {LH.Artifacts.NetworkRequest[]} */
     const records = [];
     graph.getRootNode().traverse(node => {
-      if (node.type === Node.TYPES.NETWORK) {
-        records.push(/** @type {NetworkNode} */ (node).record);
+      if (node.type === BaseNode.TYPES.NETWORK) {
+        records.push(node.record);
       }
     });
 
@@ -167,7 +169,7 @@ class Simulator {
   }
 
   /**
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {?TcpConnection}
    */
   _acquireConnection(record) {
@@ -192,7 +194,7 @@ class Simulator {
    * @param {number} totalElapsedTime
    */
   _startNodeIfPossible(node, totalElapsedTime) {
-    if (node.type === Node.TYPES.CPU) {
+    if (node.type === BaseNode.TYPES.CPU) {
       // Start a CPU task if there's no other CPU task in process
       if (this._numberInProgress(node.type) === 0) {
         this._markNodeAsInProgress(node, totalElapsedTime);
@@ -202,15 +204,14 @@ class Simulator {
       return;
     }
 
-    if (node.type !== Node.TYPES.NETWORK) throw new Error('Unsupported');
+    if (node.type !== BaseNode.TYPES.NETWORK) throw new Error('Unsupported');
 
-    const networkNode = /** @type {NetworkNode} */ (node);
     // If a network request is cached, we can always start it, so skip the connection checks
-    if (!networkNode.fromDiskCache) {
+    if (!node.fromDiskCache) {
       // Start a network request if we're not at max requests and a connection is available
       const numberOfActiveRequests = this._numberInProgress(node.type);
       if (numberOfActiveRequests >= this._maximumConcurrentRequests) return;
-      const connection = this._acquireConnection(networkNode.record);
+      const connection = this._acquireConnection(node.record);
       if (!connection) return;
     }
 
@@ -238,10 +239,10 @@ class Simulator {
    * @return {number}
    */
   _estimateTimeRemaining(node) {
-    if (node.type === Node.TYPES.CPU) {
-      return this._estimateCPUTimeRemaining(/** @type {CpuNode} */ (node));
-    } else if (node.type === Node.TYPES.NETWORK) {
-      return this._estimateNetworkTimeRemaining(/** @type {NetworkNode} */ (node));
+    if (node.type === BaseNode.TYPES.CPU) {
+      return this._estimateCPUTimeRemaining(node);
+    } else if (node.type === BaseNode.TYPES.NETWORK) {
+      return this._estimateNetworkTimeRemaining(node);
     } else {
       throw new Error('Unsupported');
     }
@@ -276,7 +277,7 @@ class Simulator {
     if (networkNode.fromDiskCache) {
       // Rough access time for seeking to location on disk and reading sequentially
       // @see http://norvig.com/21-days.html#answers
-      const sizeInMb = (networkNode.record._resourceSize || 0) / 1024 / 1024;
+      const sizeInMb = (networkNode.record.resourceSize || 0) / 1024 / 1024;
       timeElapsed = 8 + 20 * sizeInMb - timingData.timeElapsed;
     } else {
       // If we're estimating time remaining, we already acquired a connection for this record, definitely non-null
@@ -317,17 +318,15 @@ class Simulator {
     const timingData = this._getTimingData(node);
     const isFinished = timingData.estimatedTimeElapsed === timePeriodLength;
 
-    const networkNode = /** @type {NetworkNode} */ (node);
-
-    if (node.type === Node.TYPES.CPU || networkNode.fromDiskCache) {
+    if (node.type === BaseNode.TYPES.CPU || node.fromDiskCache) {
       return isFinished
         ? this._markNodeAsComplete(node, totalElapsedTime)
         : (timingData.timeElapsed += timePeriodLength);
     }
 
-    if (node.type !== Node.TYPES.NETWORK) throw new Error('Unsupported');
+    if (node.type !== BaseNode.TYPES.NETWORK) throw new Error('Unsupported');
 
-    const record = networkNode.record;
+    const record = node.record;
     // If we're updating the progress, we already acquired a connection for this record, definitely non-null
     const connection = /** @type {TcpConnection} */ (this._acquireConnection(record));
     const calculation = connection.simulateDownloadUntil(
@@ -387,7 +386,7 @@ class Simulator {
    * @return {LH.Gatherer.Simulation.Result}
    */
   simulate(graph, options) {
-    if (Node.hasCycle(graph)) {
+    if (BaseNode.hasCycle(graph)) {
       throw new Error('Cannot simulate graph with cycle');
     }
 

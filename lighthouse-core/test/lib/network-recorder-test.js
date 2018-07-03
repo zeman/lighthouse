@@ -8,13 +8,41 @@
 const NetworkRecorder = require('../../lib/network-recorder');
 const assert = require('assert');
 const devtoolsLogItems = require('../fixtures/artifacts/perflog/defaultPass.devtoolslog.json');
+const redirectsDevtoolsLog = require('../fixtures/wikipedia-redirect.devtoolslog.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 describe('network recorder', function() {
   it('recordsFromLogs expands into records', function() {
     assert.equal(devtoolsLogItems.length, 555);
     const records = NetworkRecorder.recordsFromLogs(devtoolsLogItems);
     assert.equal(records.length, 76);
+  });
+
+  it('handles redirects properly', () => {
+    const records = NetworkRecorder.recordsFromLogs(redirectsDevtoolsLog);
+    assert.equal(records.length, 25);
+
+    const [redirectA, redirectB, redirectC, mainDocument] = records.slice(0, 4);
+    assert.equal(redirectA.initiatorRequest, undefined);
+    assert.equal(redirectA.redirectSource, undefined);
+    assert.equal(redirectA.redirectDestination, redirectB);
+    assert.equal(redirectB.initiatorRequest, redirectA);
+    assert.equal(redirectB.redirectSource, redirectA);
+    assert.equal(redirectB.redirectDestination, redirectC);
+    assert.equal(redirectC.initiatorRequest, redirectB);
+    assert.equal(redirectC.redirectSource, redirectB);
+    assert.equal(redirectC.redirectDestination, mainDocument);
+    assert.equal(mainDocument.initiatorRequest, redirectC);
+    assert.equal(mainDocument.redirectSource, redirectC);
+    assert.equal(mainDocument.redirectDestination, undefined);
+
+    const redirectURLs = mainDocument.redirects.map(request => request.url);
+    assert.deepStrictEqual(redirectURLs, [redirectA.url, redirectB.url, redirectC.url]);
+
+    assert.equal(redirectA.resourceType, undefined);
+    assert.equal(redirectB.resourceType, undefined);
+    assert.equal(redirectC.resourceType, undefined);
+    assert.equal(mainDocument.resourceType, 'Document');
   });
 
   describe('#findNetworkQuietPeriods', () => {
@@ -93,8 +121,8 @@ describe('network recorder', function() {
     it('should handle QUIC requests', () => {
       const quicRequest = {
         finished: false,
-        _responseHeaders: [{name: 'ALT-SVC', value: 'hq=":49288";quic="1,1abadaba,51303334,0"'}],
-        _timing: {receiveHeadersEnd: 1.28},
+        responseHeaders: [{name: 'ALT-SVC', value: 'hq=":49288";quic="1,1abadaba,51303334,0"'}],
+        timing: {receiveHeadersEnd: 1.28},
       };
 
       const records = [

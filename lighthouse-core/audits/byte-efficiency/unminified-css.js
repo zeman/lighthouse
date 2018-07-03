@@ -20,11 +20,11 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unminified-css',
-      description: 'Minify CSS',
+      id: 'unminified-css',
+      title: 'Minify CSS',
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Minifying CSS files can reduce network payload sizes. ' +
-        '[Learn more](https://developers.google.com/speed/docs/insights/MinifyResources).',
+      description: 'Minifying CSS files can reduce network payload sizes. ' +
+        '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/minify-css).',
       requiredArtifacts: ['CSSUsage', 'devtoolsLogs'],
     };
   }
@@ -92,7 +92,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts.CSSStyleSheetInfo} stylesheet
-   * @param {LH.WebInspector.NetworkRequest=} networkRecord
+   * @param {LH.Artifacts.NetworkRequest=} networkRecord
    * @param {string} pageUrl
    * @return {{url: string, totalBytes: number, wastedBytes: number, wastedPercent: number}}
    */
@@ -107,7 +107,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, content.length,
-      'stylesheet');
+      'Stylesheet');
     const wastedRatio = 1 - totalTokenLength / content.length;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -121,7 +121,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {

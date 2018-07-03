@@ -5,21 +5,22 @@
  */
 'use strict';
 
-const Audit = require('./audit');
-const Util = require('../report/html/renderer/util');
+const Audit = require('../audit');
 
-class SpeedIndex extends Audit {
+class EstimatedInputLatency extends Audit {
   /**
    * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'speed-index',
-      description: 'Speed Index',
-      helpText: 'Speed Index shows how quickly the contents of a page are visibly populated. ' +
-          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/speed-index).',
+      id: 'estimated-input-latency',
+      title: 'Estimated Input Latency',
+      description: 'The score above is an estimate of how long your app takes to respond to user ' +
+          'input, in milliseconds, during the busiest 5s window of page load. If your ' +
+          'latency is higher than 50 ms, users may perceive your app as laggy. ' +
+          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/estimated-input-latency).',
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      requiredArtifacts: ['traces', 'devtoolsLogs'],
+      requiredArtifacts: ['traces'],
     };
   }
 
@@ -28,18 +29,17 @@ class SpeedIndex extends Audit {
    */
   static get defaultOptions() {
     return {
-      // 75th and 95th percentiles HTTPArchive -> median and PODR
-      // https://bigquery.cloud.google.com/table/httparchive:lighthouse.2018_04_01_mobile?pli=1
-      // see https://www.desmos.com/calculator/orvoyu9ygq
-      scorePODR: 2900,
-      scoreMedian: 5800,
+      // see https://www.desmos.com/calculator/srv0hqhf7d
+      scorePODR: 50,
+      scoreMedian: 100,
     };
   }
 
   /**
-   * Audits the page to give a score for the Speed Index.
-   * @see https://github.com/GoogleChrome/lighthouse/issues/197
-   * @param {LH.Artifacts} artifacts The artifacts from the gather phase.
+   * Audits the page to estimate input latency.
+   * @see https://github.com/GoogleChrome/lighthouse/issues/28
+   *
+   * @param {LH.Artifacts} artifacts
    * @param {LH.Audit.Context} context
    * @return {Promise<LH.Audit.Product>}
    */
@@ -47,7 +47,7 @@ class SpeedIndex extends Audit {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
     const metricComputationData = {trace, devtoolsLog, settings: context.settings};
-    const metricResult = await artifacts.requestSpeedIndex(metricComputationData);
+    const metricResult = await artifacts.requestEstimatedInputLatency(metricComputationData);
 
     return {
       score: Audit.computeLogNormalScore(
@@ -56,9 +56,9 @@ class SpeedIndex extends Audit {
         context.options.scoreMedian
       ),
       rawValue: metricResult.timing,
-      displayValue: [Util.MS_DISPLAY_VALUE, metricResult.timing],
+      displayValue: ['%d\xa0ms', metricResult.timing],
     };
   }
 }
 
-module.exports = SpeedIndex;
+module.exports = EstimatedInputLatency;

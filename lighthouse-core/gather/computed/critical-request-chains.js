@@ -6,7 +6,7 @@
 'use strict';
 
 const ComputedArtifact = require('./computed-artifact');
-const WebInspector = require('../../lib/web-inspector');
+const NetworkRequest = require('../../lib/network-request');
 const assert = require('assert');
 
 class CriticalRequestChains extends ComputedArtifact {
@@ -18,56 +18,56 @@ class CriticalRequestChains extends ComputedArtifact {
    * For now, we use network priorities as a proxy for "render-blocking"/critical-ness.
    * It's imperfect, but there is not a higher-fidelity signal available yet.
    * @see https://docs.google.com/document/d/1bCDuq9H1ih9iNjgzyAL0gpwNFiEP4TZS-YLRp_RuMlc
-   * @param {LH.WebInspector.NetworkRequest} request
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} request
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {boolean}
    */
   static isCritical(request, mainResource) {
     assert.ok(mainResource, 'mainResource not provided');
 
     // Treat any preloaded resource as non-critical
-    if (request._isLinkPreload) {
+    if (request.isLinkPreload) {
       return false;
     }
-
-    const resourceTypeCategory = request._resourceType && request._resourceType._category;
 
     // Iframes are considered High Priority but they are not render blocking
-    const isIframe = request._resourceType === WebInspector.resourceTypes.Document
-      && request._frameId !== mainResource._frameId;
+    const isIframe = request.resourceType === NetworkRequest.TYPES.Document
+      && request.frameId !== mainResource.frameId;
     // XHRs are fetched at High priority, but we exclude them, as they are unlikely to be critical
     // Images are also non-critical.
-    // Treat any images missed by category, primarily favicons, as non-critical resources
+    // Treat any missed images, primarily favicons, as non-critical resources
     const nonCriticalResourceTypes = [
-      WebInspector.resourceTypes.Image._category,
-      WebInspector.resourceTypes.XHR._category,
+      NetworkRequest.TYPES.Image,
+      NetworkRequest.TYPES.XHR,
+      NetworkRequest.TYPES.Fetch,
+      NetworkRequest.TYPES.EventSource,
     ];
-    if (nonCriticalResourceTypes.includes(resourceTypeCategory) ||
+    if (nonCriticalResourceTypes.includes(request.resourceType || 'Other') ||
         isIframe ||
-        request._mimeType && request._mimeType.startsWith('image/')) {
+        request.mimeType && request.mimeType.startsWith('image/')) {
       return false;
     }
 
-    return ['VeryHigh', 'High', 'Medium'].includes(request.priority());
+    return ['VeryHigh', 'High', 'Medium'].includes(request.priority);
   }
 
   /**
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {LH.Artifacts.CriticalRequestNode}
    */
   static extractChain(networkRecords, mainResource) {
     networkRecords = networkRecords.filter(req => req.finished);
 
     // Build a map of requestID -> Node.
-    /** @type {Map<string, LH.WebInspector.NetworkRequest>} */
+    /** @type {Map<string, LH.Artifacts.NetworkRequest>} */
     const requestIdToRequests = new Map();
     for (const request of networkRecords) {
       requestIdToRequests.set(request.requestId, request);
     }
 
     // Get all the critical requests.
-    /** @type {Array<LH.WebInspector.NetworkRequest>} */
+    /** @type {Array<LH.Artifacts.NetworkRequest>} */
     const criticalRequests = networkRecords.filter(request =>
       CriticalRequestChains.isCritical(request, mainResource));
 
@@ -80,7 +80,7 @@ class CriticalRequestChains extends ComputedArtifact {
       // during this phase.
       /** @type {Array<string>} */
       const ancestors = [];
-      let ancestorRequest = request.initiatorRequest();
+      let ancestorRequest = request.initiatorRequest;
       /** @type {LH.Artifacts.CriticalRequestNode|undefined} */
       let node = criticalRequestChains;
       while (ancestorRequest) {
@@ -98,7 +98,7 @@ class CriticalRequestChains extends ComputedArtifact {
           break;
         }
         ancestors.push(ancestorRequest.requestId);
-        ancestorRequest = ancestorRequest.initiatorRequest();
+        ancestorRequest = ancestorRequest.initiatorRequest;
       }
 
       // With the above array we can work from back to front, i.e. A, B, C, and during this process

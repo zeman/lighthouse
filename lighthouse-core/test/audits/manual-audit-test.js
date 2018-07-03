@@ -8,21 +8,21 @@
 const ManualAudit = require('../../audits/manual/manual-audit.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 // Extend the Audit class but fail to implement meta. It should throw errors.
 class TestAudit extends ManualAudit {
   static get meta() {
     return Object.assign({
-      name: 'manual-audit',
-      helpText: 'Some help text.',
+      id: 'manual-audit',
+      description: 'Some help text.',
     }, super.partialMeta);
   }
 }
 
 describe('ManualAudit', () => {
   it('sets defaults', () => {
-    assert.equal(TestAudit.meta.name, 'manual-audit');
+    assert.equal(TestAudit.meta.id, 'manual-audit');
     assert.equal(TestAudit.meta.requiredArtifacts.length, 0);
     assert.equal(TestAudit.meta.scoreDisplayMode, 'manual');
   });

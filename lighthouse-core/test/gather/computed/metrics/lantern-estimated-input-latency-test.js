@@ -12,7 +12,7 @@ const LanternEIL = require('../../../../gather/computed/metrics/lantern-estimate
 const trace = require('../../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Metrics: Lantern EIL', () => {
   it('should compute a simulated value', async () => {

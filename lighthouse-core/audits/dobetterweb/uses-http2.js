@@ -21,10 +21,10 @@ class UsesHTTP2Audit extends Audit {
    */
   static get meta() {
     return {
-      name: 'uses-http2',
-      description: 'Uses HTTP/2 for its own resources',
-      failureDescription: 'Does not use HTTP/2 for all of its resources',
-      helpText: 'HTTP/2 offers many benefits over HTTP/1.1, including binary headers, ' +
+      id: 'uses-http2',
+      title: 'Uses HTTP/2 for its own resources',
+      failureTitle: 'Does not use HTTP/2 for all of its resources',
+      description: 'HTTP/2 offers many benefits over HTTP/1.1, including binary headers, ' +
           'multiplexing, and server push. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/http2).',
       requiredArtifacts: ['URL', 'devtoolsLogs'],
     };
@@ -45,12 +45,12 @@ class UsesHTTP2Audit extends Audit {
         // test the protocol first to avoid (potentially) expensive URL parsing
         const isOldHttp = /HTTP\/[01][.\d]?/i.test(record.protocol);
         if (!isOldHttp) return false;
-        const requestHost = new URL(record._url).host;
+        const requestHost = new URL(record.url).host;
         return requestHost === finalHost;
       }).map(record => {
         return {
           protocol: record.protocol,
-          url: record._url,
+          url: record.url,
         };
       }).filter(record => {
         if (seenURLs.has(record.url)) return false;

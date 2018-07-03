@@ -8,7 +8,7 @@
  */
 'use strict';
 
-const WebInspector = require('../../lib/web-inspector');
+const NetworkRequest = require('../../lib/network-request');
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 
 // If GIFs are above this size, we'll flag them
@@ -21,10 +21,10 @@ class EfficientAnimatedContent extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'efficient-animated-content',
+      id: 'efficient-animated-content',
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      description: 'Use video formats for animated content',
-      helpText: 'Large GIFs are inefficient for delivering animated content. Consider using ' +
+      title: 'Use video formats for animated content',
+      description: 'Large GIFs are inefficient for delivering animated content. Consider using ' +
         'MPEG4/WebM videos for animations and PNG/WebP for static images instead of GIF to save ' +
         'network bytes. [Learn more](https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/replace-animated-gifs-with-video/)',
       requiredArtifacts: ['devtoolsLogs'],
@@ -43,19 +43,19 @@ class EfficientAnimatedContent extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {
     const unoptimizedContent = networkRecords.filter(
-      record => record._mimeType === 'image/gif' &&
-        record._resourceType === WebInspector.resourceTypes.Image &&
-        (record._resourceSize || 0) > GIF_BYTE_THRESHOLD
+      record => record.mimeType === 'image/gif' &&
+        record.resourceType === NetworkRequest.TYPES.Image &&
+        (record.resourceSize || 0) > GIF_BYTE_THRESHOLD
     );
 
     /** @type {Array<{url: string, totalBytes: number, wastedBytes: number}>}*/
     const items = unoptimizedContent.map(record => {
-      const resourceSize = record._resourceSize || 0;
+      const resourceSize = record.resourceSize || 0;
       return {
         url: record.url,
         totalBytes: resourceSize,

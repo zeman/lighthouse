@@ -6,7 +6,10 @@
 
 import parseManifest = require('../lighthouse-core/lib/manifest-parser.js');
 import _LanternSimulator = require('../lighthouse-core/lib/dependency-graph/simulator/simulator.js');
+import _NetworkRequest = require('../lighthouse-core/lib/network-request.js');
 import speedline = require('speedline');
+
+type _TaskNode = import('../lighthouse-core/gather/computed/main-thread-tasks').TaskNode;
 
 type LanternSimulator = InstanceType<typeof _LanternSimulator>;
 
@@ -79,6 +82,8 @@ declare global {
       MetaDescription: string|null;
       /** The value of the <meta name="robots">'s content attribute, or null. */
       MetaRobots: string|null;
+      /** The URL loaded with interception */
+      MixedContent: {url: string};
       /** The status code of the attempted load of the page while network access is disabled. */
       Offline: number;
       /** Size and compression opportunity information for all the images in the page. */
@@ -111,15 +116,15 @@ declare global {
 
     export interface ComputedArtifacts {
       requestCriticalRequestChains(data: {devtoolsLog: DevtoolsLog, URL: Artifacts['URL']}): Promise<Artifacts.CriticalRequestNode>;
-      requestDevtoolsTimelineModel(trace: Trace): Promise<Artifacts.DevtoolsTimelineModel>;
       requestLoadSimulator(data: {devtoolsLog: DevtoolsLog, settings: Config.Settings}): Promise<LanternSimulator>;
-      requestMainResource(data: {devtoolsLog: DevtoolsLog, URL: Artifacts['URL']}): Promise<WebInspector.NetworkRequest>;
+      requestMainResource(data: {devtoolsLog: DevtoolsLog, URL: Artifacts['URL']}): Promise<Artifacts.NetworkRequest>;
       requestManifestValues(manifest: LH.Artifacts['Manifest']): Promise<LH.Artifacts.ManifestValues>;
       requestNetworkAnalysis(devtoolsLog: DevtoolsLog): Promise<LH.Artifacts.NetworkAnalysis>;
       requestNetworkThroughput(devtoolsLog: DevtoolsLog): Promise<number>;
-      requestNetworkRecords(devtoolsLog: DevtoolsLog): Promise<WebInspector.NetworkRequest[]>;
+      requestNetworkRecords(devtoolsLog: DevtoolsLog): Promise<Artifacts.NetworkRequest[]>;
       requestPageDependencyGraph(data: {trace: Trace, devtoolsLog: DevtoolsLog}): Promise<Gatherer.Simulation.GraphNode>;
-      requestPushedRequests(devtoolsLogs: DevtoolsLog): Promise<WebInspector.NetworkRequest[]>;
+      requestPushedRequests(devtoolsLogs: DevtoolsLog): Promise<Artifacts.NetworkRequest[]>;
+      requestMainThreadTasks(trace: Trace): Promise<Artifacts.TaskNode[]>;
       requestTraceOfTab(trace: Trace): Promise<Artifacts.TraceOfTab>;
       requestScreenshots(trace: Trace): Promise<{timestamp: number, datauri: string}[]>;
       requestSpeedline(trace: Trace): Promise<LH.Artifacts.Speedline>;
@@ -142,6 +147,9 @@ declare global {
     }
 
     module Artifacts {
+      export type NetworkRequest = _NetworkRequest;
+      export type TaskNode = _TaskNode;
+
       export interface Accessibility {
         violations: {
           id: string;
@@ -296,30 +304,9 @@ declare global {
       // Computed artifact types below.
       export type CriticalRequestNode = {
         [id: string]: {
-          request: WebInspector.NetworkRequest;
+          request: Artifacts.NetworkRequest;
           children: CriticalRequestNode;
         }
-      }
-
-      export interface DevtoolsTimelineFilmStripModel {
-        frames(): Array<{
-          imageDataPromise(): Promise<string>;
-          timestamp: number;
-        }>;
-      }
-
-      export interface DevtoolsTimelineModelNode {
-        children: Map<string, DevtoolsTimelineModelNode>;
-        selfTime: number;
-        // SDK.TracingModel.Event
-        event: {
-          name: string;
-        };
-      }
-
-      export interface DevtoolsTimelineModel {
-        filmStripModel(): Artifacts.DevtoolsTimelineFilmStripModel;
-        bottomUpGroupBy(grouping: string): DevtoolsTimelineModelNode;
       }
 
       export type ManifestValueCheckID = 'hasStartUrl'|'hasIconsAtLeast192px'|'hasIconsAtLeast512px'|'hasPWADisplayValue'|'hasBackgroundColor'|'hasThemeColor'|'hasShortName'|'hasName'|'shortNameLength';
@@ -342,7 +329,7 @@ declare global {
       }
 
       export interface MetricComputationData extends MetricComputationDataInput {
-        networkRecords: Array<WebInspector.NetworkRequest>;
+        networkRecords: Array<Artifacts.NetworkRequest>;
         traceOfTab: TraceOfTab;
       }
 

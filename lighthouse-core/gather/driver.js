@@ -9,6 +9,7 @@ const NetworkRecorder = require('../lib/network-recorder');
 const emulation = require('../lib/emulation');
 const Element = require('../lib/element');
 const LHError = require('../lib/errors');
+const NetworkRequest = require('../lib/network-request');
 const EventEmitter = require('events').EventEmitter;
 const URL = require('../lib/url-shim');
 const TraceParser = require('../lib/traces/trace-parser');
@@ -173,7 +174,7 @@ class Driver {
    * @param {string} scriptSource
    * @return {Promise<LH.Crdp.Page.AddScriptToEvaluateOnLoadResponse>} Identifier of the added script.
    */
-  evaluteScriptOnNewDocument(scriptSource) {
+  evaluateScriptOnNewDocument(scriptSource) {
     return this.sendCommand('Page.addScriptToEvaluateOnLoad', {
       scriptSource,
     });
@@ -586,11 +587,11 @@ class Driver {
    * @private
    */
   _beginNetworkStatusMonitoring(startingUrl) {
-    this._networkStatusMonitor = new NetworkRecorder([]);
+    this._networkStatusMonitor = new NetworkRecorder();
 
     // Update startingUrl if it's ever redirected.
     this._monitoredUrl = startingUrl;
-    /** @param {LH.WebInspector.NetworkRequest} redirectRequest */
+    /** @param {LH.Artifacts.NetworkRequest} redirectRequest */
     const requestLoadedListener = redirectRequest => {
       // Ignore if this is not a redirected request.
       if (!redirectRequest.redirectSource) {
@@ -727,6 +728,8 @@ class Driver {
    * @return {Promise<string>}
    */
   getRequestContent(requestId, timeout = 1000) {
+    requestId = NetworkRequest.getRequestIdForBackend(requestId);
+
     return new Promise((resolve, reject) => {
       // If this takes more than 1s, reject the Promise.
       // Why? Encoding issues can lead to hanging getResponseBody calls: https://github.com/GoogleChrome/lighthouse/pull/4718
@@ -1064,7 +1067,7 @@ class Driver {
    * @return {Promise<void>}
    */
   async cacheNatives() {
-    await this.evaluteScriptOnNewDocument(`window.__nativePromise = Promise;
+    await this.evaluateScriptOnNewDocument(`window.__nativePromise = Promise;
         window.__nativeError = Error;`);
   }
 
@@ -1074,7 +1077,7 @@ class Driver {
    */
   async registerPerformanceObserver() {
     const scriptStr = `(${pageFunctions.registerPerformanceObserverInPage.toString()})()`;
-    await this.evaluteScriptOnNewDocument(scriptStr);
+    await this.evaluateScriptOnNewDocument(scriptStr);
   }
 
   /**

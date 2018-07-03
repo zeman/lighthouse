@@ -4,7 +4,6 @@
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
 
-import _Node = require('../lighthouse-core/lib/dependency-graph/node');
 import _NetworkNode = require('../lighthouse-core/lib/dependency-graph/network-node');
 import _CPUNode = require('../lighthouse-core/lib/dependency-graph/cpu-node');
 import _Simulator = require('../lighthouse-core/lib/dependency-graph/simulator/simulator');
@@ -14,7 +13,7 @@ declare global {
   module LH.Gatherer {
     export interface PassContext {
       url: string;
-      driver: InstanceType<typeof Driver>;
+      driver: Driver;
       disableJavaScript?: boolean;
       passConfig: Config.Pass
       settings: Config.Settings;
@@ -24,17 +23,16 @@ declare global {
     }
 
     export interface LoadData {
-      networkRecords: Array<WebInspector.NetworkRequest>;
+      networkRecords: Array<Artifacts.NetworkRequest>;
       devtoolsLog: DevtoolsLog;
       trace?: Trace;
     }
 
     namespace Simulation {
-      // HACK: TS treats 'import * as Foo' as namespace instead of a type, use typeof and prototype
-      export type GraphNode = InstanceType<typeof _Node>;
-      export type GraphNetworkNode = InstanceType<typeof _NetworkNode>;
-      export type GraphCPUNode = InstanceType<typeof _CPUNode>;
-      export type Simulator = InstanceType<typeof _Simulator>;
+      export type GraphNode = import('../lighthouse-core/lib/dependency-graph/base-node').Node;
+      export type GraphNetworkNode = _NetworkNode;
+      export type GraphCPUNode = _CPUNode;
+      export type Simulator = _Simulator;
 
       export interface MetricCoefficients {
         intercept: number;

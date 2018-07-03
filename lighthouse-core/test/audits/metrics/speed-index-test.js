@@ -5,15 +5,15 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
-const Audit = require('../../audits/speed-index.js');
+const Audit = require('../../../audits/metrics/speed-index.js');
 const assert = require('assert');
-const Runner = require('../../runner.js');
+const Runner = require('../../../runner.js');
 const options = Audit.defaultOptions;
 
-const pwaTrace = require('../fixtures/traces/progressive-app-m60.json');
-const pwaDevtoolsLog = require('../fixtures/traces/progressive-app-m60.devtools.log.json');
+const pwaTrace = require('../../fixtures/traces/progressive-app-m60.json');
+const pwaDevtoolsLog = require('../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
 describe('Performance: speed-index audit', () => {
   it('works on a real trace', () => {
@@ -27,7 +27,7 @@ describe('Performance: speed-index audit', () => {
       assert.equal(result.score, 1);
       assert.equal(result.rawValue, 605);
     });
-  }).timeout(10000);
+  }, 10000);
 
   it('scores speed index of 845 as 100', () => {
     const artifacts = {

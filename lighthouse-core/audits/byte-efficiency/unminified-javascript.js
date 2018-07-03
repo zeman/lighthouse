@@ -28,11 +28,11 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unminified-javascript',
-      description: 'Minify JavaScript',
+      id: 'unminified-javascript',
+      title: 'Minify JavaScript',
 
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Minifying JavaScript files can reduce payload sizes and script parse time. ' +
+      description: 'Minifying JavaScript files can reduce payload sizes and script parse time. ' +
         '[Learn more](https://developers.google.com/speed/docs/insights/MinifyResources).',
       requiredArtifacts: ['Scripts', 'devtoolsLogs'],
     };
@@ -40,7 +40,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
 
   /**
    * @param {string} scriptContent
-   * @param {LH.WebInspector.NetworkRequest} networkRecord
+   * @param {LH.Artifacts.NetworkRequest} networkRecord
    * @return {{url: string, totalBytes: number, wastedBytes: number, wastedPercent: number}}
    */
   static computeWaste(scriptContent, networkRecord) {
@@ -57,7 +57,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, contentLength,
-      'script');
+      'Script');
     const wastedRatio = 1 - totalTokenLength / contentLength;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -71,7 +71,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {
@@ -92,7 +92,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
           !Number.isFinite(result.wastedBytes)) continue;
         items.push(result);
       } catch (err) {
-        warnings.push(`Unable to process ${networkRecord._url}: ${err.message}`);
+        warnings.push(`Unable to process ${networkRecord.url}: ${err.message}`);
       }
     }
 

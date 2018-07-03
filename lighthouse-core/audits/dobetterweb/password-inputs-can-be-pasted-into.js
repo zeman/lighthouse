@@ -13,11 +13,11 @@ class PasswordInputsCanBePastedIntoAudit extends Audit {
    */
   static get meta() {
     return {
-      name: 'password-inputs-can-be-pasted-into',
-      description: 'Allows users to paste into password fields',
-      failureDescription: 'Prevents users to paste into password fields',
-      helpText: 'Preventing password pasting undermines good security policy. ' +
-          '[Learn more](https://www.ncsc.gov.uk/blog-post/let-them-paste-passwords).',
+      id: 'password-inputs-can-be-pasted-into',
+      title: 'Allows users to paste into password fields',
+      failureTitle: 'Prevents users to paste into password fields',
+      description: 'Preventing password pasting undermines good security policy. ' +
+          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/password-pasting).',
       requiredArtifacts: ['PasswordInputsWithPreventedPaste'],
     };
   }

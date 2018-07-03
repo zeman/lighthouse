@@ -12,7 +12,7 @@ const LanternFCPUI = require('../../../../gather/computed/metrics/lantern-first-
 const trace = require('../../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 describe('Metrics: Lantern TTFCPUI', () => {
   it('should compute predicted value', async () => {
     const artifacts = Runner.instantiateComputedArtifacts();

@@ -10,7 +10,7 @@ const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
 const PREVIEW_LENGTH = 100;
 
-/** @typedef {LH.Artifacts.CSSStyleSheetInfo & {networkRecord: LH.WebInspector.NetworkRequest, usedRules: Array<LH.Crdp.CSS.RuleUsage>}} StyleSheetInfo */
+/** @typedef {LH.Artifacts.CSSStyleSheetInfo & {networkRecord: LH.Artifacts.NetworkRequest, usedRules: Array<LH.Crdp.CSS.RuleUsage>}} StyleSheetInfo */
 
 class UnusedCSSRules extends ByteEfficiencyAudit {
   /**
@@ -18,10 +18,10 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unused-css-rules',
-      description: 'Defer unused CSS',
+      id: 'unused-css-rules',
+      title: 'Defer unused CSS',
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Remove unused rules from stylesheets to reduce unnecessary ' +
+      description: 'Remove unused rules from stylesheets to reduce unnecessary ' +
           'bytes consumed by network activity. ' +
           '[Learn more](https://developers.google.com/speed/docs/insights/OptimizeCSSDelivery).',
       requiredArtifacts: ['CSSUsage', 'URL', 'devtoolsLogs'],
@@ -30,7 +30,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
 
   /**
    * @param {Array<LH.Artifacts.CSSStyleSheetInfo>} styles The output of the Styles gatherer.
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {Object<string, StyleSheetInfo>} A map of styleSheetId to stylesheet information.
    */
   static indexStylesheetsById(styles, networkRecords) {
@@ -38,7 +38,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
         .reduce((indexed, record) => {
           indexed[record.url] = record;
           return indexed;
-        }, /** @type {Object<string, LH.WebInspector.NetworkRequest>} */ ({}));
+        }, /** @type {Object<string, LH.Artifacts.NetworkRequest>} */ ({}));
 
     return styles.reduce((indexed, stylesheet) => {
       indexed[stylesheet.header.styleSheetId] = Object.assign({
@@ -81,7 +81,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
     }
 
     const totalTransferredBytes = ByteEfficiencyAudit.estimateTransferSize(
-        stylesheetInfo.networkRecord, totalUncompressedBytes, 'stylesheet');
+        stylesheetInfo.networkRecord, totalUncompressedBytes, 'Stylesheet');
     const percentUnused = (totalUncompressedBytes - usedUncompressedBytes) / totalUncompressedBytes;
     const wastedBytes = Math.round(percentUnused * totalTransferredBytes);
 

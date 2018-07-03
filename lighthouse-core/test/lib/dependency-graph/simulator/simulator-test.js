@@ -21,8 +21,8 @@ function request(opts) {
     requestId: opts.requestId || nextRequestId++,
     url,
     transferSize: opts.transferSize || 1000,
-    parsedURL: {scheme, securityOrigin: () => url},
-    _timing: opts.timing,
+    parsedURL: {scheme, securityOrigin: url},
+    timing: opts.timing,
   }, opts);
 }
 
@@ -33,7 +33,7 @@ function cpuTask({tid, ts, duration}) {
   return {tid, ts, dur};
 }
 
-/* eslint-env mocha */
+/* eslint-env jest */
 describe('DependencyGraph/Simulator', () => {
   describe('.simulate', () => {
     const serverResponseTimeByOrigin = new Map([['http://example.com', 500]]);
@@ -92,8 +92,8 @@ describe('DependencyGraph/Simulator', () => {
     });
 
     it('should simulate cached network graphs', () => {
-      const nodeA = new NetworkNode(request({startTime: 0, endTime: 1, _fromDiskCache: true}));
-      const nodeB = new NetworkNode(request({startTime: 0, endTime: 3, _fromDiskCache: true}));
+      const nodeA = new NetworkNode(request({startTime: 0, endTime: 1, fromDiskCache: true}));
+      const nodeB = new NetworkNode(request({startTime: 0, endTime: 3, fromDiskCache: true}));
       nodeA.addDependent(nodeB);
 
       const simulator = new Simulator({serverResponseTimeByOrigin});

@@ -15,7 +15,7 @@ const trace = require('../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../fixtures/traces/progressive-app-m60.devtools.log.json');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Byte efficiency base audit', () => {
   let graph;
@@ -31,16 +31,10 @@ describe('Byte efficiency base audit', () => {
     const networkRecord = {
       requestId: 1,
       url: 'http://example.com/',
-      parsedURL: {scheme: 'http', securityOrigin: () => 'http://example.com'},
-      _transferSize: 400000,
-      _timing: {receiveHeadersEnd: 0},
+      parsedURL: {scheme: 'http', securityOrigin: 'http://example.com'},
+      transferSize: 400000,
+      timing: {receiveHeadersEnd: 0},
     };
-
-    Object.defineProperty(networkRecord, 'transferSize', {
-      get() {
-        return this._transferSize;
-      },
-    });
 
     graph = new NetworkNode(networkRecord);
     // add a CPU node to force improvement to TTI
@@ -63,20 +57,20 @@ describe('Byte efficiency base audit', () => {
     });
 
     it('should return transferSize when asset matches', () => {
-      const _resourceType = {_name: 'stylesheet'};
-      const result = estimate({_transferSize: 1234, _resourceType}, 10000, 'stylesheet');
+      const resourceType = 'Stylesheet';
+      const result = estimate({transferSize: 1234, resourceType}, 10000, 'Stylesheet');
       assert.equal(result, 1234);
     });
 
     it('should estimate by network compression ratio when asset does not match', () => {
-      const _resourceType = {_name: 'other'};
-      const result = estimate({_resourceSize: 2000, _transferSize: 1000, _resourceType}, 100);
+      const resourceType = 'Other';
+      const result = estimate({resourceSize: 2000, transferSize: 1000, resourceType}, 100);
       assert.equal(result, 50);
     });
 
     it('should not error when missing resource size', () => {
-      const _resourceType = {_name: 'other'};
-      const result = estimate({_transferSize: 1000, _resourceType}, 100);
+      const resourceType = 'Other';
+      const result = estimate({transferSize: 1000, resourceType}, 100);
       assert.equal(result, 100);
     });
   });
