@@ -90,10 +90,10 @@ module.exports = {
     return formatFn;
   },
   /**
-   * @param {LH.Locale} [newLocale]
+   * @param {LH.Locale|null} [newLocale]
    */
   setLocale(newLocale) {
-    if (typeof newLocale === 'undefined') return;
+    if (!newLocale) return;
     locale = newLocale;
   },
 };

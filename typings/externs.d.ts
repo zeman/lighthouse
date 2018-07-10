@@ -58,7 +58,7 @@ declare global {
 
     interface SharedFlagsSettings {
       output?: OutputMode|OutputMode[];
-      locale?: Locale;
+      locale?: Locale | null;
       maxWaitForLoad?: number;
       blockedUrlPatterns?: string[] | null;
       additionalTraceCategories?: string | null;
