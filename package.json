@@ -23,7 +23,9 @@
     "build-viewer": "cd ./lighthouse-viewer && yarn build",
     "clean": "rimraf *.report.html *.report.dom.html *.report.json *.screenshots.html *.screenshots.json *.devtoolslog.json *.trace.json || true",
     "lint": "[ \"$CI\" = true ] && eslint --quiet -f codeframe . || eslint .",
+
     "smoke": "node lighthouse-cli/test/smokehouse/run-smoke.js",
+
     "debug": "node --inspect-brk ./lighthouse-cli/index.js",
     "start": "node ./lighthouse-cli/index.js",
     "test": "yarn diff:sample-json && yarn lint --quiet && yarn unit && yarn type-check",
@@ -49,6 +51,7 @@
     "coverage:smoke": "nyc yarn smoke && nyc report --reporter html",
     "coveralls": "cat unit-coverage.lcov | coveralls",
     "codecov": "codecov -f unit-coverage.lcov -F unit && codecov -f smoke-coverage.lcov -F smoke",
+
     "devtools": "bash lighthouse-core/scripts/roll-to-devtools.sh",
     "compile-devtools": "bash lighthouse-core/scripts/compile-against-devtools.sh",
     "chrome": "node lighthouse-core/scripts/manual-chrome-launcher.js",
