@@ -11,6 +11,7 @@ const GatherRunner = require('./gather/gather-runner');
 const ReportScoring = require('./scoring');
 const Audit = require('./audits/audit');
 const log = require('lighthouse-logger');
+const i18n = require('./lib/i18n');
 const assetSaver = require('./lib/asset-saver');
 const fs = require('fs');
 const path = require('path');
@@ -133,6 +134,8 @@ class Runner {
         categoryGroups: opts.config.groups || undefined,
         timing: {total: Date.now() - startTime},
       };
+
+      i18n.replaceLocaleStringReferences(lhr, settings.locale);
 
       const report = generateReport(lhr, settings.output);
       return {lhr, artifacts, report};

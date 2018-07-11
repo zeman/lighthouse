@@ -6,6 +6,12 @@
 
 declare global {
   module LH {
+    export type LocaleLogEntry = string | {path: string, values: any};
+
+    export interface LocaleLog {
+      [templateID: string]: LocaleLogEntry[];
+    }
+
     /**
      * The full output of a Lighthouse run.
      */
@@ -35,6 +41,8 @@ declare global {
       userAgent: string;
       /** Execution timings for the Lighthouse run */
       timing: {total: number, [t: string]: number};
+      /** The log of all localized strings and their corresponding template values. */
+      localeLog?: LocaleLog;
     }
 
     // Result namespace

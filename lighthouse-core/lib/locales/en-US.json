@@ -14,6 +14,12 @@
   "lighthouse-core/audits/metrics/interactive.js!#description": {
     "message": "Interactive marks the time at which the page is fully interactive. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/consistently-interactive)."
   },
+  "lighthouse-core/config/default-config.js!#metricGroupTitle": {
+    "message": "Metrics"
+  },
+  "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupTitle": {
+    "message": "Opportunities"
+  },
   "lighthouse-core/lib/i18n.js!#ms": {
     "message": "{timeInMs, number, milliseconds} ms"
   },
