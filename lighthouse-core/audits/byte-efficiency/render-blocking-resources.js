@@ -10,7 +10,7 @@
 'use strict';
 
 const Audit = require('../audit');
-const i18nUtils = require('../../lib/i18n');
+const i18n = require('../../lib/i18n');
 const BaseNode = require('../../lib/dependency-graph/base-node');
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const UnusedCSS = require('./unused-css-rules');
@@ -37,7 +37,7 @@ const UIStrings = {
     } delayed first paint by {timeInMs, number, milliseconds} ms`,
 };
 
-const i18n = i18nUtils.createStringFormatter(__filename, UIStrings);
+const str_ = i18n.createStringFormatter(__filename, UIStrings);
 
 /**
  * Given a simulation's nodeTimings, return an object with the nodes/timing keyed by network URL
@@ -66,9 +66,9 @@ class RenderBlockingResources extends Audit {
   static get meta() {
     return {
       id: 'render-blocking-resources',
-      title: i18n(UIStrings.title),
+      title: str_(UIStrings.title),
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      description: i18n(UIStrings.description),
+      description: str_(UIStrings.description),
       // This audit also looks at CSSUsage but has a graceful fallback if it failed, so do not mark
       // it as a "requiredArtifact".
       // TODO: look into adding an `optionalArtifacts` property that captures this
@@ -210,14 +210,14 @@ class RenderBlockingResources extends Audit {
 
     let displayValue = '';
     if (results.length > 0) {
-      displayValue = i18n(UIStrings.displayValue, {timeInMs: wastedMs, itemCount: results.length});
+      displayValue = str_(UIStrings.displayValue, {timeInMs: wastedMs, itemCount: results.length});
     }
 
     /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
     const headings = [
-      {key: 'url', valueType: 'url', label: i18n(i18nUtils.UIStrings.columnURL)},
-      {key: 'totalBytes', valueType: 'bytes', label: i18n(i18nUtils.UIStrings.columnSize)},
-      {key: 'wastedMs', valueType: 'timespanMs', label: i18n(i18nUtils.UIStrings.columnWastedTime)},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+      {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnWastedTime)},
     ];
 
     const details = Audit.makeOpportunityDetails(headings, results, wastedMs);
