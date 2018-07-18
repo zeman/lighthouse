@@ -35,7 +35,6 @@ const Config = require('./config/config');
 async function lighthouse(url, flags, configJSON) {
   // TODO(bckenny): figure out Flags types.
   flags = flags || /** @type {LH.Flags} */ ({});
-  flags.locale = flags.locale || i18n.getDefaultLocale();
 
   // set logging preferences, assume quiet
   flags.logLevel = flags.logLevel || 'error';
