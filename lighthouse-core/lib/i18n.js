@@ -135,7 +135,8 @@ module.exports = {
       if (!keyname) throw new Error(`Could not locate: ${template}`);
 
       const filenameToLookup = keyname in UIStrings ? __filename : filename;
-      const key = path.relative(LH_ROOT, filenameToLookup) + '!#' + keyname;
+      const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
+      const key = unixStyleFilename + '!#' + keyname;
       const keyUsages = formattedStringUsages.get(key) || [];
       keyUsages.push({key, template, values});
       formattedStringUsages.set(key, keyUsages);
