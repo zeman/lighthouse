@@ -14,11 +14,23 @@
   "lighthouse-core/audits/metrics/interactive.js!#description": {
     "message": "Îńt̂ér̂áĉt́îv́ê ḿâŕk̂ś t̂h́ê t́îḿê át̂ ẃĥíĉh́ t̂h́ê ṕâǵê íŝ f́ûĺl̂ý îńt̂ér̂áĉt́îv́ê. [Ĺêár̂ń m̂ór̂é](ĥt́t̂ṕŝ://d́êv́êĺôṕêŕŝ.ǵôóĝĺê.ćôḿ/ŵéb̂/t́ôól̂ś/l̂íĝh́t̂h́ôúŝé/âúd̂ít̂ś/ĉón̂śîśt̂én̂t́l̂ý-îńt̂ér̂áĉt́îv́ê)."
   },
+  "lighthouse-core/config/default-config.js!#performanceCategoryTitle": {
+    "message": "P̂ér̂f́ôŕm̂án̂ćê"
+  },
   "lighthouse-core/config/default-config.js!#metricGroupTitle": {
     "message": "M̂ét̂ŕîćŝ"
   },
   "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupTitle": {
     "message": "Ôṕp̂ór̂t́ûńît́îéŝ"
+  },
+  "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupDescription": {
+    "message": "T̂h́êśê ár̂é ôṕp̂ór̂t́ûńît́îéŝ t́ô śp̂éêd́ ûṕ ŷóûŕ âṕp̂ĺîćât́îón̂ b́ŷ óp̂t́îḿîźîńĝ t́ĥé f̂ól̂ĺôẃîńĝ ŕêśôúr̂ćêś."
+  },
+  "lighthouse-core/config/default-config.js!#diagnosticsGroupTitle": {
+    "message": "D̂íâǵn̂óŝt́îćŝ"
+  },
+  "lighthouse-core/config/default-config.js!#diagnosticsGroupDescription": {
+    "message": "M̂ór̂é îńf̂ór̂ḿât́îón̂ áb̂óût́ t̂h́ê ṕêŕf̂ór̂ḿâńĉé ôf́ ŷóûŕ âṕp̂ĺîćât́îón̂."
   },
   "lighthouse-core/lib/i18n.js!#ms": {
     "message": "{timeInMs, number, milliseconds} m̂ś"

@@ -14,11 +14,23 @@
   "lighthouse-core/audits/metrics/interactive.js!#description": {
     "message": "Interactive marks the time at which the page is fully interactive. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/consistently-interactive)."
   },
+  "lighthouse-core/config/default-config.js!#performanceCategoryTitle": {
+    "message": "Performance"
+  },
   "lighthouse-core/config/default-config.js!#metricGroupTitle": {
     "message": "Metrics"
   },
   "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupTitle": {
     "message": "Opportunities"
+  },
+  "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupDescription": {
+    "message": "These are opportunities to speed up your application by optimizing the following resources."
+  },
+  "lighthouse-core/config/default-config.js!#diagnosticsGroupTitle": {
+    "message": "Diagnostics"
+  },
+  "lighthouse-core/config/default-config.js!#diagnosticsGroupDescription": {
+    "message": "More information about the performance of your application."
   },
   "lighthouse-core/lib/i18n.js!#ms": {
     "message": "{timeInMs, number, milliseconds} ms"
