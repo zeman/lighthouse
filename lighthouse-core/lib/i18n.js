@@ -26,13 +26,21 @@ try {
 
 const UIStrings = {
   ms: '{timeInMs, number, milliseconds}\xa0ms',
+  displayValueByteSavings: 'Potential savings of {wastedBytes, number, bytes}\xa0KB',
+  displayValueMsSavings: 'Potential savings of {wastedMs, number, milliseconds}\xa0ms',
   columnURL: 'URL',
   columnSize: 'Size (KB)',
-  columnWastedTime: 'Potential Savings (ms)',
+  columnCacheTTL: 'Cache TTL',
+  columnWastedBytes: 'Potential Savings (KB)',
+  columnWastedMs: 'Potential Savings (ms)',
+  columnTimeSpent: 'Time Spent',
 };
 
 const formats = {
   number: {
+    bytes: {
+      maximumFractionDigits: 0,
+    },
     milliseconds: {
       maximumFractionDigits: 0,
     },
