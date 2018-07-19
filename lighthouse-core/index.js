@@ -8,7 +8,6 @@
 const Runner = require('./runner');
 const log = require('lighthouse-logger');
 const ChromeProtocol = require('./gather/connections/cri.js');
-const i18n = require('./lib/i18n');
 const Config = require('./config/config');
 
 /*

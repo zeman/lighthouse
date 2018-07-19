@@ -32,7 +32,7 @@ class Runner {
     try {
       const startTime = Date.now();
       const settings = opts.config.settings;
-      settings.locale = settings.locale || i18n.getDefaultLocale()
+      settings.locale = settings.locale || i18n.getDefaultLocale();
 
       /**
        * List of top-level warnings for this Lighthouse run.
