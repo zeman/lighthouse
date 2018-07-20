@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const spawnSync = require('child_process').spawnSync;
 const yargs = require('yargs');
-const log = require('../../../lighthouse-logger');
+const log = require('lighthouse-logger');
 
 const PROTOCOL_TIMEOUT_EXIT_CODE = 67;
 const RETRIES = 3;

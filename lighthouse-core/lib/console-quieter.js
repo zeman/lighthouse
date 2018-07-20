@@ -7,7 +7,7 @@
 
 /* eslint-disable no-console */
 
-const log = require('../../lighthouse-logger');
+const log = require('lighthouse-logger');
 
 /** @type {Array<{type: 'log'|'warn'|'error', args: any[], prefix: string}>} */
 let _logs = [];

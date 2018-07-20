@@ -10,7 +10,7 @@ const {promisify} = require('util');
 const execAsync = promisify(require('child_process').exec);
 
 const {server, serverForOffline} = require('../fixtures/static-server');
-const log = require('../../../lighthouse-logger');
+const log = require('lighthouse-logger');
 
 const purpleify = str => `${log.purple}${str}${log.reset}`;
 const smokehouseDir = 'lighthouse-cli/test/smokehouse/';

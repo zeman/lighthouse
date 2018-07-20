@@ -8,7 +8,7 @@
 const Connection = require('./connection.js');
 const WebSocket = require('ws');
 const http = require('http');
-const log = require('../../../lighthouse-logger');
+const log = require('lighthouse-logger');
 
 const DEFAULT_HOSTNAME = 'localhost';
 const CONNECT_TIMEOUT = 10000;

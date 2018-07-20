@@ -9,7 +9,7 @@ const Config = require('../../config/config');
 const assert = require('assert');
 const path = require('path');
 const defaultConfig = require('../../config/default-config.js');
-const log = require('../../../lighthouse-logger');
+const log = require('lighthouse-logger');
 const Gatherer = require('../../gather/gatherers/gatherer');
 const Audit = require('../../audits/audit');
 
