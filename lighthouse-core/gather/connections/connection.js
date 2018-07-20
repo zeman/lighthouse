@@ -6,7 +6,7 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const log = require('lighthouse-logger');
+const log = require('../../../lighthouse-logger');
 const LHError = require('../../lib/errors');
 
 /**

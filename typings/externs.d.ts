@@ -78,7 +78,7 @@ declare global {
       port: number;
       hostname: string;
       output: any;
-      logLevel: 'silent'|'error'|'info'|'verbose';
+      logLevel: 'silent'|'error'|'info'|'custom'|'verbose';
 
       // Just used by cli/
       _: string[];

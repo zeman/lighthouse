@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const log = require('lighthouse-logger');
+const log = require('../../lighthouse-logger');
 const stream = require('stream');
 const Simulator = require('./dependency-graph/simulator/simulator');
 const lanternTraceSaver = require('./lantern-trace-saver');

@@ -11,7 +11,7 @@ const fullConfig = require('./full-config.js');
 const constants = require('./constants');
 
 const isDeepEqual = require('lodash.isequal');
-const log = require('lighthouse-logger');
+const log = require('../../lighthouse-logger');
 const path = require('path');
 const Audit = require('../audits/audit.js');
 const Runner = require('../runner.js');

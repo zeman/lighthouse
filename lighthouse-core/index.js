@@ -6,7 +6,7 @@
 'use strict';
 
 const Runner = require('./runner');
-const log = require('lighthouse-logger');
+const log = require('../lighthouse-logger');
 const ChromeProtocol = require('./gather/connections/cri.js');
 const i18n = require('./lib/i18n');
 const Config = require('./config/config');
@@ -37,8 +37,8 @@ async function lighthouse(url, flags, configJSON) {
   flags = flags || /** @type {LH.Flags} */ ({});
   i18n.setLocale(flags.locale);
 
-  // set logging preferences, assume quiet
-  flags.logLevel = flags.logLevel || 'error';
+  // set logging preferences, assume the user is handling it
+  flags.logLevel = flags.logLevel || 'custom';
   log.setLevel(flags.logLevel);
 
   // Use ConfigParser to generate a valid config file

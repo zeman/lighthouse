@@ -15,7 +15,7 @@ const URL = require('../lib/url-shim');
 const TraceParser = require('../lib/traces/trace-parser');
 const constants = require('../config/constants');
 
-const log = require('lighthouse-logger');
+const log = require('../../lighthouse-logger');
 const DevtoolsLog = require('./devtools-log');
 
 const pageFunctions = require('../lib/page-functions.js');

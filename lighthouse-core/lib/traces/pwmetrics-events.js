@@ -6,7 +6,7 @@
 // @ts-nocheck
 'use strict';
 
-const log = require('lighthouse-logger');
+const log = require('../../../lighthouse-logger');
 
 // TODO: rework this file to not need this function
 // see https://github.com/GoogleChrome/lighthouse/pull/5101/files#r186168840

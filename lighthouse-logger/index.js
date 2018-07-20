@@ -60,7 +60,7 @@ class Log {
   static loggerfn(title) {
     let log = loggersByTitle[title];
     if (!log) {
-      log = debug(title);
+      log = debug(`lh:${title}`);
       loggersByTitle[title] = log;
       // errors with red, warnings with yellow.
       if (title.endsWith('error')) {
@@ -75,16 +75,19 @@ class Log {
   static setLevel(level) {
     switch (level) {
       case 'silent':
-        debug.enable('-*');
+        debug.enable('-lh:*');
         break;
       case 'verbose':
-        debug.enable('*');
+        debug.enable('lh:*');
         break;
       case 'error':
-        debug.enable('-*, *:error');
+        debug.enable('-lh:*, lh:*:error');
+        break;
+      case 'custom':
+        // custom assumes the user has configured debug already to their liking
         break;
       default:
-        debug.enable('*, -*:verbose');
+        debug.enable('lh:*, -lh:*:verbose');
     }
   }
 
