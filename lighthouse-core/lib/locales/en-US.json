@@ -5,9 +5,6 @@
   "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | description": {
     "message": "Resources are blocking the first paint of your page. Consider delivering critical JS/CSS inline and deferring all non-critical JS/styles. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/blocking-resources)."
   },
-  "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | displayValue": {
-    "message": "{itemCount, plural,\n    one {1 resource}\n    other {# resources}\n    } delayed first paint by {timeInMs, number, milliseconds} ms"
-  },
   "lighthouse-core/audits/metrics/interactive.js | title": {
     "message": "Time to Interactive"
   },
@@ -41,7 +38,7 @@
   "lighthouse-core/lib/i18n.js | columnSize": {
     "message": "Size (KB)"
   },
-  "lighthouse-core/lib/i18n.js | columnWastedTime": {
+  "lighthouse-core/lib/i18n.js | columnWastedMs": {
     "message": "Potential Savings (ms)"
   }
 }

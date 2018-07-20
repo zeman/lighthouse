@@ -30,7 +30,7 @@ const UIStrings = {
   ms: '{timeInMs, number, milliseconds}\xa0ms',
   columnURL: 'URL',
   columnSize: 'Size (KB)',
-  columnWastedTime: 'Potential Savings (ms)',
+  columnWastedMs: 'Potential Savings (ms)',
 };
 
 const formats = {
