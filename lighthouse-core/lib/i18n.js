@@ -161,6 +161,7 @@ function replaceLocaleStringReferences(lhr, locale) {
     for (const [property, value] of Object.entries(objectInLHR)) {
       const currentPathInLHR = pathInLHR.concat([property]);
 
+      // Check to see if the value in the LHR looks like a string reference. If it is, replace it.
       if (typeof value === 'string' && /.* \| .* # \d+$/.test(value)) {
         // @ts-ignore - Guaranteed to match from .test call above
         const [_, templateID, usageIndex] = value.match(/(.*) # (\d+)$/);
