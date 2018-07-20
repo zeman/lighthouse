@@ -32,6 +32,7 @@ const UIStrings = {
   columnURL: 'URL',
   columnSize: 'Size (KB)',
   columnWastedMs: 'Potential Savings (ms)',
+  displayValueWastedMs: 'Potential savings of {wastedMs, number, milliseconds}\xa0ms',
 };
 
 const formats = {

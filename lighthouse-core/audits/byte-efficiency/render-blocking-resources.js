@@ -206,7 +206,7 @@ class RenderBlockingResources extends Audit {
 
     let displayValue = '';
     if (results.length > 0) {
-      displayValue = str_(i18n.UIStrings.columnWastedMs, {wastedMs});
+      displayValue = str_(i18n.UIStrings.displayValueWastedMs, {wastedMs});
     }
 
     /** @type {LH.Result.Audit.OpportunityDetails['headings']} */

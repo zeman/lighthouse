@@ -1920,7 +1920,7 @@
       "score": 0.46,
       "scoreDisplayMode": "numeric",
       "rawValue": 1129,
-      "displayValue": "5 resources delayed first paint by 1,130 ms",
+      "displayValue": "Potential savings of 1,130 ms",
       "details": {
         "type": "opportunity",
         "headings": [
@@ -3451,11 +3451,10 @@
       "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | description": [
         "audits[render-blocking-resources].description"
       ],
-      "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | displayValue": [
+      "lighthouse-core/lib/i18n.js | displayValueWastedMs": [
         {
           "values": {
-            "timeInMs": 1129,
-            "itemCount": 5
+            "wastedMs": 1129
           },
           "path": "audits[render-blocking-resources].displayValue"
         }
@@ -3466,7 +3465,7 @@
       "lighthouse-core/lib/i18n.js | columnSize": [
         "audits[render-blocking-resources].details.headings[1].label"
       ],
-      "lighthouse-core/lib/i18n.js | columnWastedTime": [
+      "lighthouse-core/lib/i18n.js | columnWastedMs": [
         "audits[render-blocking-resources].details.headings[2].label"
       ],
       "lighthouse-core/config/default-config.js | performanceCategoryTitle": [
