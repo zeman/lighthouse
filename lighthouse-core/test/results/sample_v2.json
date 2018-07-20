@@ -3429,62 +3429,64 @@
       "description": "To appear in search results, crawlers need access to your app."
     }
   },
-  "localeLog": {
-    "lighthouse-core/audits/metrics/interactive.js!#title": [
-      "audits.interactive.title"
-    ],
-    "lighthouse-core/audits/metrics/interactive.js!#description": [
-      "audits.interactive.description"
-    ],
-    "lighthouse-core/lib/i18n.js!#ms": [
-      {
-        "values": {
-          "timeInMs": 4927.278
-        },
-        "path": "audits.interactive.displayValue"
-      }
-    ],
-    "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js!#title": [
-      "audits[render-blocking-resources].title"
-    ],
-    "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js!#description": [
-      "audits[render-blocking-resources].description"
-    ],
-    "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js!#displayValue": [
-      {
-        "values": {
-          "timeInMs": 1129,
-          "itemCount": 5
-        },
-        "path": "audits[render-blocking-resources].displayValue"
-      }
-    ],
-    "lighthouse-core/lib/i18n.js!#columnURL": [
-      "audits[render-blocking-resources].details.headings[0].label"
-    ],
-    "lighthouse-core/lib/i18n.js!#columnSize": [
-      "audits[render-blocking-resources].details.headings[1].label"
-    ],
-    "lighthouse-core/lib/i18n.js!#columnWastedTime": [
-      "audits[render-blocking-resources].details.headings[2].label"
-    ],
-    "lighthouse-core/config/default-config.js!#performanceCategoryTitle": [
-      "categories.performance.title"
-    ],
-    "lighthouse-core/config/default-config.js!#metricGroupTitle": [
-      "categoryGroups.metrics.title"
-    ],
-    "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupTitle": [
-      "categoryGroups[load-opportunities].title"
-    ],
-    "lighthouse-core/config/default-config.js!#loadOpportunitiesGroupDescription": [
-      "categoryGroups[load-opportunities].description"
-    ],
-    "lighthouse-core/config/default-config.js!#diagnosticsGroupTitle": [
-      "categoryGroups.diagnostics.title"
-    ],
-    "lighthouse-core/config/default-config.js!#diagnosticsGroupDescription": [
-      "categoryGroups.diagnostics.description"
-    ]
+  "i18n": {
+    "messages": {
+      "lighthouse-core/audits/metrics/interactive.js | title": [
+        "audits.interactive.title"
+      ],
+      "lighthouse-core/audits/metrics/interactive.js | description": [
+        "audits.interactive.description"
+      ],
+      "lighthouse-core/lib/i18n.js | ms": [
+        {
+          "values": {
+            "timeInMs": 4927.278
+          },
+          "path": "audits.interactive.displayValue"
+        }
+      ],
+      "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | title": [
+        "audits[render-blocking-resources].title"
+      ],
+      "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | description": [
+        "audits[render-blocking-resources].description"
+      ],
+      "lighthouse-core/audits/byte-efficiency/render-blocking-resources.js | displayValue": [
+        {
+          "values": {
+            "timeInMs": 1129,
+            "itemCount": 5
+          },
+          "path": "audits[render-blocking-resources].displayValue"
+        }
+      ],
+      "lighthouse-core/lib/i18n.js | columnURL": [
+        "audits[render-blocking-resources].details.headings[0].label"
+      ],
+      "lighthouse-core/lib/i18n.js | columnSize": [
+        "audits[render-blocking-resources].details.headings[1].label"
+      ],
+      "lighthouse-core/lib/i18n.js | columnWastedTime": [
+        "audits[render-blocking-resources].details.headings[2].label"
+      ],
+      "lighthouse-core/config/default-config.js | performanceCategoryTitle": [
+        "categories.performance.title"
+      ],
+      "lighthouse-core/config/default-config.js | metricGroupTitle": [
+        "categoryGroups.metrics.title"
+      ],
+      "lighthouse-core/config/default-config.js | loadOpportunitiesGroupTitle": [
+        "categoryGroups[load-opportunities].title"
+      ],
+      "lighthouse-core/config/default-config.js | loadOpportunitiesGroupDescription": [
+        "categoryGroups[load-opportunities].description"
+      ],
+      "lighthouse-core/config/default-config.js | diagnosticsGroupTitle": [
+        "categoryGroups.diagnostics.title"
+      ],
+      "lighthouse-core/config/default-config.js | diagnosticsGroupDescription": [
+        "categoryGroups.diagnostics.description"
+      ]
+    }
   }
 }

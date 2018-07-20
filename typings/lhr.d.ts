@@ -6,10 +6,10 @@
 
 declare global {
   module LH {
-    export type LocaleLogEntry = string | {path: string, values: any};
+    export type I18NMessageEntry = string | {path: string, values: any};
 
-    export interface LocaleLog {
-      [templateID: string]: LocaleLogEntry[];
+    export interface I18NMessages {
+      [templateID: string]: I18NMessageEntry[];
     }
 
     /**
@@ -41,8 +41,8 @@ declare global {
       userAgent: string;
       /** Execution timings for the Lighthouse run */
       timing: {total: number, [t: string]: number};
-      /** The log of all localized strings and their corresponding template values. */
-      localeLog?: LocaleLog;
+      /** The record of all localized strings and their corresponding template values. */
+      i18n?: {messages: I18NMessages};
     }
 
     // Result namespace

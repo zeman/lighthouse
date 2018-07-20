@@ -40,14 +40,14 @@ const formats = {
 };
 
 /**
- * @param {string} msg
+ * @param {string} template
  * @param {Record<string, *>} [values]
  */
-function preprocessMessageValues(msg, values) {
+function preprocessMessageValues(template, values) {
   if (!values) return;
 
   const clonedValues = JSON.parse(JSON.stringify(values));
-  const parsed = MessageParser.parse(msg);
+  const parsed = MessageParser.parse(template);
   // Round all milliseconds to 10s place
   parsed.elements
     .filter(el => el.format && el.format.style === 'milliseconds')
@@ -63,7 +63,7 @@ function preprocessMessageValues(msg, values) {
 
 /**
  * @typedef StringUsage
- * @prop {string} key
+ * @prop {string} templateID
  * @prop {string} template
  * @prop {*} [values]
  */
@@ -74,13 +74,13 @@ const formattedStringUsages = new Map();
 /**
  *
  * @param {LH.Locale} locale
- * @param {string} templateKey
+ * @param {string} templateID
  * @param {string} template
  * @param {*} [values]
  */
-function formatTemplate(locale, templateKey, template, values) {
+function _formatTemplate(locale, templateID, template, values) {
   const localeTemplates = LOCALES[locale] || {};
-  const localeTemplate = localeTemplates[templateKey] && localeTemplates[templateKey].message;
+  const localeTemplate = localeTemplates[templateID] && localeTemplates[templateID].message;
   // fallback to the original english message if we couldn't find a message in the specified locale
   // better to have an english message than no message at all, in some number cases it won't even matter
   const templateForMessageFormat = localeTemplate || template;
@@ -95,15 +95,15 @@ function formatTemplate(locale, templateKey, template, values) {
   return {message, template: templateForMessageFormat};
 }
 
-/** @param {string[]} path */
-function formatPathAsString(path) {
+/** @param {string[]} pathInLHR */
+function _formatPathAsString(pathInLHR) {
   let pathAsString = '';
-  for (const property of path) {
+  for (const property of pathInLHR) {
     if (/^[a-z]+$/i.test(property)) {
       if (pathAsString.length) pathAsString += '.';
       pathAsString += property;
     } else {
-      if (/]|"|'/.test(property)) throw new Error(`Cannot handle "${property}" in i18n`);
+      if (/]|"|'|\s/.test(property)) throw new Error(`Cannot handle "${property}" in i18n`);
       pathAsString += `[${property}]`;
     }
   }
@@ -111,80 +111,86 @@ function formatPathAsString(path) {
   return pathAsString;
 }
 
-module.exports = {
-  UIStrings,
-  formatPathAsString,
+/**
+ * @return {LH.Locale}
+ */
+function getDefaultLocale() {
+  const defaultLocale = MessageFormat.defaultLocale;
+  if (defaultLocale in LOCALES) return /** @type {LH.Locale} */ (defaultLocale);
+  return 'en-US';
+}
+
+/**
+ * @param {string} filename
+ * @param {Record<string, string>} fileStrings
+ */
+function createStringFormatter(filename, fileStrings) {
+  const mergedStrings = {...UIStrings, ...fileStrings};
+
+  /** @param {string} template @param {*} [values] */
+  const formatFn = (template, values) => {
+    const keyname = Object.keys(mergedStrings).find(key => mergedStrings[key] === template);
+    if (!keyname) throw new Error(`Could not locate: ${template}`);
+
+    const filenameToLookup = keyname in UIStrings ? __filename : filename;
+    const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
+    const templateID = `${unixStyleFilename} | ${keyname}`;
+    const templateUsages = formattedStringUsages.get(templateID) || [];
+    templateUsages.push({templateID, template, values});
+    formattedStringUsages.set(templateID, templateUsages);
+
+    return `${templateID} # ${templateUsages.length - 1}`;
+  };
+
+  return formatFn;
+}
+
+/**
+ * @param {LH.Result} lhr
+ * @param {LH.Locale} locale
+ */
+function replaceLocaleStringReferences(lhr, locale) {
   /**
-   * @return {LH.Locale}
+   * @param {*} objectInLHR
+   * @param {LH.I18NMessages} messages
+   * @param {string[]} pathInLHR
    */
-  getDefaultLocale() {
-    const defaultLocale = MessageFormat.defaultLocale;
-    if (defaultLocale in LOCALES) return /** @type {LH.Locale} */ (defaultLocale);
-    return 'en-US';
-  },
-  /**
-   * @param {string} filename
-   * @param {Record<string, string>} fileStrings
-   */
-  createStringFormatter(filename, fileStrings) {
-    const mergedStrings = {...UIStrings, ...fileStrings};
+  function replaceInObject(objectInLHR, messages, pathInLHR = []) {
+    if (typeof objectInLHR !== 'object' || !objectInLHR) return;
 
-    /** @param {string} template @param {*} [values] */
-    const formatFn = (template, values) => {
-      const keyname = Object.keys(mergedStrings).find(key => mergedStrings[key] === template);
-      if (!keyname) throw new Error(`Could not locate: ${template}`);
+    for (const [property, value] of Object.entries(objectInLHR)) {
+      const currentPathInLHR = pathInLHR.concat([property]);
 
-      const filenameToLookup = keyname in UIStrings ? __filename : filename;
-      const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
-      const key = unixStyleFilename + '!#' + keyname;
-      const keyUsages = formattedStringUsages.get(key) || [];
-      keyUsages.push({key, template, values});
-      formattedStringUsages.set(key, keyUsages);
+      if (typeof value === 'string' && /.* \| .* # \d+$/.test(value)) {
+        // @ts-ignore - Guaranteed to match from .test call above
+        const [_, templateID, usageIndex] = value.match(/(.*) # (\d+)$/);
+        const templateUsagesInLHR = messages[templateID] || [];
+        const usages = formattedStringUsages.get(templateID) || [];
+        const usage = usages[Number(usageIndex)];
+        const pathAsString = _formatPathAsString(currentPathInLHR);
+        templateUsagesInLHR.push(
+          usage.values ? {values: usage.values, path: pathAsString} : pathAsString
+        );
 
-      return `${key}#${keyUsages.length - 1}`;
-    };
+        const {message} = _formatTemplate(locale, templateID, usage.template, usage.values);
 
-    return formatFn;
-  },
-  /**
-   * @param {LH.Result} lhr
-   * @param {LH.Locale} locale
-   */
-  replaceLocaleStringReferences(lhr, locale) {
-    /**
-     * @param {*} objectInLHR
-     * @param {LH.LocaleLog} log
-     * @param {string[]} path
-     */
-    function replaceInObject(objectInLHR, log, path = []) {
-      if (typeof objectInLHR !== 'object' || !objectInLHR) return;
-
-      for (const [property, value] of Object.entries(objectInLHR)) {
-        const currentPath = path.concat([property]);
-
-        if (typeof value === 'string' && /.*!#.*#\d+$/.test(value)) {
-          // @ts-ignore - Guaranteed to match from .test call above
-          const [_, templateKey, usageIndex] = value.match(/(.*)#(\d+)$/);
-          const templateLogRecord = log[templateKey] || [];
-          const usages = formattedStringUsages.get(templateKey) || [];
-          const usage = usages[Number(usageIndex)];
-          const pathAsString = formatPathAsString(currentPath);
-          templateLogRecord.push(
-            usage.values ? {values: usage.values, path: pathAsString} : pathAsString
-          );
-
-          const {message} = formatTemplate(locale, templateKey, usage.template, usage.values);
-
-          objectInLHR[property] = message;
-          log[templateKey] = templateLogRecord;
-        } else {
-          replaceInObject(value, log, currentPath);
-        }
+        objectInLHR[property] = message;
+        messages[templateID] = templateUsagesInLHR;
+      } else {
+        replaceInObject(value, messages, currentPathInLHR);
       }
     }
+  }
 
-    const log = {};
-    replaceInObject(lhr, log);
-    lhr.localeLog = log;
-  },
+  const messages = {};
+  replaceInObject(lhr, messages);
+  lhr.i18n = {messages};
+}
+
+module.exports = {
+  _formatPathAsString,
+  UIStrings,
+  getDefaultLocale,
+  createStringFormatter,
+  replaceLocaleStringReferences,
 };

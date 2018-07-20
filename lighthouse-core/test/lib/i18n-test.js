@@ -11,23 +11,23 @@ const i18n = require('../../lib/i18n');
 /* eslint-env jest */
 
 describe('i18n', () => {
-  describe('#formatPathAsString', () => {
+  describe('#_formatPathAsString', () => {
     it('handles simple paths', () => {
-      expect(i18n.formatPathAsString(['foo'])).toBe('foo');
-      expect(i18n.formatPathAsString(['foo', 'bar', 'baz'])).toBe('foo.bar.baz');
+      expect(i18n._formatPathAsString(['foo'])).toBe('foo');
+      expect(i18n._formatPathAsString(['foo', 'bar', 'baz'])).toBe('foo.bar.baz');
     });
 
     it('handles array paths', () => {
-      expect(i18n.formatPathAsString(['foo', 0])).toBe('foo[0]');
+      expect(i18n._formatPathAsString(['foo', 0])).toBe('foo[0]');
     });
 
     it('handles complex paths', () => {
       const propertyPath = ['foo', 'what-the', 'bar', 0, 'no'];
-      expect(i18n.formatPathAsString(propertyPath)).toBe('foo[what-the].bar[0].no');
+      expect(i18n._formatPathAsString(propertyPath)).toBe('foo[what-the].bar[0].no');
     });
 
     it('throws on unhandleable paths', () => {
-      expect(() => i18n.formatPathAsString(['Bobby "DROP TABLE'])).toThrow(/Cannot handle/);
+      expect(() => i18n._formatPathAsString(['Bobby "DROP TABLE'])).toThrow(/Cannot handle/);
     });
   });
 
@@ -37,20 +37,20 @@ describe('i18n', () => {
       const templates = {daString: 'use me!'};
       const formatter = i18n.createStringFormatter(fakeFile, templates);
 
-      const expected = 'lighthouse-core/test/lib/fake-file.js!#daString#0';
+      const expected = 'lighthouse-core/test/lib/fake-file.js | daString # 0';
       expect(formatter(templates.daString, {x: 1})).toBe(expected);
     });
   });
 
   describe('#replaceLocaleStringReferences', () => {
     it('replaces the references in the LHR', () => {
-      const templateID = 'lighthouse-core/test/lib/fake-file.js!#daString';
-      const reference = templateID + '#0';
+      const templateID = 'lighthouse-core/test/lib/fake-file.js | daString';
+      const reference = templateID + ' # 0';
       const lhr = {audits: {'fake-audit': {title: reference}}};
 
       i18n.replaceLocaleStringReferences(lhr, 'en-US');
       expect(lhr.audits['fake-audit'].title).toBe('use me!');
-      expect(lhr.localeLog).toEqual({
+      expect(lhr.i18n.messages).toEqual({
         [templateID]: [{path: 'audits[fake-audit].title', values: {x: 1}}]});
     });
   });
