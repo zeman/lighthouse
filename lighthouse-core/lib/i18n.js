@@ -6,6 +6,7 @@
 'use strict';
 
 const path = require('path');
+const isDeepEqual = require('lodash.isequal');
 const MessageFormat = require('intl-messageformat').default;
 const MessageParser = require('intl-messageformat-parser');
 const LOCALES = require('./locales');
@@ -138,10 +139,16 @@ function createStringFormatter(filename, fileStrings) {
     const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
     const templateID = `${unixStyleFilename} | ${keyname}`;
     const templateUsages = formattedStringUsages.get(templateID) || [];
-    templateUsages.push({templateID, template, values});
+
+    let indexOfUsage = templateUsages.findIndex(usage => isDeepEqual(usage.values, values));
+    if (indexOfUsage === -1) {
+      templateUsages.push({templateID, template, values});
+      indexOfUsage = templateUsages.length - 1;
+    }
+
     formattedStringUsages.set(templateID, templateUsages);
 
-    return `${templateID} # ${templateUsages.length - 1}`;
+    return `${templateID} # ${indexOfUsage}`;
   };
 
   return formatFn;
