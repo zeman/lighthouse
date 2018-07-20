@@ -18,6 +18,8 @@ try {
 
   // @ts-ignore
   const IntlPolyfill = require('intl');
+  if (!IntlPolyfill.NumberFormat) throw new Error('Invalid polyfill');
+
   // @ts-ignore
   Intl.NumberFormat = IntlPolyfill.NumberFormat;
   // @ts-ignore
