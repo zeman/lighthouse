@@ -31,11 +31,11 @@ describe('i18n', () => {
     });
   });
 
-  describe('#createStringFormatter', () => {
+  describe('#createMessageInstanceIdFn', () => {
     it('returns a string reference', () => {
       const fakeFile = path.join(__dirname, 'fake-file.js');
       const templates = {daString: 'use me!'};
-      const formatter = i18n.createStringFormatter(fakeFile, templates);
+      const formatter = i18n.createMessageInstanceIdFn(fakeFile, templates);
 
       const expected = 'lighthouse-core/test/lib/fake-file.js | daString # 0';
       expect(formatter(templates.daString, {x: 1})).toBe(expected);

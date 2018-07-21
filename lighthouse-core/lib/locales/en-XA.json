@@ -40,5 +40,8 @@
   },
   "lighthouse-core/lib/i18n.js | columnWastedMs": {
     "message": "P̂ót̂én̂t́îál̂ Śâv́îńĝś (m̂ś)"
+  },
+  "lighthouse-core/lib/i18n.js | displayValueWastedMs": {
+    "message": "P̂ót̂én̂t́îál̂ śâv́îńĝś ôf́ {wastedMs, number, milliseconds} m̂ś"
   }
 }

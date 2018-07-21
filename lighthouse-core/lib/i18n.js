@@ -44,15 +44,15 @@ const formats = {
 };
 
 /**
- * @param {string} template
+ * @param {string} icuMessage
  * @param {Record<string, *>} [values]
  */
-function preprocessMessageValues(template, values) {
+function _preprocessMessageValues(icuMessage, values) {
   if (!values) return;
 
   const clonedValues = JSON.parse(JSON.stringify(values));
-  const parsed = MessageParser.parse(template);
-  // Round all milliseconds to 10s place
+  const parsed = MessageParser.parse(icuMessage);
+  // Round all milliseconds to the nearest 10
   parsed.elements
     .filter(el => el.format && el.format.style === 'milliseconds')
     .forEach(el => (clonedValues[el.id] = Math.round(clonedValues[el.id] / 10) * 10));
@@ -66,37 +66,38 @@ function preprocessMessageValues(template, values) {
 }
 
 /**
- * @typedef StringUsage
- * @prop {string} templateID
- * @prop {string} template
+ * @typedef IcuMessageInstance
+ * @prop {string} icuMessageId
+ * @prop {string} icuMessage
  * @prop {*} [values]
  */
 
-/** @type {Map<string, StringUsage[]>} */
-const formattedStringUsages = new Map();
+/** @type {Map<string, IcuMessageInstance[]>} */
+const _icuMessageInstanceMap = new Map();
 
 /**
  *
  * @param {LH.Locale} locale
- * @param {string} templateID
- * @param {string} template
+ * @param {string} icuMessageId
+ * @param {string} icuMessage
  * @param {*} [values]
+ * @return {{formattedString: string, icuMessage: string}}
  */
-function _formatTemplate(locale, templateID, template, values) {
-  const localeTemplates = LOCALES[locale] || {};
-  const localeTemplate = localeTemplates[templateID] && localeTemplates[templateID].message;
+function _formatIcuMessage(locale, icuMessageId, icuMessage, values) {
+  const localeMessages = LOCALES[locale] || {};
+  const localeMessage = localeMessages[icuMessageId] && localeMessages[icuMessageId].message;
   // fallback to the original english message if we couldn't find a message in the specified locale
   // better to have an english message than no message at all, in some number cases it won't even matter
-  const templateForMessageFormat = localeTemplate || template;
+  const messageForMessageFormat = localeMessage || icuMessage;
   // when using accented english, force the use of a different locale for number formatting
   const localeForMessageFormat = locale === 'en-XA' ? 'de-DE' : locale;
   // pre-process values for the message format like KB and milliseconds
-  const valuesForMessageFormat = preprocessMessageValues(template, values);
+  const valuesForMessageFormat = _preprocessMessageValues(icuMessage, values);
 
-  const formatter = new MessageFormat(templateForMessageFormat, localeForMessageFormat, formats);
-  const message = formatter.format(valuesForMessageFormat);
+  const formatter = new MessageFormat(messageForMessageFormat, localeForMessageFormat, formats);
+  const formattedString = formatter.format(valuesForMessageFormat);
 
-  return {message, template: templateForMessageFormat};
+  return {formattedString, icuMessage: messageForMessageFormat};
 }
 
 /** @param {string[]} pathInLHR */
@@ -128,44 +129,44 @@ function getDefaultLocale() {
  * @param {string} filename
  * @param {Record<string, string>} fileStrings
  */
-function createStringFormatter(filename, fileStrings) {
+function createMessageInstanceIdFn(filename, fileStrings) {
   const mergedStrings = {...UIStrings, ...fileStrings};
 
-  /** @param {string} template @param {*} [values] */
-  const formatFn = (template, values) => {
-    const keyname = Object.keys(mergedStrings).find(key => mergedStrings[key] === template);
-    if (!keyname) throw new Error(`Could not locate: ${template}`);
+  /** @param {string} icuMessage @param {*} [values] */
+  const getMessageInstanceIdFn = (icuMessage, values) => {
+    const keyname = Object.keys(mergedStrings).find(key => mergedStrings[key] === icuMessage);
+    if (!keyname) throw new Error(`Could not locate: ${icuMessage}`);
 
-    const filenameToLookup = keyname in UIStrings ? __filename : filename;
+    const filenameToLookup = keyname in fileStrings ? filename : __filename;
     const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
-    const templateID = `${unixStyleFilename} | ${keyname}`;
-    const templateUsages = formattedStringUsages.get(templateID) || [];
+    const icuMessageId = `${unixStyleFilename} | ${keyname}`;
+    const icuMessageInstances = _icuMessageInstanceMap.get(icuMessageId) || [];
 
-    let indexOfUsage = templateUsages.findIndex(usage => isDeepEqual(usage.values, values));
-    if (indexOfUsage === -1) {
-      templateUsages.push({templateID, template, values});
-      indexOfUsage = templateUsages.length - 1;
+    let indexOfInstance = icuMessageInstances.findIndex(inst => isDeepEqual(inst.values, values));
+    if (indexOfInstance === -1) {
+      icuMessageInstances.push({icuMessageId, icuMessage, values});
+      indexOfInstance = icuMessageInstances.length - 1;
     }
 
-    formattedStringUsages.set(templateID, templateUsages);
+    _icuMessageInstanceMap.set(icuMessageId, icuMessageInstances);
 
-    return `${templateID} # ${indexOfUsage}`;
+    return `${icuMessageId} # ${indexOfInstance}`;
   };
 
-  return formatFn;
+  return getMessageInstanceIdFn;
 }
 
 /**
  * @param {LH.Result} lhr
  * @param {LH.Locale} locale
  */
-function replaceLocaleStringReferences(lhr, locale) {
+function replaceIcuMessageInstanceIds(lhr, locale) {
   /**
    * @param {*} objectInLHR
-   * @param {LH.I18NMessages} messages
+   * @param {LH.I18NMessages} icuMessagePaths
    * @param {string[]} pathInLHR
    */
-  function replaceInObject(objectInLHR, messages, pathInLHR = []) {
+  function replaceInObject(objectInLHR, icuMessagePaths, pathInLHR = []) {
     if (typeof objectInLHR !== 'object' || !objectInLHR) return;
 
     for (const [property, value] of Object.entries(objectInLHR)) {
@@ -174,34 +175,38 @@ function replaceLocaleStringReferences(lhr, locale) {
       // Check to see if the value in the LHR looks like a string reference. If it is, replace it.
       if (typeof value === 'string' && /.* \| .* # \d+$/.test(value)) {
         // @ts-ignore - Guaranteed to match from .test call above
-        const [_, templateID, usageIndex] = value.match(/(.*) # (\d+)$/);
-        const templateUsagesInLHR = messages[templateID] || [];
-        const usages = formattedStringUsages.get(templateID) || [];
-        const usage = usages[Number(usageIndex)];
-        const pathAsString = _formatPathAsString(currentPathInLHR);
-        templateUsagesInLHR.push(
-          usage.values ? {values: usage.values, path: pathAsString} : pathAsString
+        const [_, icuMessageId, icuMessageInstanceIndex] = value.match(/(.*) # (\d+)$/);
+        const messageInstancesInLHR = icuMessagePaths[icuMessageId] || [];
+        const icuMessageInstances = _icuMessageInstanceMap.get(icuMessageId) || [];
+        const icuMessageInstance = icuMessageInstances[Number(icuMessageInstanceIndex)];
+        const currentPathAsString = _formatPathAsString(currentPathInLHR);
+
+        messageInstancesInLHR.push(
+          icuMessageInstance.values ?
+            {values: icuMessageInstance.values, path: currentPathAsString} :
+            currentPathAsString
         );
 
-        const {message} = _formatTemplate(locale, templateID, usage.template, usage.values);
+        const {formattedString} = _formatIcuMessage(locale, icuMessageId,
+          icuMessageInstance.icuMessage, icuMessageInstance.values);
 
-        objectInLHR[property] = message;
-        messages[templateID] = templateUsagesInLHR;
+        objectInLHR[property] = formattedString;
+        icuMessagePaths[icuMessageId] = messageInstancesInLHR;
       } else {
-        replaceInObject(value, messages, currentPathInLHR);
+        replaceInObject(value, icuMessagePaths, currentPathInLHR);
       }
     }
   }
 
-  const messages = {};
-  replaceInObject(lhr, messages);
-  lhr.i18n = {messages};
+  const icuMessagePaths = {};
+  replaceInObject(lhr, icuMessagePaths);
+  lhr.i18n = {icuMessagePaths};
 }
 
 module.exports = {
   _formatPathAsString,
   UIStrings,
   getDefaultLocale,
-  createStringFormatter,
-  replaceLocaleStringReferences,
+  createMessageInstanceIdFn,
+  replaceIcuMessageInstanceIds,
 };

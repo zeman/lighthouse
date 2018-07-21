@@ -40,5 +40,8 @@
   },
   "lighthouse-core/lib/i18n.js | columnWastedMs": {
     "message": "Potential Savings (ms)"
+  },
+  "lighthouse-core/lib/i18n.js | displayValueWastedMs": {
+    "message": "Potential savings of {wastedMs, number, milliseconds} ms"
   }
 }

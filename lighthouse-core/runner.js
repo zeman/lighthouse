@@ -137,7 +137,7 @@ class Runner {
         timing: {total: Date.now() - startTime},
       };
 
-      i18n.replaceLocaleStringReferences(lhr, settings.locale);
+      i18n.replaceIcuMessageInstanceIds(lhr, settings.locale);
 
       const report = generateReport(lhr, settings.output);
       return {lhr, artifacts, report};

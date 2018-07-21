@@ -3430,7 +3430,7 @@
     }
   },
   "i18n": {
-    "messages": {
+    "icuMessagePaths": {
       "lighthouse-core/audits/metrics/interactive.js | title": [
         "audits.interactive.title"
       ],

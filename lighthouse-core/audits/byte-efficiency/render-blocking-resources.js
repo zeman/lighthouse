@@ -33,7 +33,7 @@ const UIStrings = {
     'JS/styles. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/blocking-resources).',
 };
 
-const str_ = i18n.createStringFormatter(__filename, UIStrings);
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 /**
  * Given a simulation's nodeTimings, return an object with the nodes/timing keyed by network URL

@@ -41,8 +41,8 @@ declare global {
       userAgent: string;
       /** Execution timings for the Lighthouse run */
       timing: {total: number, [t: string]: number};
-      /** The record of all localized strings and their corresponding template values. */
-      i18n?: {messages: I18NMessages};
+      /** The record of all formatted string locations in the LHR and their corresponding source values. */
+      i18n?: {icuMessagePaths: I18NMessages};
     }
 
     // Result namespace

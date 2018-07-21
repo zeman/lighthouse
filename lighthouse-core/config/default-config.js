@@ -19,7 +19,7 @@ const UIStrings = {
   diagnosticsGroupDescription: 'More information about the performance of your application.',
 };
 
-const str_ = i18n.createStringFormatter(__filename, UIStrings);
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 module.exports = {
   settings: constants.defaultSettings,
