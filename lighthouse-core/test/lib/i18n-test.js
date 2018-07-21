@@ -42,15 +42,15 @@ describe('i18n', () => {
     });
   });
 
-  describe('#replaceLocaleStringReferences', () => {
+  describe('#replaceIcuMessageInstanceIds', () => {
     it('replaces the references in the LHR', () => {
       const templateID = 'lighthouse-core/test/lib/fake-file.js | daString';
       const reference = templateID + ' # 0';
       const lhr = {audits: {'fake-audit': {title: reference}}};
 
-      i18n.replaceLocaleStringReferences(lhr, 'en-US');
+      i18n.replaceIcuMessageInstanceIds(lhr, 'en-US');
       expect(lhr.audits['fake-audit'].title).toBe('use me!');
-      expect(lhr.i18n.messages).toEqual({
+      expect(lhr.i18n.icuMessagePaths).toEqual({
         [templateID]: [{path: 'audits[fake-audit].title', values: {x: 1}}]});
     });
   });
