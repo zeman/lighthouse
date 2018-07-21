@@ -161,6 +161,8 @@ function createMessageInstanceIdFn(filename, fileStrings) {
  * @param {LH.Locale} locale
  */
 function replaceIcuMessageInstanceIds(lhr, locale) {
+  const MESSAGE_INSTANCE_ID_REGEX = /(.* \| .*) # (\d+)$/;
+
   /**
    * @param {*} objectInLHR
    * @param {LH.I18NMessages} icuMessagePaths
@@ -173,9 +175,9 @@ function replaceIcuMessageInstanceIds(lhr, locale) {
       const currentPathInLHR = pathInLHR.concat([property]);
 
       // Check to see if the value in the LHR looks like a string reference. If it is, replace it.
-      if (typeof value === 'string' && /.* \| .* # \d+$/.test(value)) {
+      if (typeof value === 'string' && MESSAGE_INSTANCE_ID_REGEX.test(value)) {
         // @ts-ignore - Guaranteed to match from .test call above
-        const [_, icuMessageId, icuMessageInstanceIndex] = value.match(/(.*) # (\d+)$/);
+        const [_, icuMessageId, icuMessageInstanceIndex] = value.match(MESSAGE_INSTANCE_ID_REGEX);
         const messageInstancesInLHR = icuMessagePaths[icuMessageId] || [];
         const icuMessageInstances = _icuMessageInstanceMap.get(icuMessageId) || [];
         const icuMessageInstance = icuMessageInstances[Number(icuMessageInstanceIndex)];
