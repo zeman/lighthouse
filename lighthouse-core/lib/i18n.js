@@ -7,25 +7,31 @@
 
 const path = require('path');
 const isDeepEqual = require('lodash.isequal');
+const log = require('lighthouse-logger');
 const MessageFormat = require('intl-messageformat').default;
 const MessageParser = require('intl-messageformat-parser');
 const LOCALES = require('./locales');
 
 const LH_ROOT = path.join(__dirname, '../../');
 
-try {
-  // Node usually doesn't come with the locales we want built-in, so load the polyfill.
-  // In browser environments, we won't need the polyfill, and this will throw so wrap in try/catch.
+(() => {
+  // Node usually doesn't come with the locales we want built-in, so load the polyfill if we can.
 
-  // @ts-ignore
-  const IntlPolyfill = require('intl');
-  if (!IntlPolyfill.NumberFormat) throw new Error('Invalid polyfill');
+  try {
+    // @ts-ignore
+    const IntlPolyfill = require('intl');
+    // In browser environments where we don't need the polyfill, this won't exist
+    if (!IntlPolyfill.NumberFormat) return;
 
-  // @ts-ignore
-  Intl.NumberFormat = IntlPolyfill.NumberFormat;
-  // @ts-ignore
-  Intl.DateTimeFormat = IntlPolyfill.DateTimeFormat;
-} catch (_) {}
+    // @ts-ignore
+    Intl.NumberFormat = IntlPolyfill.NumberFormat;
+    // @ts-ignore
+    Intl.DateTimeFormat = IntlPolyfill.DateTimeFormat;
+  } catch (_) {
+    log.warn('i18n', 'Failed to install `intl` polyfill');
+  }
+})();
+
 
 const UIStrings = {
   ms: '{timeInMs, number, milliseconds}\xa0ms',
