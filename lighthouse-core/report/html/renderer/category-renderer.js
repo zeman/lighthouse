@@ -89,7 +89,8 @@ class CategoryRenderer {
       textEl.textContent = Util.str(Util.UIStrings.errorLabel);
       textEl.classList.add('tooltip-boundary');
       const tooltip = this.dom.createChildOf(textEl, 'div', 'tooltip tooltip--error');
-      tooltip.textContent = audit.result.errorMessage || Util.str(Util.UIStrings.errorMissingAuditInfo);
+      tooltip.textContent = audit.result.errorMessage ||
+          Util.str(Util.UIStrings.errorMissingAuditInfo);
     } else if (audit.result.explanation) {
       const explEl = this.dom.createChildOf(titleEl, 'div', 'lh-audit-explanation');
       explEl.textContent = audit.result.explanation;
@@ -249,7 +250,10 @@ class CategoryRenderer {
    * @return {Element}
    */
   _renderManualAudits(manualAudits, manualDescription) {
-    const group = {title: Util.str(Util.UIStrings.manualAuditsGroupTitle), description: manualDescription};
+    const group = {
+      title: Util.str(Util.UIStrings.manualAuditsGroupTitle),
+      description: manualDescription,
+    };
     const auditGroupElem = this.renderAuditGroup(group,
         {expandable: true, itemCount: manualAudits.length});
     auditGroupElem.classList.add('lh-audit-group--manual');

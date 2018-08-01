@@ -39,20 +39,6 @@ class Util {
   }
 
   /**
-   * @param {string} sourceString
-   * @return {string}
-   */
-  static str_(sourceString) {
-    // If the renderer was provided new strings, we'll use those
-    if (Util.rendererFormattedStrings) {
-      const keyName = Object.keys(Util.UIStrings).find(key => Util.UIStrings[key] === sourceString);
-      return Util.rendererFormattedStrings[/** @type {string} */ (keyName)];
-    }
-    // Otherwise, continue using the source string already referenced
-    return sourceString;
-  }
-
-  /**
    * @param {string|Array<string|number>=} displayValue
    * @return {string}
    */
@@ -413,6 +399,21 @@ class Util {
       networkThrottling,
       summary: `${deviceEmulation}, ${summary}`,
     };
+  }
+
+  /**
+   * @param {string} sourceString
+   * @return {string}
+   */
+  static str(sourceString) {
+    // If the renderer was provided new strings, we'll use those
+    if (Util.rendererFormattedStrings) {
+      const keyName = Object.keys(Util.UIStrings).find(key => Util.UIStrings[key] === sourceString);
+      const localizedString = Util.rendererFormattedStrings[/** @type {string} */ (keyName)];
+      if (localizedString) return localizedString;
+    }
+    // Otherwise, continue using the source string already referenced
+    return sourceString;
   }
 
   /**

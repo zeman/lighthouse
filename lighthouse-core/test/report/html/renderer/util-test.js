@@ -168,6 +168,21 @@ describe('util helpers', () => {
     assert.deepStrictEqual(displayValue, cloned, 'displayValue was mutated');
   });
 
+  describe('str()', () => {
+    it('returns original string if no localized ones were provided', () => {
+      const sampleUIString = Util.UIStrings.passedAuditsGroupTitle;
+      assert.equal(Util.str(Util.UIStrings.passedAuditsGroupTitle), sampleUIString);
+    });
+
+    it('returns localized UI string if it was in the LHR', () => {
+      const cloneResults = JSON.parse(JSON.stringify(sampleResults));
+      const localizedStr = 'Våļûéš åŕé éšţîmåţéð';
+      cloneResults.i18n.rendererFormattedStrings.varianceDisclaimer = localizedStr;
+      Util.rendererFormattedStrings = cloneResults.i18n.rendererFormattedStrings;
+      assert.equal(Util.str(Util.UIStrings.varianceDisclaimer), localizedStr);
+    });
+  });
+
   describe('getFinalScreenshot', () => {
     const cloneResults = JSON.parse(JSON.stringify(sampleResults));
     cloneResults.reportCategories = Object.values(cloneResults.categories);
