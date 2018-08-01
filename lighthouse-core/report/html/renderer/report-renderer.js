@@ -46,15 +46,13 @@ class ReportRenderer {
   renderReport(report, container) {
     // If any mutations happen to the report within the renderers, we want the original object untouched
     const clone = /** @type {LH.ReportResult} */ (JSON.parse(JSON.stringify(report)));
-    // Mutate the UIStrings if necessary (while saving originals)
-    const originalUIStrings = JSON.parse(JSON.stringify(Util.UIStrings));
     // If LHR is older (≤3.0.3), it has no locale setting. Set default.
     if (!clone.configSettings.locale) {
       clone.configSettings.locale = 'en-US';
     }
     Util.setNumberDateLocale(clone.configSettings.locale);
     if (clone.i18n && clone.i18n.rendererFormattedStrings) {
-      ReportRenderer.updateAllUIStrings(clone.i18n.rendererFormattedStrings);
+      Util.rendererFormattedStrings = clone.i18n.rendererFormattedStrings;
     }
 
     // TODO(phulce): we all agree this is technical debt we should fix
@@ -64,9 +62,6 @@ class ReportRenderer {
 
     container.textContent = ''; // Remove previous report.
     container.appendChild(this._renderReport(clone));
-
-    // put the UIStrings back into original state
-    ReportRenderer.updateAllUIStrings(originalUIStrings);
 
     return /** @type {Element} **/ (container);
   }
@@ -152,7 +147,7 @@ class ReportRenderer {
 
     const container = this._dom.cloneTemplate('#tmpl-lh-warnings--toplevel', this._templateContext);
     const message = this._dom.find('.lh-warnings__msg', container);
-    message.textContent = Util.UIStrings.toplevelWarningsMessage;
+    message.textContent = Util.str(Util.UIStrings.toplevelWarningsMessage);
 
     const warnings = this._dom.find('ul', container);
     for (const warningString of report.runWarnings) {
@@ -216,7 +211,7 @@ class ReportRenderer {
     if (scoreHeader) {
       const scoreScale = this._dom.cloneTemplate('#tmpl-lh-scorescale', this._templateContext);
       this._dom.find('.lh-scorescale-label', scoreScale).textContent =
-        Util.UIStrings.scorescaleLabel;
+        Util.str(Util.UIStrings.scorescaleLabel);
       scoresContainer.appendChild(scoreHeader);
       scoresContainer.appendChild(scoreScale);
     }
@@ -241,16 +236,6 @@ class ReportRenderer {
         const result = audits[auditMeta.id];
         auditMeta.result = result;
       });
-    }
-  }
-
-  /**
-   * @param {LH.I18NRendererStrings} rendererFormattedStrings
-   */
-  static updateAllUIStrings(rendererFormattedStrings) {
-    // TODO(i18n): don't mutate these here but on the LHR and pass that around everywhere
-    for (const [key, value] of Object.entries(rendererFormattedStrings)) {
-      Util.UIStrings[key] = value;
     }
   }
 }

@@ -39,6 +39,20 @@ class Util {
   }
 
   /**
+   * @param {string} sourceString
+   * @return {string}
+   */
+  static str_(sourceString) {
+    // If the renderer was provided new strings, we'll use those
+    if (Util.rendererFormattedStrings) {
+      const keyName = Object.keys(Util.UIStrings).find(key => Util.UIStrings[key] === sourceString);
+      return Util.rendererFormattedStrings[/** @type {string} */ (keyName)];
+    }
+    // Otherwise, continue using the source string already referenced
+    return sourceString;
+  }
+
+  /**
    * @param {string|Array<string|number>=} displayValue
    * @return {string}
    */
@@ -413,6 +427,11 @@ class Util {
     if (Util.numberDateLocale === 'en-XA') Util.numberDateLocale = 'de-DE';
   }
 }
+
+/**
+ * @type {LH.I18NRendererStrings | undefined}
+ */
+Util.rendererFormattedStrings = undefined;
 
 /**
  * This value is updated on each run to the locale of the report

@@ -139,7 +139,7 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
     });
     const estValuesEl = this.dom.createChildOf(metricsColumn2El, 'div',
         'lh-metrics__disclaimer lh-metrics__disclaimer');
-    estValuesEl.textContent = Util.UIStrings.varianceDisclaimer;
+    estValuesEl.textContent = Util.str(Util.UIStrings.varianceDisclaimer);
 
     metricAuditsEl.classList.add('lh-audit-group--metrics');
     element.appendChild(metricAuditsEl);
@@ -169,9 +169,9 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
       const tmpl = this.dom.cloneTemplate('#tmpl-lh-opportunity-header', this.templateContext);
 
       this.dom.find('.lh-load-opportunity__col--one', tmpl).textContent =
-        Util.UIStrings.opportunityResourceColumnLabel;
+        Util.str(Util.UIStrings.opportunityResourceColumnLabel);
       this.dom.find('.lh-load-opportunity__col--two', tmpl).textContent =
-        Util.UIStrings.opportunitySavingsColumnLabel;
+        Util.str(Util.UIStrings.opportunitySavingsColumnLabel);
 
       const headerEl = this.dom.find('.lh-load-opportunity__header', tmpl);
       groupEl.appendChild(headerEl);
