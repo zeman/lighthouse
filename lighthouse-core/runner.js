@@ -142,7 +142,7 @@ class Runner {
       // Summarize all the timings and drop onto the LHR
       log.timeEnd(runnerStatus);
       lhr.timing.entries.push(...log.getEntries());
-      const runnerEntry = log.getEntries().find(e => e.name === 'lh:runner:run');
+      const runnerEntry = lhr.timing.entries.find(e => e.name === 'lh:runner:run');
       if (runnerEntry) {
         lhr.timing.total = runnerEntry.duration;
       }

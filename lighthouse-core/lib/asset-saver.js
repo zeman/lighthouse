@@ -118,7 +118,7 @@ async function loadArtifacts(basePath) {
     });
   });
   await Promise.all(promises);
-  if (artifacts.Timing) {
+  if (Array.isArray(artifacts.Timing)) {
     // Tag existing entries, so they can be rendered in parallel
     artifacts.Timing.forEach(entry => (entry.gather = true));
   }
