@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha, browser */
+/* eslint-env jest, browser */
 
 const assert = require('assert');
 const fs = require('fs');
@@ -17,16 +17,16 @@ const DetailsRenderer = require('../../../../report/html/renderer/details-render
 const CriticalRequestChainRenderer = require(
     '../../../../report/html/renderer/crc-details-renderer.js');
 const CategoryRenderer = require('../../../../report/html/renderer/category-renderer.js');
-const ReportRenderer = require('../../../../report/html/renderer/report-renderer.js');
-const sampleResults = require('../../../results/sample_v2.json');
+const sampleResultsOrig = require('../../../results/sample_v2.json');
 
 const TEMPLATE_FILE = fs.readFileSync(__dirname +
     '/../../../../report/html/templates.html', 'utf8');
 
 describe('CategoryRenderer', () => {
   let renderer;
+  let sampleResults;
 
-  before(() => {
+  beforeAll(() => {
     global.URL = URL;
     global.Util = Util;
     global.CriticalRequestChainRenderer = CriticalRequestChainRenderer;
@@ -36,12 +36,10 @@ describe('CategoryRenderer', () => {
     const detailsRenderer = new DetailsRenderer(dom);
     renderer = new CategoryRenderer(dom, detailsRenderer);
 
-    sampleResults.reportCategories = Object.values(sampleResults.categories);
-    ReportRenderer.smooshAuditResultsIntoCategories(sampleResults.audits,
-      sampleResults.reportCategories);
+    sampleResults = Util.prepareReportResult(sampleResultsOrig);
   });
 
-  after(() => {
+  afterAll(() => {
     global.URL = undefined;
     global.Util = undefined;
     global.CriticalRequestChainRenderer = undefined;
@@ -147,10 +145,6 @@ describe('CategoryRenderer', () => {
     assert.ok(categoryDOM.querySelector('.lh-audit-group--manual .lh-audit-group__summary'));
     assert.equal(categoryDOM.querySelectorAll('.lh-audit--manual').length, 3,
         'score shows informative and dash icon');
-
-    const perfCategory = sampleResults.reportCategories.find(cat => cat.id === 'performance');
-    const categoryDOM2 = renderer.render(perfCategory, sampleResults.categoryGroups);
-    assert.ok(!categoryDOM2.querySelector('.lh-audit-group--manual'));
   });
 
   it('renders not applicable audits if the category contains them', () => {

@@ -11,6 +11,7 @@ const GatherRunner = require('./gather/gather-runner');
 const ReportScoring = require('./scoring');
 const Audit = require('./audits/audit');
 const log = require('lighthouse-logger');
+const i18n = require('./lib/i18n');
 const assetSaver = require('./lib/asset-saver');
 const fs = require('fs');
 const path = require('path');
@@ -24,12 +25,12 @@ const generateReport = require('./report/report-generator').generateReport;
 class Runner {
   /**
    * @param {Connection} connection
-   * @param {{config: Config, url?: string, driverMock?: Driver}} opts
+   * @param {{config: Config, url?: string, driverMock?: Driver}} runOpts
    * @return {Promise<LH.RunnerResult|undefined>}
    */
-  static async run(connection, opts) {
+  static async run(connection, runOpts) {
     try {
-      const settings = opts.config.settings;
+      const settings = runOpts.config.settings;
       const runnerStatus = {msg: 'Runner setup', id: 'lh:runner:run'};
       log.time(runnerStatus, 'verbose');
 
@@ -65,22 +66,22 @@ class Runner {
         if (!requestedUrl) {
           throw new Error('Cannot run audit mode on empty URL');
         }
-        if (opts.url && opts.url !== requestedUrl) {
+        if (runOpts.url && runOpts.url !== requestedUrl) {
           throw new Error('Cannot run audit mode on different URL');
         }
       } else {
-        if (typeof opts.url !== 'string' || opts.url.length === 0) {
-          throw new Error(`You must provide a url to the runner. '${opts.url}' provided.`);
+        if (typeof runOpts.url !== 'string' || runOpts.url.length === 0) {
+          throw new Error(`You must provide a url to the runner. '${runOpts.url}' provided.`);
         }
 
         try {
           // Use canonicalized URL (with trailing slashes and such)
-          requestedUrl = new URL(opts.url).href;
+          requestedUrl = new URL(runOpts.url).href;
         } catch (e) {
           throw new Error('The url provided should have a proper protocol and hostname.');
         }
 
-        artifacts = await Runner._gatherArtifactsFromBrowser(requestedUrl, opts, connection);
+        artifacts = await Runner._gatherArtifactsFromBrowser(requestedUrl, runOpts, connection);
         // -G means save these to ./latest-run, etc.
         if (settings.gatherMode) {
           const path = Runner._getArtifactsPath(settings);
@@ -92,10 +93,11 @@ class Runner {
       if (settings.gatherMode && !settings.auditMode) return;
 
       // Audit phase
-      if (!opts.config.audits) {
+      if (!runOpts.config.audits) {
         throw new Error('No audits to evaluate.');
       }
-      const auditResults = await Runner._runAudits(settings, opts.config.audits, artifacts);
+      const auditResults = await Runner._runAudits(settings, runOpts.config.audits, artifacts,
+          lighthouseRunWarnings);
 
       // LHR construction phase
       const resultsStatus = {msg: 'Generating results...', id: 'lh:runner:generate'};
@@ -106,8 +108,7 @@ class Runner {
       }
 
       // Entering: conclusion of the lighthouse result object
-      // @ts-ignore - Needs json require() support
-      const lighthouseVersion = /** @type {string} */ (require('../package.json').version);
+      const lighthouseVersion = require('../package.json').version;
 
       /** @type {Object<string, LH.Audit.Result>} */
       const resultsById = {};
@@ -117,8 +118,8 @@ class Runner {
 
       /** @type {Object<string, LH.Result.Category>} */
       let categories = {};
-      if (opts.config.categories) {
-        categories = ReportScoring.scoreAllCategories(opts.config.categories, resultsById);
+      if (runOpts.config.categories) {
+        categories = ReportScoring.scoreAllCategories(runOpts.config.categories, resultsById);
       }
 
       log.timeEnd(resultsStatus);
@@ -134,7 +135,7 @@ class Runner {
         audits: resultsById,
         configSettings: settings,
         categories,
-        categoryGroups: opts.config.groups || undefined,
+        categoryGroups: runOpts.config.groups || undefined,
         timing: {entries: artifacts.Timing || [], total: 0},
       };
 
@@ -146,6 +147,11 @@ class Runner {
         lhr.timing.total = runnerEntry.duration;
       }
 
+      lhr.i18n = {
+        rendererFormattedStrings: i18n.getRendererFormattedStrings(settings.locale),
+        icuMessagePaths: i18n.replaceIcuMessageInstanceIds(lhr, settings.locale),
+      };
+    
       // Create the HTML, JSON, or CSV string
       const report = generateReport(lhr, settings.output);
 
@@ -181,13 +187,14 @@ class Runner {
   }
 
   /**
-   * Save collected artifacts to disk
+   * Run all audits with specified settings and artifacts.
    * @param {LH.Config.Settings} settings
    * @param {Array<LH.Config.AuditDefn>} audits
    * @param {LH.Artifacts} artifacts
+   * @param {Array<string>} runWarnings
    * @return {Promise<Array<LH.Audit.Result>>}
    */
-  static async _runAudits(settings, audits, artifacts) {
+  static async _runAudits(settings, audits, artifacts, runWarnings) {
     log.time({msg: 'Analyzing and running audits...', id: 'lh:runner:auditing'});
     artifacts = Object.assign({}, Runner.instantiateComputedArtifacts(), artifacts);
 
@@ -205,7 +212,7 @@ class Runner {
     // Run each audit sequentially
     const auditResults = [];
     for (const auditDefn of audits) {
-      const auditResult = await Runner._runAudit(auditDefn, artifacts, settings);
+      const auditResult = await Runner._runAudit(auditDefn, artifacts, settings, runWarnings);
       auditResults.push(auditResult);
     }
 
@@ -219,13 +226,14 @@ class Runner {
    * @param {LH.Config.AuditDefn} auditDefn
    * @param {LH.Artifacts} artifacts
    * @param {LH.Config.Settings} settings
+   * @param {Array<string>} runWarnings
    * @return {Promise<LH.Audit.Result>}
    * @private
    */
-  static async _runAudit(auditDefn, artifacts, settings) {
+  static async _runAudit(auditDefn, artifacts, settings, runWarnings) {
     const audit = auditDefn.implementation;
     const status = {
-      msg: `Evaluating: ${audit.meta.description}`,
+      msg: `Evaluating: ${i18n.getFormatted(audit.meta.title, 'en-US')}`,
       id: `lh:audit:${audit.meta.name}`,
     };
     log.time(status);
@@ -242,7 +250,7 @@ class Runner {
 
         if (noArtifact || noTrace) {
           log.warn('Runner',
-              `${artifactName} gatherer, required by audit ${audit.meta.name}, did not run.`);
+              `${artifactName} gatherer, required by audit ${audit.meta.id}, did not run.`);
           throw new Error(`Required ${artifactName} gatherer did not run.`);
         }
 
@@ -259,7 +267,7 @@ class Runner {
             level: 'error',
           });
 
-          log.warn('Runner', `${artifactName} gatherer, required by audit ${audit.meta.name},` +
+          log.warn('Runner', `${artifactName} gatherer, required by audit ${audit.meta.id},` +
             ` encountered an error: ${artifactError.message}`);
 
           // Create a friendlier display error and mark it as expected to avoid duplicates in Sentry
@@ -273,16 +281,22 @@ class Runner {
 
       // all required artifacts are in good shape, so we proceed
       const auditOptions = Object.assign({}, audit.defaultOptions, auditDefn.options);
-      const product = await audit.audit(artifacts, {options: auditOptions, settings: settings});
+      const auditContext = {
+        options: auditOptions,
+        settings,
+        LighthouseRunWarnings: runWarnings,
+      };
+
+      const product = await audit.audit(artifacts, auditContext);
       auditResult = Audit.generateAuditResult(audit, product);
     } catch (err) {
-      log.warn(audit.meta.name, `Caught exception: ${err.message}`);
+      log.warn(audit.meta.id, `Caught exception: ${err.message}`);
       if (err.fatal) {
         throw err;
       }
 
       // @ts-ignore TODO(bckenny): Sentry type checking
-      Sentry.captureException(err, {tags: {audit: audit.meta.name}, level: 'error'});
+      Sentry.captureException(err, {tags: {audit: audit.meta.id}, level: 'error'});
       // Non-fatal error become error audit result.
       const errorMessage = err.friendlyMessage ?
         `${err.friendlyMessage} (${err.message})` :
@@ -311,6 +325,7 @@ class Runner {
     const fileList = [
       ...fs.readdirSync(path.join(__dirname, './audits')),
       ...fs.readdirSync(path.join(__dirname, './audits/dobetterweb')).map(f => `dobetterweb/${f}`),
+      ...fs.readdirSync(path.join(__dirname, './audits/metrics')).map(f => `metrics/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/seo')).map(f => `seo/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/seo/manual')).map(f => `seo/manual/${f}`),
       ...fs.readdirSync(path.join(__dirname, './audits/accessibility'))

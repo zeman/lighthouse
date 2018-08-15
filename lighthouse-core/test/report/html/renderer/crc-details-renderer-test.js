@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const assert = require('assert');
 const fs = require('fs');
@@ -77,14 +77,14 @@ const DETAILS = {
 describe('DetailsRenderer', () => {
   let dom;
 
-  before(() => {
+  beforeAll(() => {
     global.URL = URL;
     global.Util = Util;
     const document = jsdom.jsdom(TEMPLATE_FILE);
     dom = new DOM(document);
   });
 
-  after(() => {
+  afterAll(() => {
     global.URL = undefined;
     global.Util = undefined;
   });
@@ -103,7 +103,7 @@ describe('DetailsRenderer', () => {
     assert.equal(chains[1].querySelector('.crc-node__tree-file').textContent, '/b.js');
     assert.equal(chains[1].querySelector('.crc-node__tree-hostname').textContent, '(example.com)');
     const durationNodes = chains[1].querySelectorAll('.crc-node__chain-duration');
-    assert.equal(durationNodes[0].textContent, ' - 5,000ms, ');
+    assert.equal(durationNodes[0].textContent, ' - 5,000\xa0ms, ');
     // Note: actual transferSize is 2000 bytes but formatter formats to KBs.
     assert.equal(durationNodes[1].textContent, '1.95\xa0KB');
   });

@@ -33,14 +33,15 @@ before_script:
   - yarn build-all
 script:
   - yarn bundlesize
+  - yarn diff:sample-json
   - yarn lint
   - yarn unit:silentcoverage
   - yarn type-check
-  - yarn diff:sample-json
   - yarn smoke:silentcoverage
   - yarn test-extension
   - yarn test-viewer
   - yarn test-lantern
+  - yarn i18n:checks
   # _JAVA_OPTIONS is breaking parsing of compiler output. See #3338.
   - unset _JAVA_OPTIONS
   # FIXME(paulirish): re-enable after a roll of LH->CDT

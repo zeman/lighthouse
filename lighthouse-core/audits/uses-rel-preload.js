@@ -8,6 +8,18 @@
 const URL = require('../lib/url-shim');
 const Audit = require('./audit');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to use <link rel=preload> to initiate important network requests earlier during page load. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Preload key requests',
+  /** Description of a Lighthouse audit that tells the user *why* they should preload important network requests. The associated network requests are started halfway through pageload (or later) but should be started at the beginning. This is displayed after a user expands the section to see more. No character length limits. '<link rel=preload>' is the html code the user would include in their page and shouldn't be translated. 'Learn More' becomes link text to additional documentation. */
+  description: 'Consider using <link rel=preload> to prioritize fetching resources that are ' +
+    'currently requested later in page load. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/preload).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
+
 const THRESHOLD_IN_MS = 100;
 
 class UsesRelPreloadAudit extends Audit {
@@ -16,10 +28,9 @@ class UsesRelPreloadAudit extends Audit {
    */
   static get meta() {
     return {
-      name: 'uses-rel-preload',
-      description: 'Preload key requests',
-      helpText: 'Consider using <link rel=preload> to prioritize fetching late-discovered ' +
-        'resources sooner. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/preload).',
+      id: 'uses-rel-preload',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       requiredArtifacts: ['devtoolsLogs', 'traces', 'URL'],
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
     };
@@ -31,7 +42,7 @@ class UsesRelPreloadAudit extends Audit {
    * @param {number=} minLevel
    */
   static _flattenRequests(chains, maxLevel, minLevel = 0) {
-    /** @type {Array<LH.WebInspector.NetworkRequest>} */
+    /** @type {Array<LH.Artifacts.NetworkRequest>} */
     const requests = [];
 
     /**
@@ -60,12 +71,12 @@ class UsesRelPreloadAudit extends Audit {
 
   /**
    *
-   * @param {LH.WebInspector.NetworkRequest} request
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} request
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {boolean}
    */
   static shouldPreload(request, mainResource) {
-    if (request._isLinkPreload || request.protocol === 'data') {
+    if (request.isLinkPreload || URL.NON_NETWORK_PROTOCOLS.includes(request.protocol)) {
       return false;
     }
 
@@ -185,15 +196,15 @@ class UsesRelPreloadAudit extends Audit {
 
     /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
     const headings = [
-      {key: 'url', valueType: 'url', label: 'URL'},
-      {key: 'wastedMs', valueType: 'timespanMs', label: 'Potential Savings'},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnWastedMs)},
     ];
     const details = Audit.makeOpportunityDetails(headings, results, wastedMs);
 
     return {
       score: UnusedBytes.scoreForWastedMs(wastedMs),
       rawValue: wastedMs,
-      displayValue: ['Potential savings of %10d\xa0ms', wastedMs],
+      displayValue: str_(i18n.UIStrings.displayValueMsSavings, {wastedMs}),
       extendedInfo: {
         value: results,
       },
@@ -203,3 +214,4 @@ class UsesRelPreloadAudit extends Audit {
 }
 
 module.exports = UsesRelPreloadAudit;
+module.exports.UIStrings = UIStrings;

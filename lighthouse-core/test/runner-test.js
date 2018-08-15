@@ -17,7 +17,7 @@ const path = require('path');
 const sinon = require('sinon');
 const rimraf = require('rimraf');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Runner', () => {
   const saveArtifactsSpy = sinon.spy(assetSaver, 'saveArtifacts');
@@ -36,6 +36,13 @@ describe('Runner', () => {
     resetSpies();
   });
 
+  const basicAuditMeta = {
+    id: 'test-audit',
+    title: 'A test audit',
+    description: 'An audit for testing',
+    requiredArtifacts: [],
+  };
+
   describe('Gather Mode & Audit Mode', () => {
     const url = 'https://example.com';
     const generateConfig = settings => new Config({
@@ -48,7 +55,7 @@ describe('Runner', () => {
     const artifactsPath = '.tmp/test_artifacts';
     const resolvedPath = path.resolve(process.cwd(), artifactsPath);
 
-    after(() => {
+    afterAll(() => {
       rimraf.sync(resolvedPath);
     });
 
@@ -166,10 +173,10 @@ describe('Runner', () => {
     class EavesdropAudit extends Audit {
       static get meta() {
         return {
-          name: 'eavesdrop-audit',
-          description: 'It eavesdrops',
-          failureDescription: 'It does not',
-          helpText: 'Helpful when eavesdropping',
+          id: 'eavesdrop-audit',
+          title: 'It eavesdrops',
+          failureTitle: 'It does not',
+          description: 'Helpful when eavesdropping',
           requiredArtifacts: [],
         };
       }
@@ -209,7 +216,7 @@ describe('Runner', () => {
 
     return Runner.run({}, {config}).then(results => {
       const audits = results.lhr.audits;
-      assert.equal(audits['user-timings'].displayValue[1], 2);
+      assert.equal(audits['user-timings'].displayValue, '2 user timings');
       assert.equal(audits['user-timings'].rawValue, false);
     });
   });
@@ -310,10 +317,10 @@ describe('Runner', () => {
 
   describe('Bad audit behavior handling', () => {
     const testAuditMeta = {
-      name: 'throwy-audit',
-      description: 'Always throws',
-      failureDescription: 'Always throws is failing, natch',
-      helpText: 'Test for always throwing',
+      id: 'throwy-audit',
+      title: 'Always throws',
+      failureTitle: 'Always throws is failing, natch',
+      description: 'Test for always throwing',
       requiredArtifacts: [],
     };
 
@@ -478,7 +485,7 @@ describe('Runner', () => {
       const auditPath = '../audits/' + auditFilename;
       const auditExpectedName = path.basename(auditFilename, '.js');
       const AuditClass = require(auditPath);
-      assert.strictEqual(AuditClass.meta.name, auditExpectedName);
+      assert.strictEqual(AuditClass.meta.id, auditExpectedName);
     });
   });
 
@@ -543,6 +550,58 @@ describe('Runner', () => {
         'I\'m a warning!',
         'Also a warning',
       ]);
+    });
+  });
+
+  it('includes any LighthouseRunWarnings from audits in LHR', () => {
+    const warningString = 'Really important audit warning!';
+
+    const config = new Config({
+      settings: {
+        auditMode: __dirname + '/fixtures/artifacts/empty-artifacts/',
+      },
+      audits: [
+        class WarningAudit extends Audit {
+          static get meta() {
+            return basicAuditMeta;
+          }
+          static audit(artifacts, context) {
+            context.LighthouseRunWarnings.push(warningString);
+            return {
+              rawValue: 5,
+            };
+          }
+        },
+      ],
+    });
+
+    return Runner.run(null, {config, driverMock}).then(results => {
+      assert.deepStrictEqual(results.lhr.runWarnings, [warningString]);
+    });
+  });
+
+  it('includes any LighthouseRunWarnings from errored audits in LHR', () => {
+    const warningString = 'Audit warning just before a terrible error!';
+
+    const config = new Config({
+      settings: {
+        auditMode: __dirname + '/fixtures/artifacts/empty-artifacts/',
+      },
+      audits: [
+        class WarningAudit extends Audit {
+          static get meta() {
+            return basicAuditMeta;
+          }
+          static audit(artifacts, context) {
+            context.LighthouseRunWarnings.push(warningString);
+            throw new Error('Terrible.');
+          }
+        },
+      ],
+    });
+
+    return Runner.run(null, {config, driverMock}).then(results => {
+      assert.deepStrictEqual(results.lhr.runWarnings, [warningString]);
     });
   });
 

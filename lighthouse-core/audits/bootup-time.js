@@ -6,9 +6,31 @@
 'use strict';
 
 const Audit = require('./audit');
-const WebInspector = require('../lib/web-inspector');
-const Util = require('../report/html/renderer/util');
-const {groupIdToName, taskToGroup} = require('../lib/task-groups');
+const NetworkRequest = require('../lib/network-request');
+const {taskGroups} = require('../lib/task-groups');
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Title of a diagnostic audit that provides detail on the time spent executing javascript files during the load. This descriptive title is shown to users when the amount is acceptable and no user action is required. */
+  title: 'JavaScript execution time',
+  /** Title of a diagnostic audit that provides detail on the time spent executing javascript files during the load. This imperative title is shown to users when there is a significant amount of execution time that could be reduced. */
+  failureTitle: 'Reduce JavaScript execution time',
+  /** Description of a Lighthouse audit that tells the user that they should reduce the amount of time spent executing javascript and one method of doing so. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Consider reducing the time spent parsing, compiling, and executing JS. ' +
+    'You may find delivering smaller JS payloads helps with this. [Learn ' +
+    'more](https://developers.google.com/web/tools/lighthouse/audits/bootup).',
+  /** Label for the total time column in a data table; entries will be the number of milliseconds spent executing per resource loaded by the page. */
+  columnTotal: 'Total',
+  /** Label for a time column in a data table; entries will be the number of milliseconds spent evaluating script for every script loaded by the page. */
+  columnScriptEval: 'Script Evaluation',
+  /** Label for a time column in a data table; entries will be the number of milliseconds spent parsing script files for every script loaded by the page. */
+  columnScriptParse: 'Script Parse',
+  /** A message displayed in a Lighthouse audit result warning that Chrome extensions on the user's system substantially affected Lighthouse's measurements and instructs the user on how to run again without those extensions. */
+  chromeExtensionsWarning: 'Chrome extensions negatively affected this page\'s load performance. ' +
+    'Try auditing the page in incognito mode or from a Chrome profile without extensions.',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 class BootupTime extends Audit {
   /**
@@ -16,13 +38,11 @@ class BootupTime extends Audit {
    */
   static get meta() {
     return {
-      name: 'bootup-time',
-      description: 'JavaScript boot-up time',
-      failureDescription: 'JavaScript boot-up time is too high',
+      id: 'bootup-time',
+      title: str_(UIStrings.title),
+      failureTitle: str_(UIStrings.failureTitle),
+      description: str_(UIStrings.description),
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      helpText: 'Consider reducing the time spent parsing, compiling, and executing JS. ' +
-        'You may find delivering smaller JS payloads helps with this. [Learn ' +
-        'more](https://developers.google.com/web/tools/lighthouse/audits/bootup).',
       requiredArtifacts: ['traces'],
     };
   }
@@ -41,33 +61,40 @@ class BootupTime extends Audit {
   }
 
   /**
-   * Returns a mapping of URL to counts of event groups.
-   * @param {LH.Artifacts.DevtoolsTimelineModel} timelineModel
+   * @param {LH.Artifacts.NetworkRequest[]} records
+   */
+  static getJavaScriptURLs(records) {
+    /** @type {Set<string>} */
+    const urls = new Set();
+    for (const record of records) {
+      if (record.resourceType === NetworkRequest.TYPES.Script) {
+        urls.add(record.url);
+      }
+    }
+
+    return urls;
+  }
+
+  /**
+   * @param {LH.Artifacts.TaskNode[]} tasks
+   * @param {Set<string>} jsURLs
    * @return {Map<string, Object<string, number>>}
    */
-  static getExecutionTimingsByURL(timelineModel) {
-    const bottomUpByURL = timelineModel.bottomUpGroupBy('URL');
+  static getExecutionTimingsByURL(tasks, jsURLs) {
     /** @type {Map<string, Object<string, number>>} */
     const result = new Map();
 
-    bottomUpByURL.children.forEach((perUrlNode, url) => {
-      // when url is "" or about:blank, we skip it
-      if (!url || url === 'about:blank') {
-        return;
-      }
+    for (const task of tasks) {
+      const jsURL = task.attributableURLs.find(url => jsURLs.has(url));
+      const fallbackURL = task.attributableURLs[0];
+      const attributableURL = jsURL || fallbackURL;
+      if (!attributableURL || attributableURL === 'about:blank') continue;
 
-      /** @type {Object<string, number>} */
-      const taskGroups = {};
-      perUrlNode.children.forEach((perTaskPerUrlNode) => {
-        // eventStyle() returns a string like 'Evaluate Script'
-        const task = WebInspector.TimelineUIUtils.eventStyle(perTaskPerUrlNode.event);
-        // Resolve which taskGroup we're using
-        const groupName = taskToGroup[task.title] || groupIdToName.other;
-        const groupTotal = taskGroups[groupName] || 0;
-        taskGroups[groupName] = groupTotal + (perTaskPerUrlNode.selfTime || 0);
-      });
-      result.set(url, taskGroups);
-    });
+      const timingByGroupId = result.get(attributableURL) || {};
+      const originalTime = timingByGroupId[task.group.id] || 0;
+      timingByGroupId[task.group.id] = originalTime + task.selfTime;
+      result.set(attributableURL, timingByGroupId);
+    }
 
     return result;
   }
@@ -80,47 +107,64 @@ class BootupTime extends Audit {
   static async audit(artifacts, context) {
     const settings = context.settings || {};
     const trace = artifacts.traces[BootupTime.DEFAULT_PASS];
-    const devtoolsTimelineModel = await artifacts.requestDevtoolsTimelineModel(trace);
-    const executionTimings = BootupTime.getExecutionTimingsByURL(devtoolsTimelineModel);
-    let totalBootupTime = 0;
-    /** @type {Object<string, Object<string, number>>} */
-    const extendedInfo = {};
-
-    const headings = [
-      {key: 'url', itemType: 'url', text: 'URL'},
-      {key: 'scripting', granularity: 1, itemType: 'ms', text: groupIdToName.scripting},
-      {key: 'scriptParseCompile', granularity: 1, itemType: 'ms',
-        text: groupIdToName.scriptParseCompile},
-    ];
-
+    const devtoolsLog = artifacts.devtoolsLogs[BootupTime.DEFAULT_PASS];
+    const networkRecords = await artifacts.requestNetworkRecords(devtoolsLog);
+    const tasks = await artifacts.requestMainThreadTasks(trace);
     const multiplier = settings.throttlingMethod === 'simulate' ?
       settings.throttling.cpuSlowdownMultiplier : 1;
-    // map data in correct format to create a table
+
+    const jsURLs = BootupTime.getJavaScriptURLs(networkRecords);
+    const executionTimings = BootupTime.getExecutionTimingsByURL(tasks, jsURLs);
+
+    let hadExcessiveChromeExtension = false;
+    let totalBootupTime = 0;
     const results = Array.from(executionTimings)
-      .map(([url, groups]) => {
+      .map(([url, timingByGroupId]) => {
         // Add up the totalBootupTime for all the taskGroups
-        for (const [name, value] of Object.entries(groups)) {
-          groups[name] = value * multiplier;
-          totalBootupTime += value * multiplier;
+        let bootupTimeForURL = 0;
+        for (const [groupId, timespanMs] of Object.entries(timingByGroupId)) {
+          timingByGroupId[groupId] = timespanMs * multiplier;
+          bootupTimeForURL += timespanMs * multiplier;
         }
 
-        extendedInfo[url] = groups;
+        // Add up all the execution time of shown URLs
+        if (bootupTimeForURL >= context.options.thresholdInMs) {
+          totalBootupTime += bootupTimeForURL;
+        }
 
-        const scriptingTotal = groups[groupIdToName.scripting] || 0;
-        const parseCompileTotal = groups[groupIdToName.scriptParseCompile] || 0;
+        const scriptingTotal = timingByGroupId[taskGroups.scriptEvaluation.id] || 0;
+        const parseCompileTotal = timingByGroupId[taskGroups.scriptParseCompile.id] || 0;
+
+        hadExcessiveChromeExtension = hadExcessiveChromeExtension ||
+          (url.startsWith('chrome-extension:') && scriptingTotal > 100);
+
         return {
           url: url,
-          sum: scriptingTotal + parseCompileTotal,
-          // Only reveal the javascript task costs
-          // Later we can account for forced layout costs, etc.
+          total: bootupTimeForURL,
+          // Highlight the JavaScript task costs
           scripting: scriptingTotal,
           scriptParseCompile: parseCompileTotal,
         };
       })
-      .filter(result => result.sum >= context.options.thresholdInMs)
-      .sort((a, b) => b.sum - a.sum);
+      .filter(result => result.total >= context.options.thresholdInMs)
+      .sort((a, b) => b.total - a.total);
+
+
+    // TODO: consider moving this to core gathering so you don't need to run the audit for warning
+    if (hadExcessiveChromeExtension) {
+      context.LighthouseRunWarnings.push(str_(UIStrings.chromeExtensionsWarning));
+    }
 
     const summary = {wastedMs: totalBootupTime};
+
+    const headings = [
+      {key: 'url', itemType: 'url', text: str_(i18n.UIStrings.columnURL)},
+      {key: 'total', granularity: 1, itemType: 'ms', text: str_(UIStrings.columnTotal)},
+      {key: 'scripting', granularity: 1, itemType: 'ms', text: str_(UIStrings.columnScriptEval)},
+      {key: 'scriptParseCompile', granularity: 1, itemType: 'ms',
+        text: str_(UIStrings.columnScriptParse)},
+    ];
+
     const details = BootupTime.makeTableDetails(headings, results, summary);
 
     const score = Audit.computeLogNormalScore(
@@ -132,13 +176,11 @@ class BootupTime extends Audit {
     return {
       score,
       rawValue: totalBootupTime,
-      displayValue: [Util.MS_DISPLAY_VALUE, totalBootupTime],
+      displayValue: totalBootupTime > 0 ? str_(i18n.UIStrings.ms, {timeInMs: totalBootupTime}) : '',
       details,
-      extendedInfo: {
-        value: extendedInfo,
-      },
     };
   }
 }
 
 module.exports = BootupTime;
+module.exports.UIStrings = UIStrings;

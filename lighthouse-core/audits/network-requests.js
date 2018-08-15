@@ -14,10 +14,10 @@ class NetworkRequests extends Audit {
    */
   static get meta() {
     return {
-      name: 'network-requests',
+      id: 'network-requests',
       scoreDisplayMode: Audit.SCORING_MODES.INFORMATIVE,
-      description: 'Network Requests',
-      helpText: 'Lists the network requests that were made during page load.',
+      title: 'Network Requests',
+      description: 'Lists the network requests that were made during page load.',
       requiredArtifacts: ['devtoolsLogs'],
     };
   }
@@ -45,8 +45,8 @@ class NetworkRequests extends Audit {
           endTime: timeToMs(record.endTime),
           transferSize: record.transferSize,
           statusCode: record.statusCode,
-          mimeType: record._mimeType,
-          resourceType: record._resourceType && record._resourceType._name,
+          mimeType: record.mimeType,
+          resourceType: record.resourceType,
         };
       });
 

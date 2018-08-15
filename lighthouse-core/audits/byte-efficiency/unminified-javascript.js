@@ -6,8 +6,18 @@
 'use strict';
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
-// @ts-ignore - TODO: https://github.com/DefinitelyTyped/DefinitelyTyped/pull/25410
 const esprima = require('esprima');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to minify the page’s JS code to reduce file size. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Minify JavaScript',
+  /** Description of a Lighthouse audit that tells the user *why* they should minify the page’s JS code to reduce file size. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Minifying JavaScript files can reduce payload sizes and script parse time. ' +
+    '[Learn more](https://developers.google.com/speed/docs/insights/MinifyResources).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const IGNORE_THRESHOLD_IN_PERCENT = 10;
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
@@ -28,26 +38,25 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unminified-javascript',
-      description: 'Minify JavaScript',
-
+      id: 'unminified-javascript',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Minifying JavaScript files can reduce payload sizes and script parse time. ' +
-        '[Learn more](https://developers.google.com/speed/docs/insights/MinifyResources).',
       requiredArtifacts: ['Scripts', 'devtoolsLogs'],
     };
   }
 
   /**
    * @param {string} scriptContent
-   * @param {LH.WebInspector.NetworkRequest} networkRecord
+   * @param {LH.Artifacts.NetworkRequest} networkRecord
    * @return {{url: string, totalBytes: number, wastedBytes: number, wastedPercent: number}}
    */
   static computeWaste(scriptContent, networkRecord) {
     const contentLength = scriptContent.length;
     let totalTokenLength = 0;
 
-    const tokens = esprima.tokenize(scriptContent, {tolerant: true});
+    /** @type {Array<esprima.Token> & {errors: Error[]}} */
+    const tokens = (esprima.tokenize(scriptContent, {tolerant: true}));
     if (!tokens.length && tokens.errors && tokens.errors.length) {
       throw tokens.errors[0];
     }
@@ -57,7 +66,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, contentLength,
-      'script');
+      'Script');
     const wastedRatio = 1 - totalTokenLength / contentLength;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -71,7 +80,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {
@@ -92,20 +101,24 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
           !Number.isFinite(result.wastedBytes)) continue;
         items.push(result);
       } catch (err) {
-        warnings.push(`Unable to process ${networkRecord._url}: ${err.message}`);
+        warnings.push(`Unable to process ${networkRecord.url}: ${err.message}`);
       }
     }
+
+    /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
+    const headings = [
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+      {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
+    ];
 
     return {
       items,
       warnings,
-      headings: [
-        {key: 'url', valueType: 'url', label: 'URL'},
-        {key: 'totalBytes', valueType: 'bytes', label: 'Original'},
-        {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings'},
-      ],
+      headings,
     };
   }
 }
 
 module.exports = UnminifiedJavaScript;
+module.exports.UIStrings = UIStrings;

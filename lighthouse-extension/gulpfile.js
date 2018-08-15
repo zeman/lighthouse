@@ -123,12 +123,9 @@ gulp.task('browserify-lighthouse', () => {
       bundle = applyBrowserifyTransforms(bundle);
 
       // scripts will need some additional transforms, ignores and requires…
-
-      // Do the additional transform to convert references of devtools-timeline-model
-      // to the modified version internal to Lighthouse.
-      bundle.transform('./dtm-transform.js', {global: true})
-      .ignore('source-map')
+      bundle.ignore('source-map')
       .ignore('debug/node')
+      .ignore('intl')
       .ignore('raven')
       .ignore('mkdirp')
       .ignore('rimraf')

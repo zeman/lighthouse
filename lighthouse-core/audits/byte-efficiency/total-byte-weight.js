@@ -6,6 +6,23 @@
 'use strict';
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Title of a diagnostic audit that provides detail on large network resources required during page load. 'Payloads' is roughly equivalent to 'resources'. This descriptive title is shown to users when the amount is acceptable and no user action is required. */
+  title: 'Avoids enormous network payloads',
+  /** Title of a diagnostic audit that provides detail on large network resources required during page load. 'Payloads' is roughly equivalent to 'resources'. This imperative title is shown to users when there is a significant amount of execution time that could be reduced. */
+  failureTitle: 'Avoid enormous network payloads',
+  /** Description of a Lighthouse audit that tells the user *why* they should reduce the size of the network resources required by the page. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description:
+  'Large network payloads cost users real money and are highly correlated with ' +
+  'long load times. [Learn ' +
+  'more](https://developers.google.com/web/tools/lighthouse/audits/network-payloads).',
+  /** Used to summarize the total byte size of the page and all its network requests. The `{totalBytes}` placeholder will be replaced with the total byte sizes, shown in kilobytes (e.g. 142 KB) */
+  displayValue: 'Total size was {totalBytes, number, bytes}\xa0KB',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 class TotalByteWeight extends ByteEfficiencyAudit {
   /**
@@ -13,14 +30,11 @@ class TotalByteWeight extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'total-byte-weight',
-      description: 'Avoids enormous network payloads',
-      failureDescription: 'Has enormous network payloads',
+      id: 'total-byte-weight',
+      title: str_(UIStrings.title),
+      failureTitle: str_(UIStrings.failureTitle),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText:
-        'Large network payloads cost users real money and are highly correlated with ' +
-        'long load times. [Learn ' +
-        'more](https://developers.google.com/web/tools/lighthouse/audits/network-payloads).',
       requiredArtifacts: ['devtoolsLogs'],
     };
   }
@@ -76,15 +90,8 @@ class TotalByteWeight extends ByteEfficiencyAudit {
     );
 
     const headings = [
-      {key: 'url', itemType: 'url', text: 'URL'},
-      {
-        key: 'totalBytes',
-        itemType: 'bytes',
-        displayUnit: 'kb',
-        granularity: 1,
-        text: 'Total Size',
-      },
-      {key: 'totalMs', itemType: 'ms', text: 'Transfer Time'},
+      {key: 'url', itemType: 'url', text: str_(i18n.UIStrings.columnURL)},
+      {key: 'totalBytes', itemType: 'bytes', text: str_(i18n.UIStrings.columnSize)},
     ];
 
     const tableDetails = ByteEfficiencyAudit.makeTableDetails(headings, results);
@@ -92,10 +99,7 @@ class TotalByteWeight extends ByteEfficiencyAudit {
     return {
       score,
       rawValue: totalBytes,
-      displayValue: [
-        'Total size was %d\xa0KB',
-        totalBytes / 1024,
-      ],
+      displayValue: str_(UIStrings.displayValue, {totalBytes}),
       extendedInfo: {
         value: {
           results,
@@ -108,3 +112,4 @@ class TotalByteWeight extends ByteEfficiencyAudit {
 }
 
 module.exports = TotalByteWeight;
+module.exports.UIStrings = UIStrings;

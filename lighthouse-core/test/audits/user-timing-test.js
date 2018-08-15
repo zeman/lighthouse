@@ -20,7 +20,7 @@ function generateArtifactsWithTrace(trace) {
   }, computedArtifacts);
 }
 
-/* eslint-env mocha */
+/* eslint-env jest */
 describe('Performance: user-timings audit', () => {
   it('evaluates valid input correctly', () => {
     return Audit.audit(generateArtifactsWithTrace(traceEvents)).then(auditResult => {
@@ -30,7 +30,7 @@ describe('Performance: user-timings audit', () => {
       assert.equal(blackListedUTs.length, 0, 'Blacklisted usertimings included in results');
 
       assert.equal(auditResult.rawValue, false);
-      assert.deepStrictEqual(auditResult.displayValue, ['%d user timings', 2]);
+      expect(auditResult.displayValue).toBeDisplayString('2 user timings');
 
       assert.equal(auditResult.details.items[0].name, 'measure_test');
       assert.equal(auditResult.details.items[0].timingType, 'Measure');

@@ -1,13 +1,39 @@
 /**
- * @license Copyright 2017 Google Inc. All Rights Reserved.
+ * @license Copyright 2018 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
 'use strict';
 
-const constants = require('./constants');
-
 /* eslint-disable max-len */
+
+const constants = require('./constants');
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Title of the Performance category of audits. Equivalent to 'Web performance', this term is inclusive of all web page speed and loading optimization topics. Also used as a label of a score gauge; try to limit to 20 characters. */
+  performanceCategoryTitle: 'Performance',
+  /** Title of the speed metrics section of the Performance category. Within this section are various speed metrics which quantify the pageload performance into values presented in seconds and milliseconds. */
+  metricGroupTitle: 'Metrics',
+  /** Title of the opportunity section of the Performance category. Within this section are audits with imperative titles that suggest actions the user can take to improve the loading performance of their web page. 'Suggestion'/'Optimization'/'Recommendation' are reasonable synonyms for 'opportunity' in this case. */
+  loadOpportunitiesGroupTitle: 'Opportunities',
+  /** Description of the opportunity section of the Performance category. 'Optimizations' could also be 'recommendations' or 'suggestions'. Within this section are audits with imperative titles that suggest actions the user can take to improve the loading performance of their web page. */
+  loadOpportunitiesGroupDescription: 'These optimizations can speed up your page load.',
+  /** Title of an opportunity sub-section of the Performance category. Within this section are audits with imperative titles that suggest actions the user can take to improve the time of the first initial render of the webpage. */
+  firstPaintImprovementsGroupTitle: 'First Paint Improvements',
+  /** Description of an opportunity sub-section of the Performance category. Within this section are audits with imperative titles that suggest actions the user can take to improve the time of the first initial render of the webpage. */
+  firstPaintImprovementsGroupDescription: 'The most critical aspect of performance is how quickly pixels are rendered onscreen. Key metrics: First Contentful Paint, First Meaningful Paint',
+  /** Title of an opportunity sub-section of the Performance category. Within this section are audits with imperative titles that suggest actions the user can take to improve the overall loading performance of their web page. */
+  overallImprovementsGroupTitle: 'Overall Improvements',
+  /** Description of an opportunity sub-section of the Performance category. Within this section are audits with imperative titles that suggest actions the user can take to improve the overall loading performance of their web page. */
+  overallImprovementsGroupDescription: 'Enhance the overall loading experience, so the page is responsive and ready to use as soon as possible. Key metrics: Time to Interactive, Speed Index',
+  /** Title of the diagnostics section of the Performance category. Within this section are audits with non-imperative titles that provide more detail on the page's page load performance characteristics. Whereas the 'Opportunities' suggest an action along with expected time savings, diagnostics do not. Within this section, the user may read the details and deduce additional actions they could take. */
+  diagnosticsGroupTitle: 'Diagnostics',
+  /** Description of the diagnostics section of the Performance category. Within this section are audits with non-imperative titles that provide more detail on the page's page load performance characteristics. Whereas the 'Opportunities' suggest an action along with expected time savings, diagnostics do not. Within this section, the user may read the details and deduce additional actions they could take. */
+  diagnosticsGroupDescription: 'More information about the performance of your application.',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 module.exports = {
   settings: constants.defaultSettings,
@@ -31,6 +57,7 @@ module.exports = {
       'accessibility',
       'dobetterweb/anchors-with-no-rel-noopener',
       'dobetterweb/appcache',
+      'dobetterweb/doctype',
       'dobetterweb/domstats',
       'dobetterweb/js-libraries',
       'dobetterweb/optimized-images',
@@ -73,16 +100,17 @@ module.exports = {
     'works-offline',
     'viewport',
     'without-javascript',
-    'first-contentful-paint',
-    'first-meaningful-paint',
+    'metrics/first-contentful-paint',
+    'metrics/first-meaningful-paint',
     'load-fast-enough-for-pwa',
-    'speed-index',
+    'metrics/speed-index',
     'screenshot-thumbnails',
-    'estimated-input-latency',
+    'final-screenshot',
+    'metrics/estimated-input-latency',
     'errors-in-console',
     'time-to-first-byte',
-    'first-cpu-idle',
-    'interactive',
+    'metrics/first-cpu-idle',
+    'metrics/interactive',
     'user-timings',
     'critical-request-chains',
     'redirects',
@@ -143,6 +171,7 @@ module.exports = {
     'accessibility/manual/focus-traps',
     'accessibility/manual/focusable-controls',
     'accessibility/manual/heading-levels',
+    'accessibility/manual/interactive-element-affordance',
     'accessibility/manual/logical-tab-order',
     'accessibility/manual/managed-focus',
     'accessibility/manual/offscreen-content-hidden',
@@ -161,6 +190,7 @@ module.exports = {
     'byte-efficiency/uses-responsive-images',
     'byte-efficiency/efficient-animated-content',
     'dobetterweb/appcache-manifest',
+    'dobetterweb/doctype',
     'dobetterweb/dom-size',
     'dobetterweb/external-anchors-use-rel-noopener',
     'dobetterweb/geolocation-on-start',
@@ -186,15 +216,15 @@ module.exports = {
 
   groups: {
     'metrics': {
-      title: 'Metrics',
+      title: str_(UIStrings.metricGroupTitle),
     },
     'load-opportunities': {
-      title: 'Opportunities',
-      description: 'These are opportunities to speed up your application by optimizing the following resources.',
+      title: str_(UIStrings.loadOpportunitiesGroupTitle),
+      description: str_(UIStrings.loadOpportunitiesGroupDescription),
     },
     'diagnostics': {
-      title: 'Diagnostics',
-      description: 'More information about the performance of your application.',
+      title: str_(UIStrings.diagnosticsGroupTitle),
+      description: str_(UIStrings.diagnosticsGroupDescription),
     },
     'a11y-color-contrast': {
       title: 'Color Contrast Is Satisfactory',
@@ -244,7 +274,7 @@ module.exports = {
   },
   categories: {
     'performance': {
-      title: 'Performance',
+      title: str_(UIStrings.performanceCategoryTitle),
       auditRefs: [
         {id: 'first-contentful-paint', weight: 3, group: 'metrics'},
         {id: 'first-meaningful-paint', weight: 1, group: 'metrics'},
@@ -276,6 +306,7 @@ module.exports = {
         {id: 'user-timings', weight: 0, group: 'diagnostics'},
         {id: 'bootup-time', weight: 0, group: 'diagnostics'},
         {id: 'screenshot-thumbnails', weight: 0},
+        {id: 'final-screenshot', weight: 0},
         {id: 'mainthread-work-breakdown', weight: 0, group: 'diagnostics'},
         {id: 'font-display', weight: 0, group: 'diagnostics'},
       ],
@@ -302,6 +333,7 @@ module.exports = {
         {id: 'splash-screen', weight: 1},
         {id: 'themed-omnibox', weight: 1},
         {id: 'content-width', weight: 1},
+        {id: 'manifest-short-name-length', weight: 0},
         // Manual audits
         {id: 'pwa-cross-browser', weight: 0},
         {id: 'pwa-page-transitions', weight: 0},
@@ -351,6 +383,7 @@ module.exports = {
         // Manual audits
         {id: 'logical-tab-order', weight: 0},
         {id: 'focusable-controls', weight: 0},
+        {id: 'interactive-element-affordance', weight: 0},
         {id: 'managed-focus', weight: 0},
         {id: 'focus-traps', weight: 0},
         {id: 'custom-controls-labels', weight: 0},
@@ -372,10 +405,10 @@ module.exports = {
         {id: 'no-document-write', weight: 1},
         {id: 'external-anchors-use-rel-noopener', weight: 1},
         {id: 'geolocation-on-start', weight: 1},
+        {id: 'doctype', weight: 1},
         {id: 'no-vulnerable-libraries', weight: 1},
         {id: 'notification-on-start', weight: 1},
         {id: 'deprecations', weight: 1},
-        {id: 'manifest-short-name-length', weight: 1},
         {id: 'password-inputs-can-be-pasted-into', weight: 1},
         {id: 'errors-in-console', weight: 1},
         {id: 'image-aspect-ratio', weight: 1},
@@ -406,3 +439,9 @@ module.exports = {
     },
   },
 };
+
+// Use `defineProperty` so that the strings are accesible from original but ignored when we copy it
+Object.defineProperty(module.exports, 'UIStrings', {
+  enumerable: false,
+  get: () => UIStrings,
+});

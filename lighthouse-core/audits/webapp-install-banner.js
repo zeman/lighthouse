@@ -34,10 +34,10 @@ class WebappInstallBanner extends MultiCheckAudit {
    */
   static get meta() {
     return {
-      name: 'webapp-install-banner',
-      description: 'User can be prompted to Install the Web App',
-      failureDescription: 'User will not be prompted to Install the Web App',
-      helpText: 'Browsers can proactively prompt users to add your app to their homescreen, ' +
+      id: 'webapp-install-banner',
+      title: 'User can be prompted to Install the Web App',
+      failureTitle: 'User will not be prompted to Install the Web App',
+      description: 'Browsers can proactively prompt users to add your app to their homescreen, ' +
           'which can lead to higher engagement. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/install-prompt).',
       requiredArtifacts: ['URL', 'ServiceWorker', 'Manifest', 'StartUrl'],
@@ -57,6 +57,12 @@ class WebappInstallBanner extends MultiCheckAudit {
     const failures = [];
     const bannerCheckIds = [
       'hasName',
+      // Technically shortname isn't required (if name is defined):
+      //   https://cs.chromium.org/chromium/src/chrome/browser/installable/installable_manager.cc?type=cs&q=IsManifestValidForWebApp+f:cc+-f:test&sq=package:chromium&l=473
+      // Despite this, we think it's better to require it anyway.
+      // short_name is preferred for the homescreen icon, but a longer name can be used in
+      // the splash screen and app title. Given the different usecases, we'd like to make it clearer
+      // that the developer has two possible strings to work with.
       'hasShortName',
       'hasStartUrl',
       'hasPWADisplayValue',

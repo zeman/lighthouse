@@ -9,7 +9,7 @@ const DOMSize = require('../../../audits/dobetterweb/dom-size.js');
 const assert = require('assert');
 const options = DOMSize.defaultOptions;
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Num DOM nodes audit', () => {
   const numNodes = DOMSize.MAX_DOM_NODES;
@@ -25,7 +25,7 @@ describe('Num DOM nodes audit', () => {
     const auditResult = DOMSize.audit(artifact, {options});
     assert.equal(auditResult.score, 0.43);
     assert.equal(auditResult.rawValue, numNodes);
-    assert.deepEqual(auditResult.displayValue, ['%d nodes', numNodes]);
+    expect(auditResult.displayValue).toBeDisplayString('1,500 nodes');
     assert.equal(auditResult.details.items[0].totalNodes, numNodes.toLocaleString());
     assert.equal(auditResult.details.items[0].depth, '1');
     assert.equal(auditResult.details.items[0].width, '2');

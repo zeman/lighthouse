@@ -5,11 +5,11 @@
  */
 'use strict';
 
-const WebInspector = require('../../lib/web-inspector');
+const NetworkRequest = require('../../lib/network-request');
 const Audit = require('../../audits/font-display.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 const openSansFont = {
   display: 'auto',
   family: 'open Sans',
@@ -51,17 +51,17 @@ describe('Performance: Font Display audit', () => {
       {
         url: openSansFont.src[0],
         endTime: 3, startTime: 1,
-        _resourceType: WebInspector.resourceTypes.Font,
+        resourceType: NetworkRequest.TYPES.Font,
       },
       {
         url: openSansFontBold.src[0],
         endTime: 3, startTime: 1,
-        _resourceType: WebInspector.resourceTypes.Font,
+        resourceType: NetworkRequest.TYPES.Font,
       },
     ], webFonts)).then(result => {
       const items = [{
         url: openSansFontBold.src[0],
-        wastedTime: 2000,
+        wastedMs: 2000,
       }];
       assert.strictEqual(result.rawValue, false);
       assert.deepEqual(result.details.items, items);
@@ -78,12 +78,12 @@ describe('Performance: Font Display audit', () => {
       {
         url: openSansFont.src[0],
         endTime: 3, startTime: 1,
-        _resourceType: WebInspector.resourceTypes.Font,
+        resourceType: NetworkRequest.TYPES.Font,
       },
       {
         url: openSansFontBold.src[0],
         endTime: 3, startTime: 1,
-        _resourceType: WebInspector.resourceTypes.Font,
+        resourceType: NetworkRequest.TYPES.Font,
       },
     ], webFonts)).then(result => {
       assert.strictEqual(result.rawValue, true);

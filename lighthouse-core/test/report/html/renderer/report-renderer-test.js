@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const assert = require('assert');
 const fs = require('fs');
@@ -21,7 +21,7 @@ let PerformanceCategoryRenderer = null;
 const CriticalRequestChainRenderer = require(
     '../../../../report/html/renderer/crc-details-renderer.js');
 const ReportRenderer = require('../../../../report/html/renderer/report-renderer.js');
-const sampleResults = require('../../../results/sample_v2.json');
+const sampleResultsOrig = require('../../../results/sample_v2.json');
 
 const TIMESTAMP_REGEX = /\d+, \d{4}.*\d+:\d+/;
 const TEMPLATE_FILE = fs.readFileSync(__dirname +
@@ -29,8 +29,9 @@ const TEMPLATE_FILE = fs.readFileSync(__dirname +
 
 describe('ReportRenderer', () => {
   let renderer;
+  let sampleResults;
 
-  before(() => {
+  beforeAll(() => {
     global.URL = URL;
     global.Util = Util;
     global.ReportUIFeatures = ReportUIFeatures;
@@ -57,10 +58,10 @@ describe('ReportRenderer', () => {
     const detailsRenderer = new DetailsRenderer(dom);
     const categoryRenderer = new CategoryRenderer(dom, detailsRenderer);
     renderer = new ReportRenderer(dom, categoryRenderer);
-    sampleResults.reportCategories = Object.values(sampleResults.categories);
+    sampleResults = Util.prepareReportResult(sampleResultsOrig);
   });
 
-  after(() => {
+  afterAll(() => {
     global.self = undefined;
     global.URL = undefined;
     global.Util = undefined;
@@ -108,7 +109,7 @@ describe('ReportRenderer', () => {
       const originalResults = JSON.parse(JSON.stringify(sampleResults));
       renderer.renderReport(sampleResults, container);
       assert.deepStrictEqual(sampleResults, originalResults);
-    }).timeout(2000);
+    }, 2000);
 
     it('renders no warning section when no lighthouseRunWarnings occur', () => {
       const warningResults = Object.assign({}, sampleResults, {runWarnings: []});

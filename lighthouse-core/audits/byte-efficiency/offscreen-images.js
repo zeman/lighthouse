@@ -12,6 +12,19 @@
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const Sentry = require('../../lib/sentry');
 const URL = require('../../lib/url-shim');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to defer loading offscreen images. Offscreen images are images located outside of the visible browser viewport. As they are unseen by the user and slow down page load, they should be loaded later, closer to when the user is going to see them. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Defer offscreen images',
+  /** Description of a Lighthouse audit that tells the user *why* they should defer loading offscreen images. Offscreen images are images located outside of the visible browser viewport. As they are unseen by the user and slow down page load, they should be loaded later, closer to when the user is going to see them. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description:
+    'Consider lazy-loading offscreen and hidden images after all critical resources have ' +
+    'finished loading to lower time to interactive. ' +
+    '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/offscreen-images).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const ALLOWABLE_OFFSCREEN_X = 100;
 const ALLOWABLE_OFFSCREEN_Y = 200;
@@ -28,13 +41,10 @@ class OffscreenImages extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'offscreen-images',
-      description: 'Defer offscreen images',
+      id: 'offscreen-images',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText:
-        'Consider lazy-loading offscreen and hidden images after all critical resources have ' +
-        'finished loading to lower time to interactive. ' +
-        '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/offscreen-images).',
       requiredArtifacts: ['ImageUsage', 'ViewportDimensions', 'traces', 'devtoolsLogs'],
     };
   }
@@ -151,7 +161,7 @@ class OffscreenImages extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @param {LH.Audit.Context} context
    * @return {Promise<ByteEfficiencyAudit.ByteEfficiencyProduct>}
    */
@@ -172,7 +182,7 @@ class OffscreenImages extends ByteEfficiencyAudit {
       if (processed instanceof Error) {
         warnings.push(processed.message);
         // @ts-ignore TODO(bckenny): Sentry type checking
-        Sentry.captureException(processed, {tags: {audit: this.meta.name}, level: 'warning'});
+        Sentry.captureException(processed, {tags: {audit: this.meta.id}, level: 'warning'});
         return results;
       }
 
@@ -198,9 +208,9 @@ class OffscreenImages extends ByteEfficiencyAudit {
       /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
       const headings = [
         {key: 'url', valueType: 'thumbnail', label: ''},
-        {key: 'url', valueType: 'url', label: 'URL'},
-        {key: 'totalBytes', valueType: 'bytes', label: 'Original'},
-        {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings'},
+        {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+        {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+        {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
       ];
 
       return {
@@ -213,3 +223,4 @@ class OffscreenImages extends ByteEfficiencyAudit {
 }
 
 module.exports = OffscreenImages;
+module.exports.UIStrings = UIStrings;

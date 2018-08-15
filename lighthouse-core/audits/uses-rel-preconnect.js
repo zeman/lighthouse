@@ -8,6 +8,8 @@
 
 const Audit = require('./audit');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
+const i18n = require('../lib/i18n');
+
 // Preconnect establishes a "clean" socket. Chrome's socket manager will keep an unused socket
 // around for 10s. Meaning, the time delta between processing preconnect a request should be <10s,
 // otherwise it's wasted. We add a 5s margin so we are sure to capture all key requests.
@@ -16,17 +18,26 @@ const PRECONNECT_SOCKET_MAX_IDLE = 15;
 
 const IGNORE_THRESHOLD_IN_MS = 50;
 
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to connect early to internet domains that will be used to load page resources. Origin is the correct term, however 'domain name' could be used if neccsesary. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Preconnect to required origins',
+  /** Description of a Lighthouse audit that tells the user how to connect early to third-party domains that will be used to load page resources. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description:
+    'Consider adding preconnect or dns-prefetch resource hints to establish early ' +
+    `connections to important third-party origins. [Learn more](https://developers.google.com/web/fundamentals/performance/resource-prioritization#preconnect).`,
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
+
 class UsesRelPreconnectAudit extends Audit {
   /**
    * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'uses-rel-preconnect',
-      description: 'Avoid multiple, costly round trips to any origin',
-      helpText:
-        'Consider adding preconnect or dns-prefetch resource hints to establish early ' +
-        `connections to important third-party origins. [Learn more](https://developers.google.com/web/fundamentals/performance/resource-prioritization#preconnect).`,
+      id: 'uses-rel-preconnect',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       requiredArtifacts: ['devtoolsLogs', 'URL'],
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
     };
@@ -34,30 +45,30 @@ class UsesRelPreconnectAudit extends Audit {
 
   /**
    * Check if record has valid timing
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static hasValidTiming(record) {
-    return !!record._timing && record._timing.connectEnd > 0 && record._timing.connectStart > 0;
+    return !!record.timing && record.timing.connectEnd > 0 && record.timing.connectStart > 0;
   }
 
   /**
    * Check is the connection is already open
-   * @param {LH.WebInspector.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} record
    * @return {boolean}
    */
   static hasAlreadyConnectedToOrigin(record) {
     return (
-      !!record._timing &&
-      record._timing.dnsEnd - record._timing.dnsStart === 0 &&
-      record._timing.connectEnd - record._timing.connectStart === 0
+      !!record.timing &&
+      record.timing.dnsEnd - record.timing.dnsStart === 0 &&
+      record.timing.connectEnd - record.timing.connectStart === 0
     );
   }
 
   /**
    * Check is the connection has started before the socket idle time
-   * @param {LH.WebInspector.NetworkRequest} record
-   * @param {LH.WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} record
+   * @param {LH.Artifacts.NetworkRequest} mainResource
    * @return {boolean}
    */
   static socketStartTimeIsBelowThreshold(record, mainResource) {
@@ -83,7 +94,7 @@ class UsesRelPreconnectAudit extends Audit {
 
     const {rtt, additionalRttByOrigin} = loadSimulator.getOptions();
 
-    /** @type {Map<string, LH.WebInspector.NetworkRequest[]>}  */
+    /** @type {Map<string, LH.Artifacts.NetworkRequest[]>}  */
     const origins = new Map();
     networkRecords
       .forEach(record => {
@@ -91,11 +102,11 @@ class UsesRelPreconnectAudit extends Audit {
           // filter out all resources where timing info was invalid
           !UsesRelPreconnectAudit.hasValidTiming(record) ||
           // filter out all resources that are loaded by the document
-          record._initiator.url === mainResource.url ||
+          record.initiator.url === mainResource.url ||
           // filter out urls that do not have an origin (data, ...)
-          !record.parsedURL || !record.parsedURL.securityOrigin() ||
+          !record.parsedURL || !record.parsedURL.securityOrigin ||
           // filter out all resources that have the same origin
-          mainResource.parsedURL.securityOrigin() === record.parsedURL.securityOrigin() ||
+          mainResource.parsedURL.securityOrigin === record.parsedURL.securityOrigin ||
           // filter out all resources where origins are already resolved
           UsesRelPreconnectAudit.hasAlreadyConnectedToOrigin(record) ||
           // make sure the requests are below the PRECONNECT_SOCKET_MAX_IDLE (15s) mark
@@ -104,7 +115,7 @@ class UsesRelPreconnectAudit extends Audit {
           return;
         }
 
-        const securityOrigin = record.parsedURL.securityOrigin();
+        const securityOrigin = record.parsedURL.securityOrigin;
         const records = origins.get(securityOrigin) || [];
         records.push(record);
         origins.set(securityOrigin, records);
@@ -120,9 +131,9 @@ class UsesRelPreconnectAudit extends Audit {
       });
 
       // Skip the origin if we don't have timing information
-      if (!firstRecordOfOrigin._timing) return;
+      if (!firstRecordOfOrigin.timing) return;
 
-      const securityOrigin = firstRecordOfOrigin.parsedURL.securityOrigin();
+      const securityOrigin = firstRecordOfOrigin.parsedURL.securityOrigin;
 
       // Approximate the connection time with the duration of TCP (+potentially SSL) handshake
       // DNS time can be large but can also be 0 if a commonly used origin that's cached, so make
@@ -135,7 +146,7 @@ class UsesRelPreconnectAudit extends Audit {
       const timeBetweenMainResourceAndDnsStart =
         firstRecordOfOrigin.startTime * 1000 -
         mainResource.endTime * 1000 +
-        firstRecordOfOrigin._timing.dnsStart;
+        firstRecordOfOrigin.timing.dnsStart;
 
       const wastedMs = Math.min(connectionTime, timeBetweenMainResourceAndDnsStart);
       if (wastedMs < IGNORE_THRESHOLD_IN_MS) return;
@@ -152,15 +163,16 @@ class UsesRelPreconnectAudit extends Audit {
 
     /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
     const headings = [
-      {key: 'url', valueType: 'url', label: 'Origin'},
-      {key: 'wastedMs', valueType: 'timespanMs', label: 'Potential Savings'},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnWastedMs)},
     ];
+
     const details = Audit.makeOpportunityDetails(headings, results, maxWasted);
 
     return {
       score: UnusedBytes.scoreForWastedMs(maxWasted),
       rawValue: maxWasted,
-      displayValue: ['Potential savings of %10d\xa0ms', maxWasted],
+      displayValue: str_(i18n.UIStrings.displayValueMsSavings, {wastedMs: maxWasted}),
       extendedInfo: {
         value: results,
       },
@@ -170,3 +182,4 @@ class UsesRelPreconnectAudit extends Audit {
 }
 
 module.exports = UsesRelPreconnectAudit;
+module.exports.UIStrings = UIStrings;

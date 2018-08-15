@@ -11,13 +11,13 @@ _Some incomplete notes_
   * **Artifacts** - output of a gatherer
 * **Audit** - Tests for a single feature/optimization/metric. Using the Artifacts as input, an audit evaluates a test and resolves to a numeric score. See [Understanding Results](./understanding-results.md) for details of the LHR (Lighthouse Result object).
   * **Computed Artifacts** - Generated on-demand from artifacts, these add additional meaning, and are often shared amongst multiple audits.
-* **Report** - The report UI, created client-side from the LHR. See [HTML Report Generation Overview](./report.md) for details.
+* **Report** - The report UI, created client-side from the LHR. See [HTML Report Generation Overview](../lighthouse-core/report/html/readme.md) for details.
 
 ### Audit/Report terminology
 * **Category** - Roll-up collection of audits and audit groups into a user-facing section of the report (eg. `Best Practices`). Applies weighting and overall scoring to the section. Examples: PWA, Accessibility, Best Practices.
-* **Audit description** - Short user-visible title for the successful audit. eg. “All image elements have `[alt]` attributes.”
-* **Audit failure description** - Short user-visible title for a failing  audit. eg. “Some image elements do not have `[alt]` attributes.”
-* **Audit help text** - Explanation of why the user should care about the audit. Not necessarily how to fix it, unless there is no external link that explains it. ([See helpText guidelines](CONTRIBUTING.md#helptext-guidelines)). eg. “Informative elements should aim for short, descriptive alternate text. Decorative elements can be ignored with an empty alt attribute. [Learn more].”
+* **Audit title** - Short user-visible title for the successful audit. eg. “All image elements have `[alt]` attributes.”
+* **Audit failureTitle** - Short user-visible title for a failing  audit. eg. “Some image elements do not have `[alt]` attributes.”
+* **Audit description** - Explanation of why the user should care about the audit. Not necessarily how to fix it, unless there is no external link that explains it. ([See description guidelines](CONTRIBUTING.md#description-guidelines)). eg. “Informative elements should aim for short, descriptive alternate text. Decorative elements can be ignored with an empty alt attribute. [Learn more].”
 
 ## Protocol
 
@@ -87,3 +87,9 @@ Tracing processor takes the output of trace of tab and identifies the top-level 
 The return value of each audit [takes this shape](https://github.com/GoogleChrome/lighthouse/blob/8f500e00243e07ef0a80b39334bedcc8ddc8d3d0/typings/audit.d.ts#L117-L130).
 
 The `details` object is parsed in report-renderer.js. View other audits for guidance on how to structure `details`.
+
+## Lighthouse-core internal module dependencies
+
+![image](https://user-images.githubusercontent.com/39191/42241426-609d15f6-7ebf-11e8-9e40-411d9ede43e6.png)
+
+(Generated July 3, 2018 via `madge lighthouse-core/index.js --image arch.png --layout dot --backgroundColor "#fafafa" --nodeColor "#4d4afc" --noDependencyColor "#48ad00"`)

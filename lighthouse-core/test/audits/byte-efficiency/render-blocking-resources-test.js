@@ -12,13 +12,13 @@ const Runner = require('../../../runner');
 const NetworkNode = require('../../../lib/dependency-graph/network-node');
 const CPUNode = require('../../../lib/dependency-graph/cpu-node');
 const Simulator = require('../../../lib/dependency-graph/simulator/simulator');
-const WebInspector = require('../../../lib/web-inspector');
+const NetworkRequest = require('../../../lib/network-request');
 const assert = require('assert');
 
 const trace = require('../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Render blocking resources audit', () => {
   it('evaluates http2 input correctly', async () => {
@@ -51,7 +51,7 @@ describe('Render blocking resources audit', () => {
     beforeEach(() => {
       requestId = 1;
       record = props => {
-        const parsedURL = {securityOrigin: () => 'http://example.com'};
+        const parsedURL = {host: 'example.com', securityOrigin: 'http://example.com'};
         return Object.assign({parsedURL, requestId: requestId++}, props);
       };
     });
@@ -80,7 +80,7 @@ describe('Render blocking resources audit', () => {
       const simulator = new Simulator({rtt: 1000, serverResponseTimeByOrigin});
       const documentNode = new NetworkNode(record({transferSize: 10 * 1000}));
       const styleNode = new NetworkNode(
-        record({transferSize: 23 * 1000, _resourceType: WebInspector.resourceTypes.Stylesheet})
+        record({transferSize: 23 * 1000, resourceType: NetworkRequest.TYPES.Stylesheet})
       ); // pushes document over 14KB
       const deferredIds = new Set([2]);
       const wastedBytesMap = new Map([[undefined, 18 * 1000]]);

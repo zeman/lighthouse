@@ -15,6 +15,12 @@ declare global {
     code?: string;
   }
 
+  // Augment Intl to include
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/getCanonicalLocales
+  namespace Intl {
+    var getCanonicalLocales: (locales?: string | Array<string>) => Array<string>;
+  }
+
   /** Make properties K in T optional. */
   type MakeOptional<T, K extends keyof T> = {
     [P in Exclude<keyof T, K>]: T[P]
@@ -52,10 +58,13 @@ declare global {
       cpuSlowdownMultiplier?: number
     }
 
+    export type Locale = 'en-US'|'en'|'en-AU'|'en-GB'|'en-IE'|'en-SG'|'en-ZA'|'en-IN'|'ar-XB'|'ar'|'bg'|'bs'|'ca'|'cs'|'da'|'de'|'el'|'en-XA'|'es'|'fi'|'fil'|'fr'|'he'|'hi'|'hr'|'hu'|'gsw'|'id'|'in'|'it'|'iw'|'ja'|'ko'|'lt'|'lv'|'mo'|'nl'|'nb'|'no'|'pl'|'pt'|'pt-PT'|'ro'|'ru'|'sk'|'sl'|'sr'|'sr-Latn'|'sv'|'ta'|'te'|'th'|'tl'|'tr'|'uk'|'vi'|'zh'|'zh-HK'|'zh-TW';
+
     export type OutputMode = 'json' | 'html' | 'csv';
 
     interface SharedFlagsSettings {
       output?: OutputMode|OutputMode[];
+      locale?: Locale;
       maxWaitForLoad?: number;
       blockedUrlPatterns?: string[] | null;
       additionalTraceCategories?: string | null;
@@ -141,6 +150,8 @@ declare global {
       name: string;
       cat: string;
       args: {
+        fileName?: string;
+        snapshot?: string;
         data?: {
           frames?: {
             frame: string;

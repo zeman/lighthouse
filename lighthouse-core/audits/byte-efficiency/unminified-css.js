@@ -7,6 +7,17 @@
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const UnusedCSSRules = require('./unused-css-rules');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to minify (remove whitespace) the page's CSS code. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Minify CSS',
+  /** Description of a Lighthouse audit that tells the user *why* they should minify (remove whitespace) the page's CSS code. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Minifying CSS files can reduce network payload sizes. ' +
+  '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/minify-css).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const IGNORE_THRESHOLD_IN_PERCENT = 5;
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
@@ -20,11 +31,10 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unminified-css',
-      description: 'Minify CSS',
+      id: 'unminified-css',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Minifying CSS files can reduce network payload sizes. ' +
-        '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/minify-css).',
       requiredArtifacts: ['CSSUsage', 'devtoolsLogs'],
     };
   }
@@ -92,7 +102,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts.CSSStyleSheetInfo} stylesheet
-   * @param {LH.WebInspector.NetworkRequest=} networkRecord
+   * @param {LH.Artifacts.NetworkRequest=} networkRecord
    * @param {string} pageUrl
    * @return {{url: string, totalBytes: number, wastedBytes: number, wastedPercent: number}}
    */
@@ -107,7 +117,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, content.length,
-      'stylesheet');
+      'Stylesheet');
     const wastedRatio = 1 - totalTokenLength / content.length;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -121,7 +131,7 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
 
   /**
    * @param {LH.Artifacts} artifacts
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {
@@ -142,15 +152,16 @@ class UnminifiedCSS extends ByteEfficiencyAudit {
       items.push(result);
     }
 
-    return {
-      items,
-      headings: [
-        {key: 'url', valueType: 'url', label: 'URL'},
-        {key: 'totalBytes', valueType: 'bytes', label: 'Original'},
-        {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings'},
-      ],
-    };
+    /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
+    const headings = [
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+      {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
+    ];
+
+    return {items, headings};
   }
 }
 
 module.exports = UnminifiedCSS;
+module.exports.UIStrings = UIStrings;

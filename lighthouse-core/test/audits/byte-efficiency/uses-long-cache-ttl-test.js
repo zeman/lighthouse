@@ -7,10 +7,10 @@
 
 const CacheHeadersAudit = require('../../../audits/byte-efficiency/uses-long-cache-ttl.js');
 const assert = require('assert');
-const WebInspector = require('../../../lib/web-inspector');
+const NetworkRequest = require('../../../lib/network-request');
 const options = CacheHeadersAudit.defaultOptions;
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 function networkRecord(options = {}) {
   const headers = [];
@@ -19,11 +19,11 @@ function networkRecord(options = {}) {
   });
 
   return {
-    _url: options.url || 'https://example.com/asset',
+    url: options.url || 'https://example.com/asset',
     statusCode: options.statusCode || 200,
-    _resourceType: options.resourceType || WebInspector.resourceTypes.Script,
+    resourceType: options.resourceType || NetworkRequest.TYPES.Script,
     transferSize: options.transferSize || 10000,
-    _responseHeaders: headers,
+    responseHeaders: headers,
   };
 }
 
@@ -46,7 +46,7 @@ describe('Cache headers audit', () => {
       assert.equal(items.length, 1);
       assert.equal(items[0].cacheLifetimeMs, 0);
       assert.equal(items[0].wastedBytes, 10000);
-      assert.equal(result.displayValue, '1 asset found');
+      expect(result.displayValue).toBeDisplayString('1 resource found');
     });
   });
 
@@ -68,7 +68,7 @@ describe('Cache headers audit', () => {
       assert.equal(Math.round(items[1].wastedBytes), 8000);
       assert.equal(items[2].cacheLifetimeMs, 86400 * 1000);
       assert.equal(Math.round(items[2].wastedBytes), 4000);
-      assert.equal(result.displayValue, '3 assets found');
+      expect(result.displayValue).toBeDisplayString('3 resources found');
     });
   });
 
@@ -119,6 +119,25 @@ describe('Cache headers audit', () => {
     });
   });
 
+  it('respects multiple cache-control headers', () => {
+    networkRecords = [
+      networkRecord({headers: {
+        'cache-control': 'max-age=31536000, public',
+        'Cache-control': 'no-transform',
+      }}),
+      networkRecord({headers: {
+        'Cache-Control': 'no-transform',
+        'cache-control': 'max-age=3600',
+        'Cache-control': 'public',
+      }}),
+    ];
+
+    return CacheHeadersAudit.audit(artifacts, {options}).then(result => {
+      const items = result.extendedInfo.value.results;
+      assert.equal(items.length, 1);
+    });
+  });
+
   it('catches records with Etags', () => {
     networkRecords = [
       networkRecord({headers: {etag: 'md5hashhere'}}),
@@ -152,7 +171,7 @@ describe('Cache headers audit', () => {
       networkRecord({statusCode: 500}),
       networkRecord({url: 'https://example.com/dynamic.js?userId=crazy', transferSize: 10}),
       networkRecord({url: 'data:image/jpeg;base64,what'}),
-      networkRecord({resourceType: WebInspector.resourceTypes.XHR}),
+      networkRecord({resourceType: NetworkRequest.TYPES.XHR}),
     ];
 
     return CacheHeadersAudit.audit(artifacts, {options}).then(result => {

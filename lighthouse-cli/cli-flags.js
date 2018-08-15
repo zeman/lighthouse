@@ -64,6 +64,8 @@ function getFlags(manualArgv) {
         ],
         'Configuration:')
       .describe({
+        // We don't allowlist specific locales. Why? So we can support the user who requests 'es-MX' (unsupported) and we'll fall back to 'es' (supported)
+        'locale': 'The locale/language the report should be formatted in',
         'enable-error-reporting':
             'Enables error reporting, overriding any saved preference. --no-enable-error-reporting will do the opposite. More: https://git.io/vFFTO',
         'blocked-url-patterns': 'Block any network requests to the specified URL patterns',

@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha, browser */
+/* eslint-env jest, browser */
 
 const assert = require('assert');
 const fs = require('fs');
@@ -17,8 +17,7 @@ const DetailsRenderer = require('../../../../report/html/renderer/details-render
 const CriticalRequestChainRenderer = require(
     '../../../../report/html/renderer/crc-details-renderer.js');
 const CategoryRenderer = require('../../../../report/html/renderer/category-renderer.js');
-const ReportRenderer = require('../../../../report/html/renderer/report-renderer.js');
-const sampleResults = require('../../../results/sample_v2.json');
+const sampleResultsOrig = require('../../../results/sample_v2.json');
 
 const TEMPLATE_FILE = fs.readFileSync(__dirname +
     '/../../../../report/html/templates.html', 'utf8');
@@ -26,8 +25,9 @@ const TEMPLATE_FILE = fs.readFileSync(__dirname +
 describe('PerfCategoryRenderer', () => {
   let category;
   let renderer;
+  let sampleResults;
 
-  before(() => {
+  beforeAll(() => {
     global.URL = URL;
     global.Util = Util;
     global.CriticalRequestChainRenderer = CriticalRequestChainRenderer;
@@ -40,13 +40,12 @@ describe('PerfCategoryRenderer', () => {
     const dom = new DOM(document);
     const detailsRenderer = new DetailsRenderer(dom);
     renderer = new PerformanceCategoryRenderer(dom, detailsRenderer);
-    sampleResults.reportCategories = Object.values(sampleResults.categories);
+
+    sampleResults = Util.prepareReportResult(sampleResultsOrig);
     category = sampleResults.reportCategories.find(cat => cat.id === 'performance');
-    ReportRenderer.smooshAuditResultsIntoCategories(sampleResults.audits,
-      sampleResults.reportCategories);
   });
 
-  after(() => {
+  afterAll(() => {
     global.URL = undefined;
     global.Util = undefined;
     global.CriticalRequestChainRenderer = undefined;
@@ -155,6 +154,10 @@ describe('PerfCategoryRenderer', () => {
         (audit.result.score === 1 || audit.result.scoreDisplayMode === 'not-applicable'));
     const passedElements = passedSection.querySelectorAll('.lh-audit');
     assert.equal(passedElements.length, passedAudits.length);
+  });
+
+  // Unsupported by perf cat renderer right now.
+  it.skip('renders any manual audits', () => {
   });
 
   describe('getWastedMs', () => {

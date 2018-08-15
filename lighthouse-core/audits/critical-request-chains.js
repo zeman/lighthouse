@@ -6,7 +6,25 @@
 'use strict';
 
 const Audit = require('./audit');
-const Util = require('../report/html/renderer/util');
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to reduce the depth of critical network requests to enhance initial load of a page. Critical request chains are series of dependent network requests that are important for page rendering. For example, here's a 4-request-deep chain: The biglogo.jpg image is required, but is requested via the styles.css style code, which is requested by the initialize.js javascript, which is requested by the page's HTML. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Minimize Critical Requests Depth',
+  /** Description of a Lighthouse audit that tells the user *why* they should reduce the depth of critical network requests to enhance initial load of a page . This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'The Critical Request Chains below show you what resources are ' +
+      'loaded with a high priority. Consider reducing ' +
+      'the length of chains, reducing the download size of resources, or ' +
+      'deferring the download of unnecessary resources to improve page load. ' +
+      '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/critical-request-chains).',
+  /** [ICU Syntax] Label for an audit identifying the number of sequences of dependent network requests used to load the page. */
+  displayValue: `{itemCount, plural,
+    =1 {1 chain found}
+    other {# chains found}
+    }`,
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 class CriticalRequestChains extends Audit {
   /**
@@ -14,14 +32,10 @@ class CriticalRequestChains extends Audit {
    */
   static get meta() {
     return {
-      name: 'critical-request-chains',
-      description: 'Critical Request Chains',
+      id: 'critical-request-chains',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: Audit.SCORING_MODES.INFORMATIVE,
-      helpText: 'The Critical Request Chains below show you what resources are ' +
-          'issued with a high priority. Consider reducing ' +
-          'the length of chains, reducing the download size of resources, or ' +
-          'deferring the download of unnecessary resources to improve page load. ' +
-          '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/critical-request-chains).',
       requiredArtifacts: ['devtoolsLogs', 'URL'],
     };
   }
@@ -108,7 +122,7 @@ class CriticalRequestChains extends Audit {
         url: request.url,
         startTime: request.startTime,
         endTime: request.endTime,
-        _responseReceivedTime: request._responseReceivedTime,
+        responseReceivedTime: request.responseReceivedTime,
         transferSize: request.transferSize,
       };
 
@@ -184,7 +198,7 @@ class CriticalRequestChains extends Audit {
       return {
         rawValue: chainCount === 0,
         notApplicable: chainCount === 0,
-        displayValue: chainCount ? `${Util.formatNumber(chainCount)} chains found`: '',
+        displayValue: chainCount ? str_(UIStrings.displayValue, {itemCount: chainCount}) : '',
         extendedInfo: {
           value: {
             chains: flattenedChains,
@@ -193,7 +207,6 @@ class CriticalRequestChains extends Audit {
         },
         details: {
           type: 'criticalrequestchain',
-          header: {type: 'text', text: 'View critical network waterfall:'},
           chains: flattenedChains,
           longestChain,
         },
@@ -203,3 +216,4 @@ class CriticalRequestChains extends Audit {
 }
 
 module.exports = CriticalRequestChains;
+module.exports.UIStrings = UIStrings;

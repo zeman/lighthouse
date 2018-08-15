@@ -6,6 +6,16 @@
 
 declare global {
   module LH {
+    export type I18NMessageEntry = string | {path: string, values: any};
+
+    export interface I18NMessages {
+      [icuMessageId: string]: I18NMessageEntry[];
+    }
+
+    export interface I18NRendererStrings {
+      [varName: string]: string;
+    }
+
     /**
      * The full output of a Lighthouse run.
      */
@@ -35,6 +45,8 @@ declare global {
       userAgent: string;
       /** Execution timings for the Lighthouse run */
       timing: {entries: Artifacts.MeasureEntry[], total: number};
+      /** The record of all formatted string locations in the LHR and their corresponding source values. */
+      i18n?: {rendererFormattedStrings: I18NRendererStrings, icuMessagePaths: I18NMessages};
     }
 
     // Result namespace

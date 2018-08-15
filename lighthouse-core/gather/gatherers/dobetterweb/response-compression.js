@@ -11,16 +11,27 @@
 'use strict';
 
 const Gatherer = require('../gatherer');
+const URL = require('../../../lib/url-shim');
+const Sentry = require('../../../lib/sentry');
+const NetworkRequest = require('../../../lib/network-request');
 const gzip = require('zlib').gzip;
 
+const CHROME_EXTENSION_PROTOCOL = 'chrome-extension:';
 const compressionHeaders = ['content-encoding', 'x-original-content-encoding'];
 const compressionTypes = ['gzip', 'br', 'deflate'];
 const binaryMimeTypes = ['image', 'audio', 'video'];
-const CHROME_EXTENSION_PROTOCOL = 'chrome-extension:';
+const textResourceTypes = [
+  NetworkRequest.TYPES.Document,
+  NetworkRequest.TYPES.Script,
+  NetworkRequest.TYPES.Stylesheet,
+  NetworkRequest.TYPES.XHR,
+  NetworkRequest.TYPES.Fetch,
+  NetworkRequest.TYPES.EventSource,
+];
 
 class ResponseCompression extends Gatherer {
   /**
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {LH.Artifacts['ResponseCompression']}
    */
   static filterUnoptimizedResponses(networkRecords) {
@@ -28,20 +39,20 @@ class ResponseCompression extends Gatherer {
     const unoptimizedResponses = [];
 
     networkRecords.forEach(record => {
-      const mimeType = record._mimeType;
-      const resourceType = record._resourceType;
-      const resourceSize = record._resourceSize;
+      const mimeType = record.mimeType;
+      const resourceType = record.resourceType || NetworkRequest.TYPES.Other;
+      const resourceSize = record.resourceSize;
 
       const isBinaryResource = mimeType && binaryMimeTypes.some(type => mimeType.startsWith(type));
-      const isTextBasedResource = !isBinaryResource && resourceType && resourceType.isTextType();
+      const isTextResource = !isBinaryResource && textResourceTypes.includes(resourceType);
       const isChromeExtensionResource = record.url.startsWith(CHROME_EXTENSION_PROTOCOL);
 
-      if (!isTextBasedResource || !resourceSize || !record.finished ||
+      if (!isTextResource || !resourceSize || !record.finished ||
         isChromeExtensionResource || !record.transferSize || record.statusCode === 304) {
         return;
       }
 
-      const isContentEncoded = (record._responseHeaders || []).find(header =>
+      const isContentEncoded = (record.responseHeaders || []).find(header =>
         compressionHeaders.includes(header.name.toLowerCase()) &&
         compressionTypes.includes(header.value)
       );
@@ -90,6 +101,16 @@ class ResponseCompression extends Gatherer {
             resolve(record);
           });
         });
+      }).catch(err => {
+        // @ts-ignore TODO(bckenny): Sentry type checking
+        Sentry.captureException(err, {
+          tags: {gatherer: 'ResponseCompression'},
+          extra: {url: URL.elideDataURI(record.url)},
+          level: 'warning',
+        });
+
+        record.gzipSize = undefined;
+        return record;
       });
     }));
   }

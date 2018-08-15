@@ -12,6 +12,7 @@
 
 const Gatherer = require('../gatherer');
 const URL = require('../../../lib/url-shim');
+const NetworkRequest = require('../../../lib/network-request');
 const Sentry = require('../../../lib/sentry');
 const Driver = require('../../driver.js'); // eslint-disable-line no-unused-vars
 
@@ -19,6 +20,8 @@ const JPEG_QUALITY = 0.92;
 const WEBP_QUALITY = 0.85;
 
 const MINIMUM_IMAGE_SIZE = 4096; // savings of <4 KB will be ignored in the audit anyway
+
+const IMAGE_REGEX = /^image\/((x|ms|x-ms)-)?(png|bmp|jpeg)$/;
 
 /** @typedef {{isSameOrigin: boolean, isBase64DataUri: boolean, requestId: string, url: string, mimeType: string, resourceSize: number}} SimplifiedNetworkRecord */
 
@@ -73,32 +76,31 @@ function getOptimizedNumBytes(url) {
 class OptimizedImages extends Gatherer {
   /**
    * @param {string} pageUrl
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {Array<SimplifiedNetworkRecord>}
    */
   static filterImageRequests(pageUrl, networkRecords) {
     /** @type {Set<string>} */
     const seenUrls = new Set();
     return networkRecords.reduce((prev, record) => {
-      if (seenUrls.has(record._url) || !record.finished) {
+      if (seenUrls.has(record.url) || !record.finished) {
         return prev;
       }
 
-      seenUrls.add(record._url);
-      const isOptimizableImage = record._resourceType &&
-        record._resourceType._name === 'image' &&
-        /image\/(png|bmp|jpeg)/.test(record._mimeType);
-      const isSameOrigin = URL.originsMatch(pageUrl, record._url);
-      const isBase64DataUri = /^data:.{2,40}base64\s*,/.test(record._url);
+      seenUrls.add(record.url);
+      const isOptimizableImage = record.resourceType === NetworkRequest.TYPES.Image &&
+        IMAGE_REGEX.test(record.mimeType);
+      const isSameOrigin = URL.originsMatch(pageUrl, record.url);
+      const isBase64DataUri = /^data:.{2,40}base64\s*,/.test(record.url);
 
-      const actualResourceSize = Math.min(record._resourceSize || 0, record.transferSize || 0);
+      const actualResourceSize = Math.min(record.resourceSize || 0, record.transferSize || 0);
       if (isOptimizableImage && actualResourceSize > MINIMUM_IMAGE_SIZE) {
         prev.push({
           isSameOrigin,
           isBase64DataUri,
-          requestId: record._requestId,
-          url: record._url,
-          mimeType: record._mimeType,
+          requestId: record.requestId,
+          url: record.url,
+          mimeType: record.mimeType,
           resourceSize: actualResourceSize,
         });
       }
@@ -114,6 +116,8 @@ class OptimizedImages extends Gatherer {
    * @return {Promise<LH.Crdp.Audits.GetEncodedResponseResponse>}
    */
   _getEncodedResponse(driver, requestId, encoding) {
+    requestId = NetworkRequest.getRequestIdForBackend(requestId);
+
     const quality = encoding === 'jpeg' ? JPEG_QUALITY : WEBP_QUALITY;
     const params = {requestId, encoding, quality, sizeOnly: true};
     return driver.sendCommand('Audits.getEncodedResponse', params);

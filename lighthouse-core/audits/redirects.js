@@ -7,6 +7,16 @@
 
 const Audit = require('./audit');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to eliminate the redirects taken through multiple URLs to load the page. This is shown in a list of audits that Lighthouse generates. */
+  title: 'Avoid multiple page redirects',
+  /** Description of a Lighthouse audit that tells users why they should reduce the number of server-side redirects on their page. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Redirects introduce additional delays before the page can be loaded. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/redirects).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 class Redirects extends Audit {
   /**
@@ -14,10 +24,10 @@ class Redirects extends Audit {
    */
   static get meta() {
     return {
-      name: 'redirects',
-      description: 'Avoid multiple page redirects',
+      id: 'redirects',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      helpText: 'Redirects introduce additional delays before the page can be loaded. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/redirects).',
       requiredArtifacts: ['URL', 'devtoolsLogs', 'traces'],
     };
   }
@@ -84,18 +94,20 @@ class Redirects extends Audit {
       });
     }
 
+    /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
     const headings = [
-      {key: 'url', itemType: 'text', text: 'Redirected URL'},
-      {key: 'wastedMs', itemType: 'ms', text: 'Time for Redirect'},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnTimeSpent)},
     ];
-    const summary = {wastedMs: totalWastedMs};
-    const details = Audit.makeTableDetails(headings, pageRedirects, summary);
+    const details = Audit.makeOpportunityDetails(headings, pageRedirects, totalWastedMs);
 
     return {
       // We award a passing grade if you only have 1 redirect
       score: redirectRequests.length <= 2 ? 1 : UnusedBytes.scoreForWastedMs(totalWastedMs),
       rawValue: totalWastedMs,
-      displayValue: ['%d\xa0ms', totalWastedMs],
+      displayValue: totalWastedMs ?
+        str_(i18n.UIStrings.displayValueMsSavings, {wastedMs: totalWastedMs}) :
+        '',
       extendedInfo: {
         value: {
           wastedMs: totalWastedMs,
@@ -107,3 +119,4 @@ class Redirects extends Audit {
 }
 
 module.exports = Redirects;
+module.exports.UIStrings = UIStrings;

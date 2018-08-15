@@ -6,11 +6,23 @@
 'use strict';
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to remove content from their CSS that isn’t needed immediately and instead load that content at a later time. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Defer unused CSS',
+  /** Description of a Lighthouse audit that tells the user *why* they should defer loading any content in CSS that isn’t needed at page load. This is displayed after a user expands the section to see more. No word length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Remove unused rules from stylesheets to reduce unnecessary ' +
+    'bytes consumed by network activity. ' +
+    '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/unused-css).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
 const PREVIEW_LENGTH = 100;
 
-/** @typedef {LH.Artifacts.CSSStyleSheetInfo & {networkRecord: LH.WebInspector.NetworkRequest, usedRules: Array<LH.Crdp.CSS.RuleUsage>}} StyleSheetInfo */
+/** @typedef {LH.Artifacts.CSSStyleSheetInfo & {networkRecord: LH.Artifacts.NetworkRequest, usedRules: Array<LH.Crdp.CSS.RuleUsage>}} StyleSheetInfo */
 
 class UnusedCSSRules extends ByteEfficiencyAudit {
   /**
@@ -18,19 +30,17 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
    */
   static get meta() {
     return {
-      name: 'unused-css-rules',
-      description: 'Defer unused CSS',
+      id: 'unused-css-rules',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Remove unused rules from stylesheets to reduce unnecessary ' +
-          'bytes consumed by network activity. ' +
-          '[Learn more](https://developers.google.com/speed/docs/insights/OptimizeCSSDelivery).',
       requiredArtifacts: ['CSSUsage', 'URL', 'devtoolsLogs'],
     };
   }
 
   /**
    * @param {Array<LH.Artifacts.CSSStyleSheetInfo>} styles The output of the Styles gatherer.
-   * @param {Array<LH.WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {Object<string, StyleSheetInfo>} A map of styleSheetId to stylesheet information.
    */
   static indexStylesheetsById(styles, networkRecords) {
@@ -38,7 +48,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
         .reduce((indexed, record) => {
           indexed[record.url] = record;
           return indexed;
-        }, /** @type {Object<string, LH.WebInspector.NetworkRequest>} */ ({}));
+        }, /** @type {Object<string, LH.Artifacts.NetworkRequest>} */ ({}));
 
     return styles.reduce((indexed, stylesheet) => {
       indexed[stylesheet.header.styleSheetId] = Object.assign({
@@ -81,7 +91,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
     }
 
     const totalTransferredBytes = ByteEfficiencyAudit.estimateTransferSize(
-        stylesheetInfo.networkRecord, totalUncompressedBytes, 'stylesheet');
+        stylesheetInfo.networkRecord, totalUncompressedBytes, 'Stylesheet');
     const percentUnused = (totalUncompressedBytes - usedUncompressedBytes) / totalUncompressedBytes;
     const wastedBytes = Math.round(percentUnused * totalTransferredBytes);
 
@@ -165,9 +175,9 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
 
       /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
       const headings = [
-        {key: 'url', valueType: 'url', label: 'URL'},
-        {key: 'totalBytes', valueType: 'bytes', label: 'Original'},
-        {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings'},
+        {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+        {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+        {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
       ];
 
       return {
@@ -179,3 +189,4 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
 }
 
 module.exports = UnusedCSSRules;
+module.exports.UIStrings = UIStrings;

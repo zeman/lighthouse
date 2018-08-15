@@ -10,19 +10,32 @@
 'use strict';
 
 const Audit = require('../audit');
-const Node = require('../../lib/dependency-graph/node');
+const i18n = require('../../lib/i18n');
+const BaseNode = require('../../lib/dependency-graph/base-node');
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const UnusedCSS = require('./unused-css-rules');
-const WebInspector = require('../../lib/web-inspector');
+const NetworkRequest = require('../../lib/network-request');
 
-const Simulator = require('../../lib/dependency-graph/simulator/simulator'); // eslint-disable-line no-unused-vars
-const NetworkNode = require('../../lib/dependency-graph/network-node.js'); // eslint-disable-line no-unused-vars
+/** @typedef {import('../../lib/dependency-graph/simulator/simulator')} Simulator */
+/** @typedef {import('../../lib/dependency-graph/base-node.js').Node} Node */
+/** @typedef {import('../../lib/dependency-graph/network-node.js')} NetworkNode */
 
 // Because of the way we detect blocking stylesheets, asynchronously loaded
 // CSS with link[rel=preload] and an onload handler (see https://github.com/filamentgroup/loadCSS)
 // can be falsely flagged as blocking. Therefore, ignore stylesheets that loaded fast enough
 // to possibly be non-blocking (and they have minimal impact anyway).
 const MINIMUM_WASTED_MS = 50;
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to reduce or remove network resources that block the initial render of the page. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Eliminate render-blocking resources',
+  /** Description of a Lighthouse audit that tells the user *why* they should reduce or remove network resources that block the initial render of the page. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Resources are blocking the first paint of your page. Consider ' +
+    'delivering critical JS/CSS inline and deferring all non-critical ' +
+    'JS/styles. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/blocking-resources).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 /**
  * Given a simulation's nodeTimings, return an object with the nodes/timing keyed by network URL
@@ -35,11 +48,10 @@ function getNodesAndTimingByUrl(nodeTimings) {
   const nodes = Array.from(nodeTimings.keys());
   nodes.forEach(node => {
     if (node.type !== 'network') return;
-    const networkNode = /** @type {NetworkNode} */ (node);
     const nodeTiming = nodeTimings.get(node);
     if (!nodeTiming) return;
 
-    urlMap[networkNode.record.url] = {node, nodeTiming};
+    urlMap[node.record.url] = {node, nodeTiming};
   });
 
   return urlMap;
@@ -51,13 +63,10 @@ class RenderBlockingResources extends Audit {
    */
   static get meta() {
     return {
-      name: 'render-blocking-resources',
-      description: 'Eliminate render-blocking resources',
+      id: 'render-blocking-resources',
+      title: str_(UIStrings.title),
       scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
-      helpText:
-        'Resources are blocking the first paint of your page. Consider ' +
-        'delivering critical JS/CSS inline and deferring all non-critical ' +
-        'JS/styles. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/blocking-resources).',
+      description: str_(UIStrings.description),
       // This audit also looks at CSSUsage but has a graceful fallback if it failed, so do not mark
       // it as a "requiredArtifact".
       // TODO: look into adding an `optionalArtifacts` property that captures this
@@ -149,16 +158,14 @@ class RenderBlockingResources extends Audit {
     const minimalFCPGraph = /** @type {NetworkNode} */ (fcpGraph.cloneWithRelationships(node => {
       // If a node can be deferred, exclude it from the new FCP graph
       const canDeferRequest = deferredIds.has(node.id);
-      if (node.type !== Node.TYPES.NETWORK) return !canDeferRequest;
-
-      const networkNode = /** @type {NetworkNode} */ (node);
+      if (node.type !== BaseNode.TYPES.NETWORK) return !canDeferRequest;
 
       const isStylesheet =
-        networkNode.record._resourceType === WebInspector.resourceTypes.Stylesheet;
+        node.record.resourceType === NetworkRequest.TYPES.Stylesheet;
       if (canDeferRequest && isStylesheet) {
         // We'll inline the used bytes of the stylesheet and assume the rest can be deferred
-        const wastedBytes = wastedCssBytesByUrl.get(networkNode.record.url) || 0;
-        totalChildNetworkBytes += (networkNode.record.transferSize || 0) - wastedBytes;
+        const wastedBytes = wastedCssBytesByUrl.get(node.record.url) || 0;
+        totalChildNetworkBytes += (node.record.transferSize || 0) - wastedBytes;
       }
       return !canDeferRequest;
     }));
@@ -200,17 +207,15 @@ class RenderBlockingResources extends Audit {
     const {results, wastedMs} = await RenderBlockingResources.computeResults(artifacts, context);
 
     let displayValue = '';
-    if (results.length > 1) {
-      displayValue = `${results.length} resources delayed first paint by ${wastedMs}ms`;
-    } else if (results.length === 1) {
-      displayValue = `${results.length} resource delayed first paint by ${wastedMs}ms`;
+    if (results.length > 0) {
+      displayValue = str_(i18n.UIStrings.displayValueMsSavings, {wastedMs});
     }
 
     /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
     const headings = [
-      {key: 'url', valueType: 'url', label: 'URL'},
-      {key: 'totalBytes', valueType: 'bytes', label: 'Size (KB)'},
-      {key: 'wastedMs', valueType: 'timespanMs', label: 'Download Time (ms)'},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+      {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnWastedMs)},
     ];
 
     const details = Audit.makeOpportunityDetails(headings, results, wastedMs);
@@ -225,3 +230,4 @@ class RenderBlockingResources extends Audit {
 }
 
 module.exports = RenderBlockingResources;
+module.exports.UIStrings = UIStrings;
