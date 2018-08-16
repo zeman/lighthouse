@@ -18,6 +18,11 @@ const UIStrings = {
 
 const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
+/**
+ * @fileoverview This metric is the duration of the longest task after FCP. It is meant to capture
+ * the worst case First Input Delay that a user might experience.
+ * Tasks before FCP are excluded because it is unlikely that the user will try to interact with a page before it has painted anything.
+ */
 class MaxPotentialFID extends Audit {
   /**
    * @return {LH.Audit.Meta}
