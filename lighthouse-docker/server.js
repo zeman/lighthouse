@@ -79,7 +79,7 @@ function runLH(params, req, res, next) {
     console.log(str);
   });
 
-  // eslint-disable-next-line
+  // eslint-disable-next-line no-unused-vars
   child.on('close', statusCode => {
     if (log) {
       res.write('</textarea>');
@@ -135,7 +135,7 @@ function runLighthouseAsEventStream(req, res) {
     log += str;
   });
 
-  // eslint-disable-next-line
+  // eslint-disable-next-line no-unused-vars
   child.on('close', statusCode => {
     const serverOrigin = `https://${req.host}/`;
     res.write(`data: done ${serverOrigin + file}\n\n`);

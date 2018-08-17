@@ -1,6 +1,6 @@
 FROM node:8-slim
 
-LABEL maintainer="Eric Bidelman <ebidel@>" \
+LABEL maintainer="The Chromium Authors" \
       description="Run Lighthouse in a Docker container (using full headful Chrome)."
 
 # Install utilities, Xvfb and dbus for X11

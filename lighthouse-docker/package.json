@@ -1,7 +1,7 @@
 {
   "name": "lighthouse_docker",
   "description": "Lighthouse in Docker",
-  "author": "Eric Bidelman <ebidel@>",
+  "author": "The Chromium Authors",
   "license": "Apache-2.0",
   "main": "server.js",
   "scripts": {
