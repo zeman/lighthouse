@@ -48,17 +48,17 @@ function updateBadgeUI(optUrl) {
 }
 
 /**
+ * @param {string} url (fixes bug #5668)
  * @param {LH.Flags} flags Lighthouse flags.
  * @param {Array<string>} categoryIDs Name values of categories to include.
  * @return {Promise<LH.RunnerResult|void>}
  */
-async function runLighthouseInExtension(flags, categoryIDs) {
+async function runLighthouseInExtension(url, flags, categoryIDs) {
   // Default to 'info' logging level.
   flags.logLevel = flags.logLevel || 'info';
   flags.output = 'html';
 
   const connection = new ExtensionProtocol();
-  const url = await connection.getCurrentTabURL();
   const config = background.getDefaultConfigForCategories(categoryIDs);
 
   updateBadgeUI(url);

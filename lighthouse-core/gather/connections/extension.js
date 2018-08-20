@@ -128,17 +128,10 @@ class ExtensionConnection extends Connection {
           return reject(new Error(errMessage));
         }
         if (tabs.length > 1) {
-          log.warn('ExtensionConnection', '_queryCurrentTab returned multiple tabs');
+          return reject(new Error(`${errMessage} _queryCurrentTab returned multiple tabs`));
         }
 
-        const firstUrledTab = tabs.find(tab => !!tab.url);
-        if (!firstUrledTab) {
-          const tabIds = tabs.map(tab => tab.id).join(', ');
-          const message = errMessage + ` Found ${tabs.length} tab(s) with id(s) [${tabIds}].`;
-          return reject(new Error(message));
-        }
-
-        resolve(firstUrledTab);
+        resolve(tabs[0]);
       }));
     });
   }
@@ -154,20 +147,6 @@ class ExtensionConnection extends Connection {
       }
 
       return tab.id;
-    });
-  }
-
-  /**
-   * Used by lighthouse-ext-background to kick off the run on the current page
-   * @return {Promise<string>}
-   */
-  getCurrentTabURL() {
-    return this._queryCurrentTab().then(tab => {
-      if (!tab.url) {
-        log.error('ExtensionConnection', 'getCurrentTabURL returned empty string', tab);
-        throw new Error('getCurrentTabURL returned empty string');
-      }
-      return tab.url;
     });
   }
 }
