@@ -25,12 +25,20 @@ class ContentWidth extends Audit {
 
   /**
    * @param {LH.Artifacts} artifacts
+   * @param {LH.Audit.Context} context
    * @return {LH.Audit.Product}
    */
-  static audit(artifacts) {
+  static audit(artifacts, context) {
     const viewportWidth = artifacts.ViewportDimensions.innerWidth;
     const windowWidth = artifacts.ViewportDimensions.outerWidth;
     const widthsMatch = viewportWidth === windowWidth;
+
+    if (context.settings.disableDeviceEmulation) {
+      return {
+        rawValue: true,
+        notApplicable: true,
+      };
+    }
 
     return {
       rawValue: widthsMatch,

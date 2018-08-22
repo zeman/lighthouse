@@ -17,7 +17,7 @@ describe('Mobile-friendly: content-width audit', () => {
         innerWidth: 100,
         outerWidth: 300,
       },
-    });
+    }, {settings: {}});
 
     assert.equal(result.rawValue, false);
     assert.ok(result.explanation);
@@ -29,6 +29,15 @@ describe('Mobile-friendly: content-width audit', () => {
         innerWidth: 300,
         outerWidth: 300,
       },
-    }).rawValue, true);
+    }, {settings: {}}).rawValue, true);
+  });
+
+  it('not applicable when device emulation is turned off', () => {
+    return assert.equal(Audit.audit({
+      ViewportDimensions: {
+        innerWidth: 300,
+        outerWidth: 450,
+      },
+    }, {settings: {disableDeviceEmulation: true}}).notApplicable, true);
   });
 });
