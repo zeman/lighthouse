@@ -385,6 +385,54 @@ class NetworkAnalyzer {
     return NetworkAnalyzer.summarize(estimatesByOrigin);
   }
 
+
+  /**
+   * Computes the average throughput for the given records in bits/second.
+   * Excludes data URI, failed or otherwise incomplete, and cached requests.
+   * Returns Infinity if there were no analyzable network records.
+   *
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @return {number}
+   */
+  static estimateThroughput(networkRecords) {
+    let totalBytes = 0;
+    const timeBoundaries = networkRecords.reduce((boundaries, record) => {
+      const scheme = record.parsedURL && record.parsedURL.scheme;
+      if (scheme === 'data' || record.failed || !record.finished ||
+          record.statusCode > 300 || !record.transferSize) {
+        return boundaries;
+      }
+
+      totalBytes += record.transferSize;
+      boundaries.push({time: record.responseReceivedTime, isStart: true});
+      boundaries.push({time: record.endTime, isStart: false});
+      return boundaries;
+    }, /** @type {Array<{time: number, isStart: boolean}>} */([])).sort((a, b) => a.time - b.time);
+
+    if (!timeBoundaries.length) {
+      return Infinity;
+    }
+
+    let inflight = 0;
+    let currentStart = 0;
+    let totalDuration = 0;
+    timeBoundaries.forEach(boundary => {
+      if (boundary.isStart) {
+        if (inflight === 0) {
+          currentStart = boundary.time;
+        }
+        inflight++;
+      } else {
+        inflight--;
+        if (inflight === 0) {
+          totalDuration += boundary.time - currentStart;
+        }
+      }
+    });
+
+    return totalBytes * 8 / totalDuration;
+  }
+
   /**
    * @param {Array<LH.Artifacts.NetworkRequest>} records
    * @return {LH.Artifacts.NetworkRequest}

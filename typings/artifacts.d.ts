@@ -127,7 +127,6 @@ declare global {
       requestMainResource(data: {devtoolsLog: DevtoolsLog, URL: Artifacts['URL']}): Promise<Artifacts.NetworkRequest>;
       requestManifestValues(manifest: LH.Artifacts['Manifest']): Promise<LH.Artifacts.ManifestValues>;
       requestNetworkAnalysis(devtoolsLog: DevtoolsLog): Promise<LH.Artifacts.NetworkAnalysis>;
-      requestNetworkThroughput(devtoolsLog: DevtoolsLog): Promise<number>;
       requestNetworkRecords(devtoolsLog: DevtoolsLog): Promise<Artifacts.NetworkRequest[]>;
       requestPageDependencyGraph(data: {trace: Trace, devtoolsLog: DevtoolsLog}): Promise<Gatherer.Simulation.GraphNode>;
       requestPushedRequests(devtoolsLogs: DevtoolsLog): Promise<Artifacts.NetworkRequest[]>;
@@ -352,6 +351,7 @@ declare global {
       }
 
       export interface NetworkAnalysis {
+        records: Array<NetworkRequest>;
         rtt: number;
         additionalRttByOrigin: Map<string, number>;
         serverResponseTimeByOrigin: Map<string, number>;
