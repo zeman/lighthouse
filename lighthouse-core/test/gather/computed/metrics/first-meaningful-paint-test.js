@@ -16,7 +16,6 @@ const badNavStartTrace = require(`${TRACE_FIXTURES}/bad-nav-start-ts.json`);
 const lateTracingStartedTrace = require(`${TRACE_FIXTURES}/tracingstarted-after-navstart.json`);
 const preactTrace = require(`${TRACE_FIXTURES}/preactjs.com_ts_of_undefined.json`);
 const noFMPtrace = require(`${TRACE_FIXTURES}/no_fmp_event.json`);
-const noFCPtrace = require(`${TRACE_FIXTURES}/airhorner_no_fcp.json`);
 
 /* eslint-env jest */
 
@@ -25,6 +24,15 @@ describe('Metrics: FMP', () => {
   let settings;
   let trace;
   let devtoolsLog;
+
+  function addEmptyTask() {
+    const mainThreadEvt = trace.traceEvents.find(e => e.name === 'TracingStartedInPage');
+    trace.traceEvents.push({
+      ...mainThreadEvt,
+      cat: 'toplevel',
+      name: 'TaskQueueManager::ProcessTaskFromWorkQueue',
+    });
+  }
 
   beforeEach(() => {
     artifacts = Runner.instantiateComputedArtifacts();
@@ -60,6 +68,7 @@ describe('Metrics: FMP', () => {
 
   it('handles cases when there was a tracingStartedInPage after navStart', async () => {
     trace = lateTracingStartedTrace;
+    addEmptyTask();
     const result = await artifacts.requestFirstMeaningfulPaint({trace, devtoolsLog, settings});
     assert.equal(Math.round(result.timing), 530);
     assert.equal(result.timestamp, 29344070867);
@@ -67,6 +76,7 @@ describe('Metrics: FMP', () => {
 
   it('handles cases when there was a tracingStartedInPage after navStart #2', async () => {
     trace = badNavStartTrace;
+    addEmptyTask();
     const result = await artifacts.requestFirstMeaningfulPaint({trace, devtoolsLog, settings});
     assert.equal(Math.round(result.timing), 632);
     assert.equal(result.timestamp, 8886056891);
@@ -74,6 +84,7 @@ describe('Metrics: FMP', () => {
 
   it('handles cases when it appears before FCP', async () => {
     trace = preactTrace;
+    addEmptyTask();
     const result = await artifacts.requestFirstMeaningfulPaint({trace, devtoolsLog, settings});
     assert.equal(Math.round(result.timing), 878);
     assert.equal(result.timestamp, 1805797262960);
@@ -81,15 +92,9 @@ describe('Metrics: FMP', () => {
 
   it('handles cases when no FMP exists', async () => {
     trace = noFMPtrace;
+    addEmptyTask();
     const result = await artifacts.requestFirstMeaningfulPaint({trace, devtoolsLog, settings});
     assert.equal(Math.round(result.timing), 4461);
     assert.equal(result.timestamp, 2146740268666);
-  });
-
-  it('handles cases when no FCP exists', async () => {
-    trace = noFCPtrace;
-    const result = await artifacts.requestFirstMeaningfulPaint({trace, devtoolsLog, settings});
-    assert.equal(Math.round(result.timing), 482);
-    assert.equal(result.timestamp, 2149509604903);
   });
 });

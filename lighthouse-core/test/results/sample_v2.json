@@ -1,5 +1,10 @@
 {
   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3358.0 Safari/537.36",
+  "environment": {
+    "networkUserAgent": "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5 Build/MRA58N) AppleWebKit/537.36(KHTML, like Gecko) Chrome/66.0.3359.30 Mobile Safari/537.36",
+    "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3358.0 Safari/537.36",
+    "benchmarkIndex": 1000
+  },
   "lighthouseVersion": "3.0.3",
   "fetchTime": "2018-03-13T00:55:45.840Z",
   "requestedUrl": "http://localhost:10200/dobetterweb/dbw_tester.html",
@@ -75,7 +80,7 @@
     "first-contentful-paint": {
       "id": "first-contentful-paint",
       "title": "First Contentful Paint",
-      "description": "First contentful paint marks the time at which the first text or image is painted. [Learn more](https://developers.google.com/web/fundamentals/performance/user-centric-performance-metrics#first_paint_and_first_contentful_paint).",
+      "description": "First Contentful Paint marks the time at which the first text or image is painted. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/first-contentful-paint).",
       "score": 0.51,
       "scoreDisplayMode": "numeric",
       "rawValue": 3969.135,
@@ -2226,7 +2231,7 @@
       "scoreDisplayMode": "binary",
       "rawValue": false,
       "warnings": [
-        "Unable to determine the destination for anchor tag. If not used as a hyperlink, consider removing target=_blank."
+        "Unable to determine the destination for anchor (<a target=\"blank\">Hello</a>). If not used as a hyperlink, consider removing target=_blank."
       ],
       "details": {
         "type": "table",
@@ -2252,19 +2257,19 @@
             "href": "https://www.google.com/",
             "target": "_blank",
             "rel": "",
-            "url": "<a href=\"https://www.google.com/\" target=\"_blank\">"
+            "outerHTML": "<a href=\"https://www.google.com/\" target=\"blank\">Hello</a>"
           },
           {
             "href": "Unknown",
             "target": "_blank",
             "rel": "",
-            "url": "<a target=\"_blank\">"
+            "outerHTML": "<a target=\"blank\">Hello</a>"
           },
           {
             "href": "https://www.google.com/",
             "target": "_blank",
             "rel": "nofollow",
-            "url": "<a href=\"https://www.google.com/\" target=\"_blank\" rel=\"nofollow\">"
+            "outerHTML": "<a rel=\"nofollow\" href=\"https://www.google.com/\" target=\"blank\">Hello</a>"
           }
         ]
       }

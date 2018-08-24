@@ -112,6 +112,14 @@ class Driver {
   }
 
   /**
+   * Computes the ULTRADUMB™ benchmark index to get a rough estimate of device class.
+   * @return {Promise<number>}
+   */
+  getBenchmarkIndex() {
+    return this.evaluateAsync(`(${pageFunctions.ultradumbBenchmark.toString()})()`);
+  }
+
+  /**
    * @return {Promise<void>}
    */
   async connect() {

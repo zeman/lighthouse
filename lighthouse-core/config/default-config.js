@@ -35,7 +35,8 @@ const UIStrings = {
 
 const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
-module.exports = {
+/** @type {LH.Config.Json} */
+const defaultConfig = {
   settings: constants.defaultSettings,
   passes: [{
     passName: 'defaultPass',
@@ -439,6 +440,8 @@ module.exports = {
     },
   },
 };
+
+module.exports = defaultConfig;
 
 // Use `defineProperty` so that the strings are accesible from original but ignored when we copy it
 Object.defineProperty(module.exports, 'UIStrings', {

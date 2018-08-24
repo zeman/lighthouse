@@ -23,8 +23,12 @@ declare global {
       fetchTime: string;
       /** A set of warnings about unexpected things encountered while loading and testing the page. */
       LighthouseRunWarnings: string[];
-      /** The user agent string of the version of Chrome that was used by Lighthouse. */
-      UserAgent: string;
+      /** The user agent string of the version of Chrome used. */
+      HostUserAgent: string;
+      /** The user agent string that Lighthouse used to load the page. */
+      NetworkUserAgent: string;
+      /** The benchmark index that indicates rough device class. */
+      BenchmarkIndex: number;
       /** A set of page-load traces, keyed by passName. */
       traces: {[passName: string]: Trace};
       /** A set of DevTools debugger protocol records, keyed by passName. */
@@ -45,7 +49,7 @@ declare global {
       /** The results of running the aXe accessibility tests on the page. */
       Accessibility: Artifacts.Accessibility;
       /** Information on all anchors in the page that aren't nofollow or noreferrer. */
-      AnchorsWithNoRelNoopener: {href: string; rel: string; target: string}[];
+      AnchorsWithNoRelNoopener: {href: string; rel: string; target: string, outerHTML: string}[];
       /** The value of the page's <html> manifest attribute, or null if not defined */
       AppCacheManifest: string | null;
       /** Array of all URLs cached in CacheStorage. */
@@ -105,8 +109,8 @@ declare global {
       Scripts: Record<string, string>;
       /** Version information for all ServiceWorkers active after the first page load. */
       ServiceWorker: {versions: Crdp.ServiceWorker.ServiceWorkerVersion[]};
-      /** The status of an offline fetch of the page's start_url. -1 and a debugString if missing or there was an error. */
-      StartUrl: {statusCode: number, debugString?: string};
+      /** The status of an offline fetch of the page's start_url. -1 and a explanation if missing or there was an error. */
+      StartUrl: {statusCode: number, explanation?: string};
       /** Information on <script> and <link> tags blocking first paint. */
       TagsBlockingFirstPaint: Artifacts.TagBlockingFirstPaint[];
       /** The value of the <meta name="theme=color">'s content attribute, or null. */
@@ -376,30 +380,43 @@ declare global {
 
       export type Speedline = speedline.Output<'speedIndex'>;
 
-      // TODO(bckenny): all but navigationStart could actually be undefined.
       export interface TraceTimes {
         navigationStart: number;
-        firstPaint: number;
+        firstPaint?: number;
         firstContentfulPaint: number;
-        firstMeaningfulPaint: number;
+        firstMeaningfulPaint?: number;
         traceEnd: number;
-        load: number;
-        domContentLoaded: number;
+        load?: number;
+        domContentLoaded?: number;
       }
 
-      // TODO(bckenny): events other than started and navStart could be undefined.
       export interface TraceOfTab {
-        timings: TraceTimes;
+        /** The raw timestamps of key metric events, in microseconds. */
         timestamps: TraceTimes;
+        /** The relative times from navigationStart to key metric events, in milliseconds. */
+        timings: TraceTimes;
+        /** The subset of trace events from the page's process, sorted by timestamp. */
         processEvents: Array<TraceEvent>;
+        /** The subset of trace events from the page's main thread, sorted by timestamp. */
         mainThreadEvents: Array<TraceEvent>;
+        /** The event marking the start of tracing in the target browser. */
         startedInPageEvt: TraceEvent;
+        /** The trace event marking navigationStart. */
         navigationStartEvt: TraceEvent;
-        firstPaintEvt: TraceEvent;
+        /** The trace event marking firstPaint, if it was found. */
+        firstPaintEvt?: TraceEvent;
+        /** The trace event marking firstContentfulPaint, if it was found. */
         firstContentfulPaintEvt: TraceEvent;
-        firstMeaningfulPaintEvt: TraceEvent;
-        loadEvt: TraceEvent;
-        domContentLoadedEvt: TraceEvent;
+        /** The trace event marking firstMeaningfulPaint, if it was found. */
+        firstMeaningfulPaintEvt?: TraceEvent;
+        /** The trace event marking loadEventEnd, if it was found. */
+        loadEvt?: TraceEvent;
+        /** The trace event marking domContentLoadedEventEnd, if it was found. */
+        domContentLoadedEvt?: TraceEvent;
+        /**
+         * Whether the firstMeaningfulPaintEvt was the definitive event or a fallback to
+         * firstMeaningfulPaintCandidate events had to be attempted.
+         */
         fmpFellBack: boolean;
       }
     }

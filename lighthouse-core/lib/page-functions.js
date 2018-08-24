@@ -6,7 +6,7 @@
 // @ts-nocheck
 'use strict';
 
-/* global window */
+/* global window document */
 
 /**
  * Helper functions that are passed by `toString()` by Driver to be evaluated in target page.
@@ -57,7 +57,6 @@ function registerPerformanceObserverInPage() {
   window.____lhPerformanceObserver = observer;
 }
 
-
 /**
  * Used by _waitForCPUIdle and executed in the context of the page, returns time since last long task.
  */
@@ -78,8 +77,78 @@ function checkTimeSinceLastLongTask() {
   });
 }
 
+/**
+ * @param {string=} selector Optional simple CSS selector to filter nodes on.
+ *     Combinators are not supported.
+ * @return {Array<Element>}
+ */
+/* istanbul ignore next */
+function getElementsInDocument(selector) {
+  /** @type {Array<Element>} */
+  const results = [];
+
+  /** @param {NodeListOf<Element>} nodes */
+  const _findAllElements = nodes => {
+    for (let i = 0, el; el = nodes[i]; ++i) {
+      if (!selector || el.matches(selector)) {
+        results.push(el);
+      }
+      // If the element has a shadow root, dig deeper.
+      if (el.shadowRoot) {
+        _findAllElements(el.shadowRoot.querySelectorAll('*'));
+      }
+    }
+  };
+  _findAllElements(document.querySelectorAll('*'));
+
+  return results;
+}
+
+/**
+ * Gets the opening tag text of the given node.
+ * @param {Element} element
+ * @return {string}
+ */
+/* istanbul ignore next */
+function getOuterHTMLSnippet(element) {
+  const reOpeningTag = /^.*?>/;
+  const match = element.outerHTML.match(reOpeningTag);
+  return (match && match[0]) || '';
+}
+
+/**
+ * Computes a memory/CPU performance benchmark index to determine rough device class.
+ * @see https://docs.google.com/spreadsheets/d/1E0gZwKsxegudkjJl8Fki_sOwHKpqgXwt8aBAfuUaB8A/edit?usp=sharing
+ *
+ * The benchmark creates a string of length 100,000 in a loop.
+ * The returned index is the number of times per second the string can be created.
+ *
+ *  - 750+ is a desktop-class device, Core i3 PC, iPhone X, etc
+ *  - 300+ is a high-end Android phone, Galaxy S8, low-end Chromebook, etc
+ *  - 75+ is a mid-tier Android phone, Nexus 5X, etc
+ *  - <75 is a budget Android phone, Alcatel Ideal, Galaxy J2, etc
+ */
+/* istanbul ignore next */
+function ultradumbBenchmark() {
+  const start = Date.now();
+  let iterations = 0;
+
+  while (Date.now() - start < 500) {
+    let s = ''; // eslint-disable-line no-unused-vars
+    for (let j = 0; j < 100000; j++) s += 'a';
+
+    iterations++;
+  }
+
+  const durationInSeconds = (Date.now() - start) / 1000;
+  return iterations / durationInSeconds;
+}
+
 module.exports = {
   wrapRuntimeEvalErrorInBrowser,
   registerPerformanceObserverInPage,
   checkTimeSinceLastLongTask,
+  getElementsInDocument,
+  getOuterHTMLSnippet,
+  ultradumbBenchmark,
 };

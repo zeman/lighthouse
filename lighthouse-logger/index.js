@@ -113,7 +113,7 @@ class Log {
 
   static timeEnd({msg, id, args=[]}, level='verbose') {
     Log[level]('statusEnd', msg, ...args);
-    return marky.stop(id);
+    marky.stop(id);
   }
 
   static log(title, ...args) {
@@ -219,7 +219,7 @@ class Log {
 }
 
 Log.events = new Emitter();
-Log.getEntries = _ => {
+Log.takeTimeEntries = _ => {
   const entries = marky.getEntries();
   marky.clear();
   return entries;
