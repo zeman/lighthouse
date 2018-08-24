@@ -146,7 +146,7 @@ class Runner {
 
       // Summarize all the timings and drop onto the LHR
       log.timeEnd(runnerStatus);
-      lhr.timing.entries.push(...log.getEntries());
+      lhr.timing.entries.push(...log.takeTimeEntries());
       const runnerEntry = lhr.timing.entries.find(e => e.name === 'lh:runner:run');
       if (runnerEntry) {
         lhr.timing.total = runnerEntry.duration;
@@ -156,7 +156,7 @@ class Runner {
         rendererFormattedStrings: i18n.getRendererFormattedStrings(settings.locale),
         icuMessagePaths: i18n.replaceIcuMessageInstanceIds(lhr, settings.locale),
       };
-    
+
       // Create the HTML, JSON, or CSV string
       const report = generateReport(lhr, settings.output);
 
@@ -187,7 +187,7 @@ class Runner {
       settings: runnerOpts.config.settings,
     };
     const artifacts = await GatherRunner.run(runnerOpts.config.passes, gatherOpts);
-    artifacts.Timing = log.getEntries();
+    artifacts.Timing = log.takeTimeEntries();
     return artifacts;
   }
 
@@ -239,7 +239,7 @@ class Runner {
     const audit = auditDefn.implementation;
     const status = {
       msg: `Evaluating: ${i18n.getFormatted(audit.meta.title, 'en-US')}`,
-      id: `lh:audit:${audit.meta.name}`,
+      id: `lh:audit:${audit.meta.id}`,
     };
     log.time(status);
 
