@@ -30,7 +30,8 @@ class ManifestShortNameLength extends Audit {
    * @return {Promise<LH.Audit.Product>}
    */
   static async audit(artifacts, context) {
-    const manifestValues = await new ManifestValues().request(artifacts.Manifest, context);
+    const manifestValues = await new ManifestValues().request(context.computedCaches,
+        artifacts.Manifest);
     // If there's no valid manifest, this audit is not applicable
     if (manifestValues.isParseFailure) {
       return {

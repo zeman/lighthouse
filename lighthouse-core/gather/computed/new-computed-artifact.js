@@ -35,13 +35,13 @@ class ComputedArtifact {
    * Request a computed artifact, caching the result based on the input
    * artifact(s). Types of `artifact` and the return value are inferred from the
    * `compute_` method on classes derived from ComputedArtifact.
+   * @param {LH.Audit.Context['computedCaches']} caches
    * @param {FirstParamType<this['compute_']>} artifact
-   * @param {LH.Audit.Context} context
    * @return {Promise<ReturnType<this['compute_']>>}
    */
-  async request(artifact, context) {
-    const cache = context.computedCaches.get(this.name) || new ArbitraryEqualityMap();
-    context.computedCaches.set(this.name, cache);
+  async request(caches, artifact) {
+    const cache = caches.get(this.name) || new ArbitraryEqualityMap();
+    caches.set(this.name, cache);
 
     const computed = /** @type {ReturnType<this['compute_']>|undefined} */ (cache.get(artifact));
     if (computed) {
