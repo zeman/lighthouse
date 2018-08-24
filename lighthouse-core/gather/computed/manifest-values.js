@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const ComputedArtifact = require('./computed-artifact');
+const ComputedArtifact = require('./new-computed-artifact');
 const icons = require('../../lib/icons');
 
 const PWA_DISPLAY_VALUES = ['minimal-ui', 'fullscreen', 'standalone'];

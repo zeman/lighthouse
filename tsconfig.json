@@ -7,7 +7,7 @@
     "checkJs": true,
     "strict": true,
     // "listFiles": true,
-    // "noErrorTruncation": true,
+    "noErrorTruncation": true,
     "typeRoots": [
       "@types",
       "./typings"
