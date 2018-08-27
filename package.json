@@ -124,7 +124,7 @@
     "intl-messageformat-parser": "^1.4.0",
     "jpeg-js": "0.1.2",
     "js-library-detector": "^4.3.1",
-    "lighthouse-logger": "^1.0.0",
+    "lighthouse-logger": "^1.1.0",
     "lodash.isequal": "^4.5.0",
     "lookup-closest-locale": "6.0.4",
     "metaviewport-parser": "0.2.0",
