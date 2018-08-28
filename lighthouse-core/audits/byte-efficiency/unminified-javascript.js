@@ -7,7 +7,7 @@
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
 const i18n = require('../../lib/i18n');
-const computeTokenLength = require('../../lib/minification-estimator').estimateJSTokenLength;
+const computeTokenLength = require('../../lib/minification-estimator').computeJSTokenLength;
 
 const UIStrings = {
   /** Imperative title of a Lighthouse audit that tells the user to minify the page’s JS code to reduce file size. This is displayed in a list of audit titles that Lighthouse generates. */
