@@ -41,8 +41,6 @@ function computeTokenLength(content, features) {
     const isWhitespace = char === ' ' || char === '\n' || char === '\t';
     const isAStringOpenChar = char === `'` || char === '"' || char === '`';
 
-    if (twoChars === 'yO') debugger
-
     if (isInSinglelineComment) {
       if (char === '\n') {
         // console.log(i, 'leaving comment')
@@ -125,8 +123,6 @@ function computeTokenLength(content, features) {
       }
     }
   }
-
-  // console.log(content.substr(50081 - 80, 82))
 
   // If the content contained unbalanced comments, it's either invalid or we had a parsing error.
   // Report the token length as the entire string so it will be ignored.
