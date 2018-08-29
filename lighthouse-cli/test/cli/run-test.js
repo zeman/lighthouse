@@ -49,7 +49,8 @@ describe('CLI run', function() {
 
 describe('flag coercing', () => {
   it('should force to array', () => {
-    assert.deepStrictEqual(getFlags(`--only-audits foo chrome://version`).onlyAudits, ['foo']);
+    const argv = getFlags(`chrome://version --only-audits foo bar`);
+    assert.deepStrictEqual(argv.onlyAudits, ['foo', 'bar']);
   });
 });
 
