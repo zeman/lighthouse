@@ -1,0 +1,15 @@
+{
+  "name": "lighthouse_docker_image",
+  "description": "Lighthouse in Docker",
+  "author": "The Chromium Authors",
+  "license": "Apache-2.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "restart": "npm run build && npm run serve"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.1",
+    "express": "^4.15.4"
+  }
+}

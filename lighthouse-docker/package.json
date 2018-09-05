@@ -5,16 +5,10 @@
   "license": "Apache-2.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "restart": "npm run build && npm run serve",
     "build": "./docker_build.sh",
     "build:headful": "./docker_build.sh --headful",
     "serve": "./docker_run.sh",
     "serve:headful": "./docker_run.sh --headful",
     "chrome:version": "docker run -it --rm --cap-add=SYS_ADMIN lighthouse_docker https://example.com --fast --quiet --output=json | node -e \"let f = ''; process.stdin.on('data', d => f += d); process.stdin.on('close', () => console.log(JSON.parse(f).userAgent));\""
-  },
-  "dependencies": {
-    "body-parser": "^1.18.1",
-    "express": "^4.15.4"
   }
 }

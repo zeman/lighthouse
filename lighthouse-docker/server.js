@@ -25,29 +25,37 @@ const bodyParser = require('body-parser');
 
 const PORT = process.env.PORT || 8080;
 
-// Handler for CI.
-function runLH(params, req, res, next) {
-  const url = params.url;
-  const format = params.output || params.format || 'html';
-  const log = req.method === 'GET' && !('nolog' in params);
-
-  if (!url) {
-    res.status(400).send('Please provide a URL.');
-    return;
-  }
-
-  const fileName = `report.${Date.now()}.${format}`;
-  const outputPath = `./home/chrome/reports/${fileName}`;
-
+function startLighthouseProcess(outputOptions, url) {
   const args = [
-    `--output-path=${outputPath}`,
-    `--output=${format}`,
+    `--output-path=${outputOptions.outputPath}`,
+    `--output=${outputOptions.format}`,
     '--port=9222',
     // Note: this is a noop when using headful/Dockerfile b/c Chrome is already
     // launched when the container starts up.
     `--chrome-flags="--headless"`,
   ];
   const child = spawn('lighthouse', [...args, url]);
+  return child;
+}
+
+function createOutputOptions(params) {
+  const format = params.output || params.format || 'html';
+  const fileName = `report.${Date.now()}.${format}`;
+  const outputPath = `./home/chrome/reports/${fileName}`;
+  return { format, fileName, outputPath };
+}
+
+// Handler for CI.
+function runLH(params, req, res, next) {
+
+  if (!params.url) {
+    res.status(400).send('Please provide a URL.');
+    return;
+  }
+
+  const outputOptions = createOutputOptions(params);
+  const log = req.method === 'GET' && !('nolog' in params);
+  const child = startLighthouseProcess(outputOptions, params.url);
 
   if (log) {
     res.writeHead(200, {
@@ -83,14 +91,14 @@ function runLH(params, req, res, next) {
   child.on('close', statusCode => {
     if (log) {
       res.write('</textarea>');
-      res.write(`<meta http-equiv="refresh" content="0;URL='/${fileName}'">`);
+      res.write(`<meta http-equiv="refresh" content="0;URL='/${outputOptions.fileName}'">`);
       res.end();
     } else {
-      res.sendFile(`/${outputPath}`, {}, err => {
+      res.sendFile(`/${outputOptions.outputPath}`, {}, err => {
         if (err) {
           next(err);
         }
-        fs.unlink(outputPath); // delete report
+        fs.unlink(outputOptions.outputPath); // delete report
       });
     }
   });
@@ -98,13 +106,14 @@ function runLH(params, req, res, next) {
 
 // Serve sent event handler.
 function runLighthouseAsEventStream(req, res) {
-  const url = req.query.url;
-  const format = req.query.output || req.query.format || 'html';
 
-  if (!url) {
+  if (!req.query.url) {
     res.status(400).send('Please provide a URL.');
     return;
   }
+
+  const outputOptions = createOutputOptions(req.query);
+  const child = startLighthouseProcess(outputOptions, req.query.url);
 
   // Send headers for event-stream connection.
   res.writeHead(200, {
@@ -114,18 +123,6 @@ function runLighthouseAsEventStream(req, res) {
     'Access-Control-Allow-Origin': '*',
     'X-Accel-Buffering': 'no', // Keep connection open for SSE.
   });
-
-  const file = `report.${Date.now()}.${format}`;
-  const fileSavePath = './home/chrome/reports/';
-
-  const args = [
-    `--output-path=${fileSavePath + file}`,
-    `--output=${format}`,
-    '--port=9222',
-    // Note: this is a noop when using headful/Dockerfile b/c Chrome is already launched.
-    `--chrome-flags="--headless"`,
-  ];
-  const child = spawn('lighthouse', [...args, url]);
 
   let log = '';
 
@@ -138,7 +135,7 @@ function runLighthouseAsEventStream(req, res) {
   // eslint-disable-next-line no-unused-vars
   child.on('close', statusCode => {
     const serverOrigin = `https://${req.host}/`;
-    res.write(`data: done ${serverOrigin + file}\n\n`);
+    res.write(`data: done ${serverOrigin + outputOptions.fileName}\n\n`);
     res.status(410).end();
     console.log(log);
     log = '';
