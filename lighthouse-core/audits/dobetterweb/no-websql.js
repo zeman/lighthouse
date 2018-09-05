@@ -15,31 +15,31 @@ const Audit = require('../audit');
 
 class NoWebSQLAudit extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'no-websql',
-      description: 'Avoids WebSQL DB',
-      failureDescription: 'Uses WebSQL DB',
-      helpText: 'Web SQL is deprecated. Consider using IndexedDB instead. ' +
+      id: 'no-websql',
+      title: 'Avoids WebSQL DB',
+      failureTitle: 'Uses WebSQL DB',
+      description: 'Web SQL is deprecated. Consider using IndexedDB instead. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/web-sql).',
       requiredArtifacts: ['WebSQL'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const db = artifacts.WebSQL;
-    const debugString = (db ?
-        `Found database "${db.name}", version: ${db.version}.` : '');
+    const displayValue = (db ?
+        `Found "${db.name}" (v${db.version})` : '');
 
     return {
       rawValue: !db,
-      debugString,
+      displayValue,
     };
   }
 }

@@ -7,7 +7,7 @@
 
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 const TracingProcessor = require('../../../lib/traces/tracing-processor');
 const pwaTrace = require('../../fixtures/traces/progressive-app.json');
 const defaultPercentiles = [0, 0.25, 0.5, 0.75, 0.9, 0.99, 1];
@@ -147,9 +147,9 @@ describe('TracingProcessor lib', () => {
   });
 
   describe('getMainThreadTopLevelEvents', () => {
-    it('gets durations of top-level tasks', () => {
+    it('gets durations of top-level tasks', async () => {
       const trace = {traceEvents: pwaTrace};
-      const tabTrace = new TraceOfTab().compute_(trace);
+      const tabTrace = await new TraceOfTab().compute_(trace);
       const ret = TracingProcessor.getMainThreadTopLevelEvents(tabTrace);
 
       assert.equal(ret.length, 645);
@@ -188,10 +188,11 @@ describe('TracingProcessor lib', () => {
   });
 
   describe('getMainThreadTopLevelEventDurations', () => {
-    it('gets durations of top-level tasks', () => {
+    it('gets durations of top-level tasks', async () => {
       const trace = {traceEvents: pwaTrace};
-      const tabTrace = new TraceOfTab().compute_(trace);
-      const ret = TracingProcessor.getMainThreadTopLevelEventDurations(tabTrace);
+      const tabTrace = await new TraceOfTab().compute_(trace);
+      const events = TracingProcessor.getMainThreadTopLevelEvents(tabTrace);
+      const ret = TracingProcessor.getMainThreadTopLevelEventDurations(events);
       const durations = ret.durations;
 
       function getDurationFromIndex(index) {
@@ -200,6 +201,9 @@ describe('TracingProcessor lib', () => {
 
       assert.equal(durations.filter(dur => isNaN(dur)).length, 0, 'NaN found');
       assert.equal(durations.length, 645);
+
+      const sum = durations.reduce((a, b) => a + b);
+      assert.equal(Math.round(sum), 386);
 
       assert.equal(getDurationFromIndex(50), 0.01);
       assert.equal(getDurationFromIndex(300), 0.04);
@@ -222,10 +226,11 @@ describe('TracingProcessor lib', () => {
       };
     });
 
-    it('compute correct defaults', () => {
+    it('compute correct defaults', async () => {
       const trace = {traceEvents: pwaTrace};
-      const tabTrace = new TraceOfTab().compute_(trace);
-      const ret = TracingProcessor.getRiskToResponsiveness(tabTrace);
+      const tabTrace = await new TraceOfTab().compute_(trace);
+      const events = TracingProcessor.getMainThreadTopLevelEvents(tabTrace);
+      const ret = TracingProcessor.getRiskToResponsiveness(events, 0, tabTrace.timings.traceEnd);
       assert.equal(ret.durations.length, 645);
       assert.equal(Math.round(ret.totalTime), 2143);
       assert.equal(ret.clippedLength, 0);

@@ -6,74 +6,11 @@
 // @ts-nocheck
 'use strict';
 
+/* global window document */
+
 /**
  * Helper functions that are passed by `toString()` by Driver to be evaluated in target page.
  */
-
-/**
- * Tracks function call usage. Used by captureJSCalls to inject code into the page.
- * @param {function(...*): *} funcRef The function call to track.
- * @param {!Set} set An empty set to populate with stack traces. Should be
- *     on the global object.
- * @return {function(...*): *} A wrapper around the original function.
- */
-/* istanbul ignore next */
-function captureJSCallUsage(funcRef, set) {
-  /* global window */
-  const __nativeError = window.__nativeError || Error;
-  const originalFunc = funcRef;
-  const originalPrepareStackTrace = __nativeError.prepareStackTrace;
-
-  return function(...args) {
-    // Note: this function runs in the context of the page that is being audited.
-
-    // See v8's Stack Trace API https://github.com/v8/v8/wiki/Stack-Trace-API#customizing-stack-traces
-    __nativeError.prepareStackTrace = function(error, structStackTrace) {
-      // First frame is the function we injected (the one that just threw).
-      // Second, is the actual callsite of the funcRef we're after.
-      const callFrame = structStackTrace[1];
-      let url = callFrame.getFileName() || callFrame.getEvalOrigin();
-      const line = callFrame.getLineNumber();
-      const col = callFrame.getColumnNumber();
-      const isEval = callFrame.isEval();
-      let isExtension = false;
-      const stackTrace = structStackTrace.slice(1).map(callsite => callsite.toString());
-
-      // If we don't have an URL, (e.g. eval'd code), use the 2nd entry in the
-      // stack trace. First is eval context: eval(<context>):<line>:<col>.
-      // Second is the callsite where eval was called.
-      // See https://crbug.com/646849.
-      if (isEval) {
-        url = stackTrace[1];
-      }
-
-      // Chrome extension content scripts can produce an empty .url and
-      // "<anonymous>:line:col" for the first entry in the stack trace.
-      if (stackTrace[0].startsWith('<anonymous>')) {
-        // Note: Although captureFunctionCallSites filters out crx usage,
-        // filling url here provides context. We may want to keep those results
-        // some day.
-        url = stackTrace[0];
-        isExtension = true;
-      }
-
-      // TODO: add back when we want stack traces.
-      // Stack traces were removed from the return object in
-      // https://github.com/GoogleChrome/lighthouse/issues/957 so callsites
-      // would be unique.
-      return {url, args, line, col, isEval, isExtension}; // return value is e.stack
-    };
-    const e = new __nativeError(`__called ${funcRef.name}__`);
-    set.add(JSON.stringify(e.stack));
-
-    // Restore prepareStackTrace so future errors use v8's formatter and not
-    // our custom one.
-    __nativeError.prepareStackTrace = originalPrepareStackTrace;
-
-    // eslint-disable-next-line no-invalid-this
-    return originalFunc.apply(this, args);
-  };
-}
 
 /**
  * The `exceptionDetails` provided by the debugger protocol does not contain the useful
@@ -120,7 +57,6 @@ function registerPerformanceObserverInPage() {
   window.____lhPerformanceObserver = observer;
 }
 
-
 /**
  * Used by _waitForCPUIdle and executed in the context of the page, returns time since last long task.
  */
@@ -141,9 +77,78 @@ function checkTimeSinceLastLongTask() {
   });
 }
 
+/**
+ * @param {string=} selector Optional simple CSS selector to filter nodes on.
+ *     Combinators are not supported.
+ * @return {Array<Element>}
+ */
+/* istanbul ignore next */
+function getElementsInDocument(selector) {
+  /** @type {Array<Element>} */
+  const results = [];
+
+  /** @param {NodeListOf<Element>} nodes */
+  const _findAllElements = nodes => {
+    for (let i = 0, el; el = nodes[i]; ++i) {
+      if (!selector || el.matches(selector)) {
+        results.push(el);
+      }
+      // If the element has a shadow root, dig deeper.
+      if (el.shadowRoot) {
+        _findAllElements(el.shadowRoot.querySelectorAll('*'));
+      }
+    }
+  };
+  _findAllElements(document.querySelectorAll('*'));
+
+  return results;
+}
+
+/**
+ * Gets the opening tag text of the given node.
+ * @param {Element} element
+ * @return {string}
+ */
+/* istanbul ignore next */
+function getOuterHTMLSnippet(element) {
+  const reOpeningTag = /^.*?>/;
+  const match = element.outerHTML.match(reOpeningTag);
+  return (match && match[0]) || '';
+}
+
+/**
+ * Computes a memory/CPU performance benchmark index to determine rough device class.
+ * @see https://docs.google.com/spreadsheets/d/1E0gZwKsxegudkjJl8Fki_sOwHKpqgXwt8aBAfuUaB8A/edit?usp=sharing
+ *
+ * The benchmark creates a string of length 100,000 in a loop.
+ * The returned index is the number of times per second the string can be created.
+ *
+ *  - 750+ is a desktop-class device, Core i3 PC, iPhone X, etc
+ *  - 300+ is a high-end Android phone, Galaxy S8, low-end Chromebook, etc
+ *  - 75+ is a mid-tier Android phone, Nexus 5X, etc
+ *  - <75 is a budget Android phone, Alcatel Ideal, Galaxy J2, etc
+ */
+/* istanbul ignore next */
+function ultradumbBenchmark() {
+  const start = Date.now();
+  let iterations = 0;
+
+  while (Date.now() - start < 500) {
+    let s = ''; // eslint-disable-line no-unused-vars
+    for (let j = 0; j < 100000; j++) s += 'a';
+
+    iterations++;
+  }
+
+  const durationInSeconds = (Date.now() - start) / 1000;
+  return iterations / durationInSeconds;
+}
+
 module.exports = {
-  captureJSCallUsage,
   wrapRuntimeEvalErrorInBrowser,
   registerPerformanceObserverInPage,
   checkTimeSinceLastLongTask,
+  getElementsInDocument,
+  getOuterHTMLSnippet,
+  ultradumbBenchmark,
 };

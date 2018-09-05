@@ -14,15 +14,15 @@ const AxeAudit = require('./axe-audit');
 
 class AudioCaption extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'audio-caption',
-      description: '`<audio>` elements contain a `<track>` element with `[kind="captions"]`',
-      failureDescription: '`<audio>` elements are missing a `<track>` element with ' +
+      id: 'audio-caption',
+      title: '`<audio>` elements contain a `<track>` element with `[kind="captions"]`',
+      failureTitle: '`<audio>` elements are missing a `<track>` element with ' +
           '`[kind="captions"]`.',
-      helpText: 'Captions make audio elements usable for deaf or hearing-impaired users, ' +
+      description: 'Captions make audio elements usable for deaf or hearing-impaired users, ' +
           'providing critical information such as who is talking, what they\'re saying, ' +
           'and other non-speech information. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/audio-caption?application=lighthouse).',

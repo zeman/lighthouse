@@ -22,22 +22,26 @@ const MultiCheckAudit = require('./multi-check-audit');
 
 class SplashScreen extends MultiCheckAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'splash-screen',
-      description: 'Configured for a custom splash screen',
-      failureDescription: 'Is not configured for a custom splash screen',
-      helpText: 'A themed splash screen ensures a high-quality experience when ' +
+      id: 'splash-screen',
+      title: 'Configured for a custom splash screen',
+      failureTitle: 'Is not configured for a custom splash screen',
+      description: 'A themed splash screen ensures a high-quality experience when ' +
           'users launch your app from their homescreens. [Learn ' +
           'more](https://developers.google.com/web/tools/lighthouse/audits/custom-splash-screen).',
       requiredArtifacts: ['Manifest'],
     };
   }
 
+  /**
+   * @param {LH.Artifacts.ManifestValues} manifestValues
+   * @param {Array<string>} failures
+   */
   static assessManifest(manifestValues, failures) {
-    if (manifestValues.isParseFailure) {
+    if (manifestValues.isParseFailure && manifestValues.parseFailureReason) {
       failures.push(manifestValues.parseFailureReason);
       return;
     }
@@ -58,8 +62,12 @@ class SplashScreen extends MultiCheckAudit {
       });
   }
 
-
+  /**
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<{failures: Array<string>, manifestValues: LH.Artifacts.ManifestValues}>}
+   */
   static audit_(artifacts) {
+    /** @type {Array<string>} */
     const failures = [];
 
     return artifacts.requestManifestValues(artifacts.Manifest).then(manifestValues => {

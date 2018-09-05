@@ -8,7 +8,6 @@ Unless required by applicable law or agreed to in writing, software distributed 
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="author" content="Lighthouse Team">
   <meta name="viewport" content="width=device-width">
   <title>Lighthouse Report</title>
@@ -22,6 +21,16 @@ Unless required by applicable law or agreed to in writing, software distributed 
     <div class="header-titles">
       <h1 class="header-titles__main">Lighthouse</h1>
       <h2 class="header-titles__url">...</h2>
+      <div class="header-titles__throttling">
+        <label for="lantern-checkbox">
+          <input
+            id="lantern-checkbox"
+            type="checkbox"
+            checked />
+          Simulate throttling for performance audits (faster)
+          <span class="header-titles__new-adornment">NEW!</span>
+        </label>
+      </div>
     </div>
   </header>
 
@@ -46,12 +55,6 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
   <aside class="options subpage">
     <h2 class="options__title" hidden>Settings</h2>
-    <div hidden>
-      <label>
-        <input type="checkbox" class="setting-disable-extensions" disabled
-               value="Disable other extensions while Lighthouse audits a page">Disable other extensions while Lighthouse audits a page.
-      </label>
-    </div>
 
     <h2 class="options__title">Audit categories to include</h2>
     <ul class="options__list">

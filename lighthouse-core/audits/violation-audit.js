@@ -9,15 +9,24 @@ const Audit = require('./audit');
 
 class ViolationAudit extends Audit {
   /**
-   * @param {!Artifacts} artifacts
-   * @param {!RegExp} pattern
-   * @return {!Array}
+   * @param {LH.Artifacts} artifacts
+   * @param {RegExp} pattern
+   * @return {Array<{label: string, url?: string}>}
    */
   static getViolationResults(artifacts, pattern) {
+    const seen = new Set();
     return artifacts.ChromeConsoleMessages
         .map(message => message.entry)
         .filter(entry => entry.url && entry.source === 'violation' && pattern.test(entry.text))
-        .map(entry => Object.assign({label: `line: ${entry.lineNumber}`}, entry));
+        .map(entry => ({label: `line: ${entry.lineNumber}`, url: entry.url}))
+        .filter(entry => {
+          // Filter out duplicate entries by URL/label since they are not differentiable to the user
+          // @see https://github.com/GoogleChrome/lighthouse/issues/5218
+          const key = `${entry.url}!${entry.label}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
   }
 }
 

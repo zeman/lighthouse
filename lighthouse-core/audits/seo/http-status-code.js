@@ -11,28 +11,29 @@ const HTTP_UNSUCCESSFUL_CODE_HIGH = 599;
 
 class HTTPStatusCode extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'http-status-code',
-      description: 'Page has successful HTTP status code',
-      failureDescription: 'Page has unsuccessful HTTP status code',
-      helpText: 'Pages with unsuccessful HTTP status codes may not be indexed properly. ' +
+      id: 'http-status-code',
+      title: 'Page has successful HTTP status code',
+      failureTitle: 'Page has unsuccessful HTTP status code',
+      description: 'Pages with unsuccessful HTTP status codes may not be indexed properly. ' +
       '[Learn more]' +
       '(https://developers.google.com/web/tools/lighthouse/audits/successful-http-code).',
-      requiredArtifacts: ['devtoolsLogs'],
+      requiredArtifacts: ['devtoolsLogs', 'URL'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<LH.Audit.Product>}
    */
   static audit(artifacts) {
-    const devtoolsLogs = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    const URL = artifacts.URL;
 
-    return artifacts.requestMainResource(devtoolsLogs)
+    return artifacts.requestMainResource({devtoolsLog, URL})
       .then(mainResource => {
         const statusCode = mainResource.statusCode;
 

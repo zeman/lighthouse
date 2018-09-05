@@ -8,7 +8,7 @@
 const DeprecationsAudit = require('../../audits/deprecations.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Console deprecations audit', () => {
   it('passes when no console messages were found', () => {
@@ -16,7 +16,6 @@ describe('Console deprecations audit', () => {
       ChromeConsoleMessages: [],
     });
     assert.equal(auditResult.rawValue, true);
-    assert.ok(!auditResult.debugString);
     assert.equal(auditResult.details.items.length, 0);
   });
 

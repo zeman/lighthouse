@@ -31,15 +31,19 @@ const ALLOWED_ORIENTATION_VALUES = [
   'landscape-secondary',
 ];
 
+/**
+ * @param {*} raw
+ * @param {boolean=} trim
+ */
 function parseString(raw, trim) {
   let value;
-  let debugString;
+  let warning;
 
   if (typeof raw === 'string') {
     value = trim ? raw.trim() : raw;
   } else {
     if (raw !== undefined) {
-      debugString = 'ERROR: expected a string.';
+      warning = 'ERROR: expected a string.';
     }
     value = undefined;
   }
@@ -47,10 +51,13 @@ function parseString(raw, trim) {
   return {
     raw,
     value,
-    debugString,
+    warning,
   };
 }
 
+/**
+ * @param {*} raw
+ */
 function parseColor(raw) {
   const color = parseString(raw);
 
@@ -63,16 +70,22 @@ function parseColor(raw) {
   const validatedColor = validateColor(color.raw);
   if (!validatedColor) {
     color.value = undefined;
-    color.debugString = 'ERROR: color parsing failed.';
+    color.warning = 'ERROR: color parsing failed.';
   }
 
   return color;
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseName(jsonInput) {
   return parseString(jsonInput.name, true);
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseShortName(jsonInput) {
   return parseString(jsonInput.short_name, true);
 }
@@ -92,6 +105,9 @@ function checkSameOrigin(url1, url2) {
 
 /**
  * https://w3c.github.io/manifest/#start_url-member
+ * @param {*} jsonInput
+ * @param {string} manifestUrl
+ * @param {string} documentUrl
  */
 function parseStartUrl(jsonInput, manifestUrl, documentUrl) {
   const raw = jsonInput.start_url;
@@ -101,7 +117,7 @@ function parseStartUrl(jsonInput, manifestUrl, documentUrl) {
     return {
       raw,
       value: documentUrl,
-      debugString: 'ERROR: start_url string empty',
+      warning: 'ERROR: start_url string empty',
     };
   }
   const parsedAsString = parseString(raw);
@@ -119,7 +135,7 @@ function parseStartUrl(jsonInput, manifestUrl, documentUrl) {
     return {
       raw,
       value: documentUrl,
-      debugString: 'ERROR: invalid start_url relative to ${manifestUrl}',
+      warning: 'ERROR: invalid start_url relative to ${manifestUrl}',
     };
   }
 
@@ -128,7 +144,7 @@ function parseStartUrl(jsonInput, manifestUrl, documentUrl) {
     return {
       raw,
       value: documentUrl,
-      debugString: 'ERROR: start_url must be same-origin as document',
+      warning: 'ERROR: start_url must be same-origin as document',
     };
   }
 
@@ -138,36 +154,57 @@ function parseStartUrl(jsonInput, manifestUrl, documentUrl) {
   };
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseDisplay(jsonInput) {
-  const display = parseString(jsonInput.display, true);
+  const parsedString = parseString(jsonInput.display, true);
+  const stringValue = parsedString.value;
 
-  if (!display.value) {
-    display.value = DEFAULT_DISPLAY_MODE;
-    return display;
+  if (!stringValue) {
+    return {
+      raw: jsonInput,
+      value: DEFAULT_DISPLAY_MODE,
+      warning: parsedString.warning,
+    };
   }
 
-  display.value = display.value.toLowerCase();
-  if (!ALLOWED_DISPLAY_VALUES.includes(display.value)) {
-    display.debugString = 'ERROR: \'display\' has invalid value ' + display.value +
-        ` will fall back to ${DEFAULT_DISPLAY_MODE}.`;
-    display.value = DEFAULT_DISPLAY_MODE;
+  const displayValue = stringValue.toLowerCase();
+  if (!ALLOWED_DISPLAY_VALUES.includes(displayValue)) {
+    return {
+      raw: jsonInput,
+      value: DEFAULT_DISPLAY_MODE,
+      warning: 'ERROR: \'display\' has invalid value ' + displayValue +
+        `. will fall back to ${DEFAULT_DISPLAY_MODE}.`,
+    };
   }
 
-  return display;
+  return {
+    raw: jsonInput,
+    value: displayValue,
+    warning: undefined,
+  };
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseOrientation(jsonInput) {
   const orientation = parseString(jsonInput.orientation, true);
 
   if (orientation.value &&
       !ALLOWED_ORIENTATION_VALUES.includes(orientation.value.toLowerCase())) {
     orientation.value = undefined;
-    orientation.debugString = 'ERROR: \'orientation\' has an invalid value, will be ignored.';
+    orientation.warning = 'ERROR: \'orientation\' has an invalid value, will be ignored.';
   }
 
   return orientation;
 }
 
+/**
+ * @param {*} raw
+ * @param {string} manifestUrl
+ */
 function parseIcon(raw, manifestUrl) {
   // 9.4(3)
   const src = parseString(raw.src, true);
@@ -185,21 +222,30 @@ function parseIcon(raw, manifestUrl) {
   const density = {
     raw: raw.density,
     value: 1,
-    debugString: undefined,
+    /** @type {string|undefined} */
+    warning: undefined,
   };
   if (density.raw !== undefined) {
     density.value = parseFloat(density.raw);
     if (isNaN(density.value) || !isFinite(density.value) || density.value <= 0) {
       density.value = 1;
-      density.debugString = 'ERROR: icon density cannot be NaN, +∞, or less than or equal to +0.';
+      density.warning = 'ERROR: icon density cannot be NaN, +∞, or less than or equal to +0.';
     }
   }
 
-  const sizes = parseString(raw.sizes);
-  if (sizes.value !== undefined) {
+  let sizes;
+  const parsedSizes = parseString(raw.sizes);
+  if (parsedSizes.value !== undefined) {
+    /** @type {Set<string>} */
     const set = new Set();
-    sizes.value.trim().split(/\s+/).forEach(size => set.add(size.toLowerCase()));
-    sizes.value = set.size > 0 ? Array.from(set) : undefined;
+    parsedSizes.value.trim().split(/\s+/).forEach(size => set.add(size.toLowerCase()));
+    sizes = {
+      raw: raw.sizes,
+      value: set.size > 0 ? Array.from(set) : undefined,
+      warning: undefined,
+    };
+  } else {
+    sizes = {...parsedSizes, value: undefined};
   }
 
   return {
@@ -210,26 +256,32 @@ function parseIcon(raw, manifestUrl) {
       density,
       sizes,
     },
-    debugString: undefined,
+    warning: undefined,
   };
 }
 
+/**
+ * @param {*} jsonInput
+ * @param {string} manifestUrl
+ */
 function parseIcons(jsonInput, manifestUrl) {
   const raw = jsonInput.icons;
 
   if (raw === undefined) {
     return {
       raw,
+      /** @type {Array<ReturnType<typeof parseIcon>>} */
       value: [],
-      debugString: undefined,
+      warning: undefined,
     };
   }
 
   if (!Array.isArray(raw)) {
     return {
       raw,
+      /** @type {Array<ReturnType<typeof parseIcon>>} */
       value: [],
-      debugString: 'ERROR: \'icons\' expected to be an array but is not.',
+      warning: 'ERROR: \'icons\' expected to be an array but is not.',
     };
   }
 
@@ -246,10 +298,13 @@ function parseIcons(jsonInput, manifestUrl) {
   return {
     raw,
     value,
-    debugString: undefined,
+    warning: undefined,
   };
 }
 
+/**
+ * @param {*} raw
+ */
 function parseApplication(raw) {
   const platform = parseString(raw.platform, true);
   const id = parseString(raw.id, true);
@@ -262,7 +317,7 @@ function parseApplication(raw) {
       appUrl.value = new URL(appUrl.value).href;
     } catch (e) {
       appUrl.value = undefined;
-      appUrl.debugString = 'ERROR: invalid application URL ${raw.url}';
+      appUrl.warning = 'ERROR: invalid application URL ${raw.url}';
     }
   }
 
@@ -273,10 +328,13 @@ function parseApplication(raw) {
       id,
       url: appUrl,
     },
-    debugString: undefined,
+    warning: undefined,
   };
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseRelatedApplications(jsonInput) {
   const raw = jsonInput.related_applications;
 
@@ -284,7 +342,7 @@ function parseRelatedApplications(jsonInput) {
     return {
       raw,
       value: undefined,
-      debugString: undefined,
+      warning: undefined,
     };
   }
 
@@ -292,7 +350,7 @@ function parseRelatedApplications(jsonInput) {
     return {
       raw,
       value: undefined,
-      debugString: 'ERROR: \'related_applications\' expected to be an array but is not.',
+      warning: 'ERROR: \'related_applications\' expected to be an array but is not.',
     };
   }
 
@@ -306,20 +364,23 @@ function parseRelatedApplications(jsonInput) {
   return {
     raw,
     value,
-    debugString: undefined,
+    warning: undefined,
   };
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parsePreferRelatedApplications(jsonInput) {
   const raw = jsonInput.prefer_related_applications;
   let value;
-  let debugString;
+  let warning;
 
   if (typeof raw === 'boolean') {
     value = raw;
   } else {
     if (raw !== undefined) {
-      debugString = 'ERROR: \'prefer_related_applications\' expected to be a boolean.';
+      warning = 'ERROR: \'prefer_related_applications\' expected to be a boolean.';
     }
     value = undefined;
   }
@@ -327,14 +388,20 @@ function parsePreferRelatedApplications(jsonInput) {
   return {
     raw,
     value,
-    debugString,
+    warning,
   };
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseThemeColor(jsonInput) {
   return parseColor(jsonInput.theme_color);
 }
 
+/**
+ * @param {*} jsonInput
+ */
 function parseBackgroundColor(jsonInput) {
   return parseColor(jsonInput.background_color);
 }
@@ -344,7 +411,6 @@ function parseBackgroundColor(jsonInput) {
  * @param {string} string Manifest JSON string.
  * @param {string} manifestUrl URL of manifest file.
  * @param {string} documentUrl URL of document containing manifest link element.
- * @return {!ManifestNode<(!Manifest|undefined)>}
  */
 function parse(string, manifestUrl, documentUrl) {
   if (manifestUrl === undefined || documentUrl === undefined) {
@@ -359,7 +425,7 @@ function parse(string, manifestUrl, documentUrl) {
     return {
       raw: string,
       value: undefined,
-      debugString: 'ERROR: file isn\'t valid JSON: ' + e,
+      warning: 'ERROR: file isn\'t valid JSON: ' + e,
     };
   }
 
@@ -381,7 +447,7 @@ function parse(string, manifestUrl, documentUrl) {
   return {
     raw: string,
     value: manifest,
-    debugString: undefined,
+    warning: undefined,
   };
 }
 

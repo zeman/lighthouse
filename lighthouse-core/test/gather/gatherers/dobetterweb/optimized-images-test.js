@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const OptimizedImages =
     require('../../../../gather/gatherers/dobetterweb/optimized-images');
@@ -20,66 +20,84 @@ const fakeImageStats = {
 const traceData = {
   networkRecords: [
     {
-      _url: 'http://google.com/image.jpg',
-      _mimeType: 'image/jpeg',
-      _resourceSize: 10000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://google.com/image.jpg',
+      mimeType: 'image/jpeg',
+      resourceSize: 10000,
+      transferSize: 20000,
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'http://google.com/transparent.png',
-      _mimeType: 'image/png',
-      _resourceSize: 11000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://google.com/transparent.png',
+      mimeType: 'image/png',
+      resourceSize: 11000,
+      transferSize: 20000,
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'http://google.com/image.bmp',
-      _mimeType: 'image/bmp',
-      _resourceSize: 12000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://google.com/image.bmp',
+      mimeType: 'image/bmp',
+      resourceSize: 12000,
+      transferSize: 9000, // bitmap was compressed another way
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'http://google.com/image.bmp',
-      _mimeType: 'image/bmp',
-      _resourceSize: 12000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://google.com/image.bmp',
+      mimeType: 'image/bmp',
+      resourceSize: 12000,
+      transferSize: 20000,
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'http://google.com/vector.svg',
-      _mimeType: 'image/svg+xml',
-      _resourceSize: 13000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://google.com/vector.svg',
+      mimeType: 'image/svg+xml',
+      resourceSize: 13000,
+      transferSize: 20000,
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'http://gmail.com/image.jpg',
-      _mimeType: 'image/jpeg',
-      _resourceSize: 15000,
-      _resourceType: {_name: 'image'},
+      requestId: '1',
+      url: 'http://gmail.com/image.jpg',
+      mimeType: 'image/jpeg',
+      resourceSize: 15000,
+      transferSize: 20000,
+      resourceType: 'Image',
       finished: true,
     },
     {
-      _url: 'data: image/jpeg ; base64 ,SgVcAT32587935321...',
-      _mimeType: 'image/jpeg',
-      _resourceType: {_name: 'image'},
-      _resourceSize: 14000,
+      requestId: '1',
+      url: 'data: image/jpeg ; base64 ,SgVcAT32587935321...',
+      mimeType: 'image/jpeg',
+      resourceType: 'Image',
+      resourceSize: 14000,
+      transferSize: 20000,
       finished: true,
     },
     {
-      _url: 'http://google.com/big-image.bmp',
-      _mimeType: 'image/bmp',
-      _resourceType: {_name: 'image'},
-      _resourceSize: 12000,
+      requestId: '1',
+      url: 'http://google.com/big-image.bmp',
+      mimeType: 'image/bmp',
+      resourceType: 'Image',
+      resourceSize: 12000,
+      transferSize: 20000,
       finished: false, // ignore for not finishing
     },
     {
-      _url: 'http://google.com/not-an-image.bmp',
-      _mimeType: 'image/bmp',
-      _resourceType: {_name: 'document'}, // ignore for not really being an image
-      _resourceSize: 12000,
+      requestId: '1',
+      url: 'http://google.com/not-an-image.bmp',
+      mimeType: 'image/bmp',
+      resourceType: 'Document', // ignore for not really being an image
+      resourceSize: 12000,
+      transferSize: 20000,
       finished: true,
     },
   ],
@@ -125,7 +143,7 @@ describe('Optimized images', () => {
       assert.equal(artifact.length, 4);
       checkSizes(artifact[0], 10000, 60, 80);
       checkSizes(artifact[1], 11000, 60, 80);
-      checkSizes(artifact[2], 12000, 60, 80);
+      checkSizes(artifact[2], 9000, 60, 80);
       // skip cross-origin for now
       // checkSizes(artifact[3], 15000, 60, 80);
       checkSizes(artifact[3], 20, 80, 100); // uses base64 data
@@ -148,7 +166,7 @@ describe('Optimized images', () => {
 
       assert.equal(artifact.length, 4);
       assert.ok(failed, 'passed along failure');
-      assert.ok(/whoops/.test(failed.err.message), 'passed along error message');
+      assert.ok(/whoops/.test(failed.errMsg), 'passed along error message');
     });
   });
 
@@ -166,5 +184,24 @@ describe('Optimized images', () => {
       // supports cross-origin
       assert.ok(/gmail.*image.jpg/.test(artifact[3].url));
     });
+  });
+
+  it('handles non-standard mime types too', async () => {
+    const traceData = {
+      networkRecords: [
+        {
+          requestId: '1',
+          url: 'http://google.com/image.bmp?x-ms',
+          mimeType: 'image/x-ms-bmp',
+          resourceSize: 12000,
+          transferSize: 20000,
+          resourceType: 'Image',
+          finished: true,
+        },
+      ],
+    };
+
+    const artifact = await optimizedImages.afterPass(options, traceData);
+    expect(artifact).toHaveLength(1);
   });
 });

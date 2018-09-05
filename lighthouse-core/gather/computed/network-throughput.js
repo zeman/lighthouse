@@ -17,7 +17,7 @@ class NetworkThroughput extends ComputedArtifact {
    * Excludes data URI, failed or otherwise incomplete, and cached requests.
    * Returns Infinity if there were no analyzable network records.
    *
-   * @param {!Array<!WebInspector.NetworkRequest>} networkRecords
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
    * @return {number}
    */
   static getThroughput(networkRecords) {
@@ -33,7 +33,7 @@ class NetworkThroughput extends ComputedArtifact {
       boundaries.push({time: record.responseReceivedTime, isStart: true});
       boundaries.push({time: record.endTime, isStart: false});
       return boundaries;
-    }, []).sort((a, b) => a.time - b.time);
+    }, /** @type {Array<{time: number, isStart: boolean}>} */([])).sort((a, b) => a.time - b.time);
 
     if (!timeBoundaries.length) {
       return Infinity;
@@ -60,12 +60,13 @@ class NetworkThroughput extends ComputedArtifact {
   }
 
   /**
-   * @param {!DevtoolsLog} devtoolsLog
-   * @param {!ComputedArtifacts} artifacts
-   * @return {!Promise<!Object>}
+   * @param {LH.DevtoolsLog} devtoolsLog
+   * @param {LH.ComputedArtifacts} computedArtifacts
+   * @return {Promise<number>}
    */
-  compute_(devtoolsLog, artifacts) {
-    return artifacts.requestNetworkRecords(devtoolsLog)
+  compute_(devtoolsLog, computedArtifacts) {
+    // TODO(phulce): migrate this to network-analysis computed artifact
+    return computedArtifacts.requestNetworkRecords(devtoolsLog)
       .then(NetworkThroughput.getThroughput);
   }
 }

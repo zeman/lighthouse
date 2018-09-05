@@ -6,29 +6,37 @@
 'use strict';
 
 const PageDependencyGraph = require('../../../gather/computed/page-dependency-graph');
-const Node = require('../../../lib/dependency-graph/node');
+const BaseNode = require('../../../lib/dependency-graph/base-node');
 const Runner = require('../../../runner.js');
-const WebInspector = require('../../../lib/web-inspector');
+const NetworkRequest = require('../../../lib/network-request');
 
 const sampleTrace = require('../../fixtures/traces/progressive-app-m60.json');
 const sampleDevtoolsLog = require('../../fixtures/traces/progressive-app-m60.devtools.log.json');
 
 const assert = require('assert');
 
-function createRequest(requestId, url, startTime = 0, _initiator = null, _resourceType = null) {
+function createRequest(
+  requestId,
+  url,
+  startTime = 0,
+  initiator = null,
+  resourceType = NetworkRequest.TYPES.Document
+) {
   startTime = startTime / 1000;
-  const endTime = startTime + .1;
-  return {requestId, url, startTime, endTime, _initiator, _resourceType};
+  const endTime = startTime + 0.05;
+  return {requestId, url, startTime, endTime, initiator, resourceType};
 }
 
-/* eslint-env mocha */
+const TOPLEVEL_TASK_NAME = 'TaskQueueManager::ProcessTaskFromWorkQueue';
+
+/* eslint-env jest */
 describe('PageDependencyGraph computed artifact:', () => {
   let computedArtifacts;
   let traceOfTab;
 
   function addTaskEvents(startTs, duration, evts) {
     const mainEvent = {
-      name: 'TaskQueueManager::ProcessTaskFromWorkQueue',
+      name: TOPLEVEL_TASK_NAME,
       tid: 1,
       ts: startTs * 1000,
       dur: duration * 1000,
@@ -59,7 +67,7 @@ describe('PageDependencyGraph computed artifact:', () => {
         trace: sampleTrace,
         devtoolsLog: sampleDevtoolsLog,
       }).then(output => {
-        assert.ok(output instanceof Node, 'did not return a graph');
+        assert.ok(output instanceof BaseNode, 'did not return a graph');
 
         const dependents = output.getDependents();
         const nodeWithNestedDependents = dependents.find(node => node.getDependents().length);
@@ -143,6 +151,8 @@ describe('PageDependencyGraph computed artifact:', () => {
       const request4 = createRequest(4, '4', 10, {url: '2'});
       const networkRecords = [request1, request2, request3, request4];
 
+      addTaskEvents(0, 0, []);
+
       const graph = PageDependencyGraph.createGraph(traceOfTab, networkRecords);
       const nodes = [];
       graph.traverse(node => nodes.push(node));
@@ -159,7 +169,7 @@ describe('PageDependencyGraph computed artifact:', () => {
       const request1 = createRequest(1, '1', 0);
       const request2 = createRequest(2, '2', 50);
       const request3 = createRequest(3, '3', 50);
-      const request4 = createRequest(4, '4', 300, null, WebInspector.resourceTypes.XHR);
+      const request4 = createRequest(4, '4', 300, null, NetworkRequest.TYPES.XHR);
       const networkRecords = [request1, request2, request3, request4];
 
       addTaskEvents(200, 200, [
@@ -196,6 +206,8 @@ describe('PageDependencyGraph computed artifact:', () => {
       const request4 = createRequest(4, '4', 10, {url: '2'});
       const networkRecords = [request1, request2, request3, request4];
 
+      addTaskEvents(0, 0, []);
+
       const graph = PageDependencyGraph.createGraph(traceOfTab, networkRecords);
       const nodes = [];
       graph.traverse(node => nodes.push(node));
@@ -206,6 +218,64 @@ describe('PageDependencyGraph computed artifact:', () => {
       assert.deepEqual(nodes[1].getDependencies(), [nodes[0]]);
       assert.deepEqual(nodes[2].getDependencies(), [nodes[0]]);
       assert.deepEqual(nodes[3].getDependencies(), [nodes[0]]); // should depend on rootNode instead
+    });
+
+    it('should be forgiving without cyclic dependencies', () => {
+      const request1 = createRequest(1, '1', 0);
+      const request2 = createRequest(2, '2', 250, null, NetworkRequest.TYPES.XHR);
+      const request3 = createRequest(3, '3', 210);
+      const request4 = createRequest(4, '4', 590);
+      const request5 = createRequest(5, '5', 595, null, NetworkRequest.TYPES.XHR);
+      const networkRecords = [request1, request2, request3, request4, request5];
+
+      addTaskEvents(200, 200, [
+        // CPU 1.2 should depend on Network 1
+        {name: 'EvaluateScript', data: {url: '1'}},
+
+        // Network 2 should depend on CPU 1.2, but 1.2 should not depend on Network 1
+        {name: 'ResourceSendRequest', data: {requestId: 2}},
+        {name: 'XHRReadyStateChange', data: {readyState: 4, url: '2'}},
+
+        // CPU 1.2 should not depend on Network 3 because it starts after CPU 1.2
+        {name: 'EvaluateScript', data: {url: '3'}},
+      ]);
+
+      addTaskEvents(600, 150, [
+        // CPU 1.4 should depend on Network 4 even though it ends at 410ms
+        {name: 'InvalidateLayout', data: {stackTrace: [{url: '4'}]}},
+        // Network 5 should not depend on CPU 1.4 because it started before CPU 1.4
+        {name: 'ResourceSendRequest', data: {requestId: 5}},
+      ]);
+
+      const graph = PageDependencyGraph.createGraph(traceOfTab, networkRecords);
+      const nodes = [];
+      graph.traverse(node => nodes.push(node));
+
+      const getDependencyIds = node => node.getDependencies().map(node => node.id);
+
+      assert.deepEqual(getDependencyIds(nodes[0]), []);
+      assert.deepEqual(getDependencyIds(nodes[1]), [1, '1.200000']);
+      assert.deepEqual(getDependencyIds(nodes[2]), [1]);
+      assert.deepEqual(getDependencyIds(nodes[3]), [1]);
+      assert.deepEqual(getDependencyIds(nodes[4]), [1]);
+      assert.deepEqual(getDependencyIds(nodes[5]), [1]);
+      assert.deepEqual(getDependencyIds(nodes[6]), [4]);
+    });
+
+    it('should set isMainDocument on first document request', () => {
+      const request1 = createRequest(1, '1', 0, null, NetworkRequest.TYPES.Image);
+      const request2 = createRequest(2, '2', 5);
+      const networkRecords = [request1, request2];
+
+      addTaskEvents(0, 0, []);
+
+      const graph = PageDependencyGraph.createGraph(traceOfTab, networkRecords);
+      const nodes = [];
+      graph.traverse(node => nodes.push(node));
+
+      assert.equal(nodes.length, 2);
+      assert.equal(nodes[0].isMainDocument(), false);
+      assert.equal(nodes[1].isMainDocument(), true);
     });
   });
 });

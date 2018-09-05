@@ -30,29 +30,39 @@ const SWAudit = require('./service-worker');
 
 class WebappInstallBanner extends MultiCheckAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'webapp-install-banner',
-      description: 'User can be prompted to Install the Web App',
-      failureDescription: 'User will not be prompted to Install the Web App',
-      helpText: 'Browsers can proactively prompt users to add your app to their homescreen, ' +
+      id: 'webapp-install-banner',
+      title: 'User can be prompted to Install the Web App',
+      failureTitle: 'User will not be prompted to Install the Web App',
+      description: 'Browsers can proactively prompt users to add your app to their homescreen, ' +
           'which can lead to higher engagement. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/install-prompt).',
       requiredArtifacts: ['URL', 'ServiceWorker', 'Manifest', 'StartUrl'],
     };
   }
 
-  static assessManifest(artifacts, result) {
-    const {manifestValues, failures} = result;
-    if (manifestValues.isParseFailure) {
-      failures.push(manifestValues.parseFailureReason);
-      return;
+  /**
+   * @param {LH.Artifacts.ManifestValues} manifestValues
+   * @return {Array<string>}
+   */
+  static assessManifest(manifestValues) {
+    if (manifestValues.isParseFailure && manifestValues.parseFailureReason) {
+      return [manifestValues.parseFailureReason];
     }
 
+    /** @type {Array<string>} */
+    const failures = [];
     const bannerCheckIds = [
       'hasName',
+      // Technically shortname isn't required (if name is defined):
+      //   https://cs.chromium.org/chromium/src/chrome/browser/installable/installable_manager.cc?type=cs&q=IsManifestValidForWebApp+f:cc+-f:test&sq=package:chromium&l=473
+      // Despite this, we think it's better to require it anyway.
+      // short_name is preferred for the homescreen icon, but a longer name can be used in
+      // the splash screen and app title. Given the different usecases, we'd like to make it clearer
+      // that the developer has two possible strings to work with.
       'hasShortName',
       'hasStartUrl',
       'hasPWADisplayValue',
@@ -65,40 +75,75 @@ class WebappInstallBanner extends MultiCheckAudit {
           failures.push(item.failureText);
         }
       });
+
+    return failures;
   }
 
-
-  static assessServiceWorker(artifacts, result) {
+  /**
+   * @param {LH.Artifacts} artifacts
+   * @return {Array<string>}
+   */
+  static assessServiceWorker(artifacts) {
+    const failures = [];
     const hasServiceWorker = SWAudit.audit(artifacts).rawValue;
     if (!hasServiceWorker) {
-      result.failures.push('Site does not register a service worker');
+      failures.push('Site does not register a service worker');
     }
+
+    return failures;
   }
 
-  static assessOfflineStartUrl(artifacts, result) {
+  /**
+   * @param {LH.Artifacts} artifacts
+   * @return {{failures: Array<string>, warnings: Array<string>}}
+   */
+  static assessOfflineStartUrl(artifacts) {
+    const failures = [];
+    const warnings = [];
     const hasOfflineStartUrl = artifacts.StartUrl.statusCode === 200;
 
     if (!hasOfflineStartUrl) {
-      result.failures.push('Service worker does not successfully serve the manifest\'s start_url');
-      if (artifacts.StartUrl.debugString) result.failures.push(artifacts.StartUrl.debugString);
+      failures.push('Service worker does not successfully serve the manifest\'s start_url');
+      if (artifacts.StartUrl.explanation) {
+        failures.push(artifacts.StartUrl.explanation);
+      }
     }
 
-    if (artifacts.StartUrl.debugString) {
-      result.warnings.push(artifacts.StartUrl.debugString);
+    if (artifacts.StartUrl.explanation) {
+      warnings.push(artifacts.StartUrl.explanation);
     }
+
+    return {failures, warnings};
   }
 
+  /**
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<{failures: Array<string>, warnings: Array<string>, manifestValues: LH.Artifacts.ManifestValues}>}
+   */
   static audit_(artifacts) {
-    const failures = [];
-    const warnings = [];
+    /** @type {Array<string>} */
+    let offlineFailures = [];
+    /** @type {Array<string>} */
+    let offlineWarnings = [];
 
     return artifacts.requestManifestValues(artifacts.Manifest).then(manifestValues => {
-      const result = {warnings, failures, manifestValues};
-      WebappInstallBanner.assessManifest(artifacts, result);
-      WebappInstallBanner.assessServiceWorker(artifacts, result);
-      WebappInstallBanner.assessOfflineStartUrl(artifacts, result);
+      const manifestFailures = WebappInstallBanner.assessManifest(manifestValues);
+      const swFailures = WebappInstallBanner.assessServiceWorker(artifacts);
+      if (!swFailures.length) {
+        const {failures, warnings} = WebappInstallBanner.assessOfflineStartUrl(artifacts);
+        offlineFailures = failures;
+        offlineWarnings = warnings;
+      }
 
-      return result;
+      return {
+        warnings: offlineWarnings,
+        failures: [
+          ...manifestFailures,
+          ...swFailures,
+          ...offlineFailures,
+        ],
+        manifestValues,
+      };
     });
   }
 }

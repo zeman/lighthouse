@@ -26,7 +26,7 @@ const _PROTOCOL_TIMEOUT_EXIT_CODE = 67;
 /**
  * exported for testing
  * @param {string} flags
- * @return {!Array<string>}
+ * @return {Array<string>}
  */
 function parseChromeFlags(flags = '') {
   const parsed = yargsParser(
@@ -49,8 +49,8 @@ function parseChromeFlags(flags = '') {
 /**
  * Attempts to connect to an instance of Chrome with an open remote-debugging
  * port. If none is found, launches a debuggable instance.
- * @param {!LH.Flags} flags
- * @return {!Promise<!LH.LaunchedChrome>}
+ * @param {LH.CliFlags} flags
+ * @return {Promise<ChromeLauncher.LaunchedChrome>}
  */
 function getDebuggableChrome(flags) {
   return ChromeLauncher.launch({
@@ -71,7 +71,7 @@ function showProtocolTimeoutError() {
 }
 
 /**
- * @param {!LH.LighthouseError} err
+ * @param {LH.LighthouseError} err
  */
 function showRuntimeError(err) {
   console.error('Runtime error encountered:', err.friendlyMessage || err.message);
@@ -82,7 +82,7 @@ function showRuntimeError(err) {
 }
 
 /**
- * @param {!LH.LighthouseError} err
+ * @param {LH.LighthouseError} err
  */
 function handleError(err) {
   if (err.code === 'ECONNREFUSED') {
@@ -95,64 +95,55 @@ function handleError(err) {
 }
 
 /**
- * @param {!LH.Results} results
- * @param {!Object} artifacts
- * @param {!LH.Flags} flags
- * @return {!Promise<void>}
+ * @param {LH.RunnerResult} runnerResult
+ * @param {LH.CliFlags} flags
+ * @return {Promise<void>}
  */
-function saveResults(results, artifacts, flags) {
+async function saveResults(runnerResult, flags) {
   const cwd = process.cwd();
-  let promise = Promise.resolve();
 
   const shouldSaveResults = flags.auditMode || (flags.gatherMode === flags.auditMode);
-  if (!shouldSaveResults) return promise;
+  if (!shouldSaveResults) return;
+  const {lhr, artifacts, report} = runnerResult;
 
   // Use the output path as the prefix for all generated files.
   // If no output path is set, generate a file prefix using the URL and date.
   const configuredPath = !flags.outputPath || flags.outputPath === 'stdout' ?
-      getFilenamePrefix(results) :
+      getFilenamePrefix(lhr) :
       flags.outputPath.replace(/\.\w{2,4}$/, '');
   const resolvedPath = path.resolve(cwd, configuredPath);
 
   if (flags.saveAssets) {
-    promise = promise.then(_ => assetSaver.saveAssets(artifacts, results.audits, resolvedPath));
+    await assetSaver.saveAssets(artifacts, lhr.audits, resolvedPath);
   }
 
-  return promise.then(_ => {
-    if (Array.isArray(flags.output)) {
-      return flags.output.reduce((innerPromise, outputType) => {
-        const extension = outputType;
-        const outputPath = `${resolvedPath}.report.${extension}`;
-        return innerPromise.then(() => Printer.write(results, outputType, outputPath));
-      }, Promise.resolve());
-    } else {
-      const extension = flags.output;
-      const outputPath =
-          flags.outputPath || `${resolvedPath}.report.${extension}`;
-      return Printer.write(results, flags.output, outputPath).then(_ => {
-        if (flags.output === Printer.OutputMode[Printer.OutputMode.html]) {
-          if (flags.view) {
-            opn(outputPath, {wait: false});
-          } else {
-            log.log(
-                'CLI',
-                // eslint-disable-next-line max-len
-                'Protip: Run lighthouse with `--view` to immediately open the HTML report in your browser');
-          }
-        }
-      });
+  for (const outputType of flags.output) {
+    const extension = outputType;
+    const output = report[flags.output.indexOf(outputType)];
+    let outputPath = `${resolvedPath}.report.${extension}`;
+    // If there was only a single output and the user specified an outputPath, force usage of it.
+    if (flags.outputPath && flags.output.length === 1) outputPath = flags.outputPath;
+    await Printer.write(output, outputType, outputPath);
+
+    if (outputType === Printer.OutputMode[Printer.OutputMode.html]) {
+      if (flags.view) {
+        opn(outputPath, {wait: false});
+      } else {
+        // eslint-disable-next-line max-len
+        log.log('CLI', 'Protip: Run lighthouse with `--view` to immediately open the HTML report in your browser');
+      }
     }
-  });
+  }
 }
 
 /**
  * @param {string} url
- * @param {!LH.Flags} flags
- * @param {!LH.Config|undefined} config
- * @return {!Promise<!LH.Results|void>}
+ * @param {LH.CliFlags} flags
+ * @param {LH.Config.Json|undefined} config
+ * @return {Promise<LH.RunnerResult|void>}
  */
 function runLighthouse(url, flags, config) {
-  /** @type {!LH.LaunchedChrome} */
+  /** @type {ChromeLauncher.LaunchedChrome|undefined} */
   let launchedChrome;
   const shouldGather = flags.gatherMode || flags.gatherMode === flags.auditMode;
   let chromeP = Promise.resolve();
@@ -167,12 +158,15 @@ function runLighthouse(url, flags, config) {
   }
 
   const resultsP = chromeP.then(_ => {
-    return lighthouse(url, flags, config).then(results => {
-      return potentiallyKillChrome().then(_ => results);
-    }).then(results => {
-      const artifacts = results.artifacts;
-      delete results.artifacts;
-      return saveResults(results, artifacts, flags).then(_ => results);
+    return lighthouse(url, flags, config).then(runnerResult => {
+      return potentiallyKillChrome().then(_ => runnerResult);
+    }).then(async runnerResult => {
+      // If in gatherMode only, there will be no runnerResult.
+      if (runnerResult) {
+        await saveResults(runnerResult, flags);
+      }
+
+      return runnerResult;
     });
   });
 
@@ -183,7 +177,7 @@ function runLighthouse(url, flags, config) {
   });
 
   /**
-   * @return {!Promise<{}>}
+   * @return {Promise<{}>}
    */
   function potentiallyKillChrome() {
     if (launchedChrome !== undefined) {

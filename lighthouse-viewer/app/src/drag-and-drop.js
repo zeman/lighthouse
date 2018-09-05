@@ -10,10 +10,15 @@
  */
 class DragAndDrop {
   /**
-   * @param {function(!File)} fileHandlerCallback Invoked when the user chooses a new file.
+   * @param {function(File)} fileHandlerCallback Invoked when the user chooses a new file.
    */
   constructor(fileHandlerCallback) {
-    this._dropZone = document.querySelector('.drop_zone');
+    const dropZone = document.querySelector('.drop_zone');
+    if (!dropZone) {
+      throw new Error('Drag and drop `.drop_zone` element not found in page');
+    }
+
+    this._dropZone = dropZone;
     this._fileHandlerCallback = fileHandlerCallback;
     this._dragging = false;
 
@@ -33,7 +38,9 @@ class DragAndDrop {
     document.addEventListener('dragover', e => {
       e.stopPropagation();
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy'; // Explicitly show as copy action.
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy'; // Explicitly show as copy action.
+      }
     });
 
     document.addEventListener('dragenter', _ => {
@@ -48,7 +55,9 @@ class DragAndDrop {
       this._resetDraggingUI();
 
       // Note, this ignores multiple files in the drop, only taking the first.
-      this._fileHandlerCallback(e.dataTransfer.files[0]);
+      if (e.dataTransfer) {
+        this._fileHandlerCallback(e.dataTransfer.files[0]);
+      }
     });
   }
 

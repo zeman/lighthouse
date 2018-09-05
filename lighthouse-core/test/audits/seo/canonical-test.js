@@ -8,7 +8,7 @@
 const CanonicalAudit = require('../../../audits/seo/canonical.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('SEO: Document has valid canonical link', () => {
   it('succeeds when there are no canonical links', () => {
@@ -45,7 +45,7 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('Multiple'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('Multiple'), auditResult.explanation);
     });
   });
 
@@ -63,7 +63,7 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('Invalid'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('Invalid'), auditResult.explanation);
     });
   });
 
@@ -81,7 +81,7 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('Relative'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('Relative'), auditResult.explanation);
     });
   });
 
@@ -102,7 +102,7 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('hreflang'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('hreflang'), auditResult.explanation);
     });
   });
 
@@ -120,7 +120,7 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('domain'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('domain'), auditResult.explanation);
     });
   });
 
@@ -138,7 +138,27 @@ describe('SEO: Document has valid canonical link', () => {
 
     return CanonicalAudit.audit(artifacts).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.debugString.includes('root'), auditResult.debugString);
+      assert.ok(auditResult.explanation.includes('root'), auditResult.explanation);
+    });
+  });
+
+  it('succeeds when there are multiple identical canonical links', () => {
+    const mainResource = {
+      url: 'http://www.example.com/',
+      responseHeaders: [{
+        name: 'Link',
+        value: '<https://www.example.com>; rel="canonical"',
+      }],
+    };
+    const artifacts = {
+      devtoolsLogs: {[CanonicalAudit.DEFAULT_PASS]: []},
+      requestMainResource: () => Promise.resolve(mainResource),
+      Canonical: ['https://www.example.com'],
+      Hreflang: [],
+    };
+
+    return CanonicalAudit.audit(artifacts).then(auditResult => {
+      assert.equal(auditResult.rawValue, true);
     });
   });
 

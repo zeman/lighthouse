@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const assert = require('assert');
 
@@ -23,7 +23,7 @@ class TestComputedArtifact extends ComputedArtifact {
     return 'TestComputedArtifact';
   }
 
-  compute_(...args) {
+  async compute_(...args) {
     this.lastArguments = args;
     return this.computeCounter++;
   }

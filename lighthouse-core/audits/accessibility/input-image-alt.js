@@ -14,15 +14,15 @@ const AxeAudit = require('./axe-audit');
 
 class InputImageAlt extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'input-image-alt',
-      description: '`<input type="image">` elements have `[alt]` text',
-      failureDescription: '`<input type="image">` elements do not have `[alt]` text',
-      helpText: 'When an image is being used as an `<input>` button, providing alternative text ' +
-          'can help screen reader users understand the purpose of the button. ' +
+      id: 'input-image-alt',
+      title: '`<input type="image">` elements have `[alt]` text',
+      failureTitle: '`<input type="image">` elements do not have `[alt]` text',
+      description: 'When an image is being used as an `<input>` button, providing alternative ' +
+          'text can help screen reader users understand the purpose of the button. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/input-image-alt?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],
     };

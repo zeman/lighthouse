@@ -5,65 +5,75 @@
  */
 'use strict';
 
+const lighthouse = require('../../../lighthouse-core/index');
 const RawProtocol = require('../../../lighthouse-core/gather/connections/raw');
-const Runner = require('../../../lighthouse-core/runner');
 const Config = require('../../../lighthouse-core/config/config');
-const defaultConfig = require('../../../lighthouse-core/config/default.js');
-const fastConfig = require('../../../lighthouse-core/config/fast-config.js');
+const defaultConfig = require('../../../lighthouse-core/config/default-config.js');
+const i18n = require('../../../lighthouse-core/lib/i18n');
 const log = require('lighthouse-logger');
 
+/** @typedef {import('../../../lighthouse-core/gather/connections/connection.js')} Connection */
+
 /**
- * @param {!Connection} connection
- * @param {string} url
- * @param {!Object} options Lighthouse options.
- * @param {!Array<string>} categoryIDs Name values of categories to include.
- * @return {!Promise}
+ * Return a version of the default config, filtered to only run the specified
+ * categories.
+ * @param {Array<string>} categoryIDs
+ * @return {LH.Config.Json}
  */
-window.runLighthouseForConnection = function(
-    connection, url, options, categoryIDs,
-    updateBadgeFn = function() { }) {
-  const config = options && options.fastMode ? new Config(fastConfig) : new Config({
+function getDefaultConfigForCategories(categoryIDs) {
+  return {
     extends: 'lighthouse:default',
-    settings: {onlyCategories: categoryIDs},
-  });
-
-  // Add url and config to fresh options object.
-  const runOptions = Object.assign({}, options, {url, config});
-  updateBadgeFn(url);
-
-  return Runner.run(connection, runOptions) // Run Lighthouse.
-    .then(result => {
-      updateBadgeFn();
-      return result;
-    })
-    .catch(err => {
-      updateBadgeFn();
-      throw err;
-    });
-};
+    settings: {
+      onlyCategories: categoryIDs,
+    },
+  };
+}
 
 /**
- * @param {!RawProtocol.Port} port
+ * @param {RawProtocol.Port} port
  * @param {string} url
- * @param {!Object} options Lighthouse options.
- * @param {!Array<string>} categoryIDs Name values of categories to include.
- * @return {!Promise}
+ * @param {LH.Flags} flags Lighthouse flags.
+ * @param {Array<string>} categoryIDs Name values of categories to include.
+ * @return {Promise<LH.RunnerResult|void>}
  */
-window.runLighthouseInWorker = function(port, url, options, categoryIDs) {
+function runLighthouseInWorker(port, url, flags, categoryIDs) {
   // Default to 'info' logging level.
-  log.setLevel('info');
+  flags.logLevel = flags.logLevel || 'info';
+  const config = getDefaultConfigForCategories(categoryIDs);
   const connection = new RawProtocol(port);
-  return window.runLighthouseForConnection(connection, url, options, categoryIDs);
-};
+
+  return lighthouse(url, flags, config, connection);
+}
 
 /**
  * Returns list of top-level categories from the default config.
- * @return {!Array<{name: string, id: string}>}
+ * @return {Array<{title: string, id: string}>}
  */
-window.getDefaultCategories = function() {
-  return Config.getCategories(defaultConfig);
-};
+function getDefaultCategories() {
+  const categories = Config.getCategories(defaultConfig);
+  categories.forEach(cat => cat.title = i18n.getFormatted(cat.title, 'en-US'));
+  return categories;
+}
 
-window.listenForStatus = function(listenCallback) {
+/** @param {(status: [string, string, string]) => void} listenCallback */
+function listenForStatus(listenCallback) {
   log.events.addListener('status', listenCallback);
-};
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  // export for lighthouse-ext-background to require (via browserify).
+  module.exports = {
+    getDefaultConfigForCategories,
+    runLighthouseInWorker,
+    getDefaultCategories,
+    listenForStatus,
+  };
+}
+
+if (typeof window !== 'undefined') {
+  // Expose on window for devtools, other consumers of file.
+  // @ts-ignore
+  window.runLighthouseInWorker = runLighthouseInWorker;
+  // @ts-ignore
+  window.listenForStatus = listenForStatus;
+}

@@ -6,7 +6,7 @@
 'use strict';
 
 const ComputedArtifact = require('./computed-artifact');
-const WebInspector = require('../../lib/web-inspector');
+const NetworkRequest = require('../../lib/network-request');
 const assert = require('assert');
 
 class CriticalRequestChains extends ComputedArtifact {
@@ -18,54 +18,71 @@ class CriticalRequestChains extends ComputedArtifact {
    * For now, we use network priorities as a proxy for "render-blocking"/critical-ness.
    * It's imperfect, but there is not a higher-fidelity signal available yet.
    * @see https://docs.google.com/document/d/1bCDuq9H1ih9iNjgzyAL0gpwNFiEP4TZS-YLRp_RuMlc
-   * @param {any} request
-   * @param {!WebInspector.NetworkRequest} mainResource
+   * @param {LH.Artifacts.NetworkRequest} request
+   * @param {LH.Artifacts.NetworkRequest} mainResource
+   * @return {boolean}
    */
   static isCritical(request, mainResource) {
     assert.ok(mainResource, 'mainResource not provided');
-    const resourceTypeCategory = request._resourceType && request._resourceType._category;
+
+    // Treat any preloaded resource as non-critical
+    if (request.isLinkPreload) {
+      return false;
+    }
 
     // Iframes are considered High Priority but they are not render blocking
-    const isIframe = request._resourceType === WebInspector.resourceTypes.Document
+    const isIframe = request.resourceType === NetworkRequest.TYPES.Document
       && request.frameId !== mainResource.frameId;
     // XHRs are fetched at High priority, but we exclude them, as they are unlikely to be critical
     // Images are also non-critical.
-    // Treat any images missed by category, primarily favicons, as non-critical resources
+    // Treat any missed images, primarily favicons, as non-critical resources
+    /** @type {Array<LH.Crdp.Page.ResourceType>} */
     const nonCriticalResourceTypes = [
-      WebInspector.resourceTypes.Image._category,
-      WebInspector.resourceTypes.XHR._category,
+      NetworkRequest.TYPES.Image,
+      NetworkRequest.TYPES.XHR,
+      NetworkRequest.TYPES.Fetch,
+      NetworkRequest.TYPES.EventSource,
     ];
-    if (nonCriticalResourceTypes.includes(resourceTypeCategory) ||
+    if (nonCriticalResourceTypes.includes(request.resourceType || 'Other') ||
         isIframe ||
         request.mimeType && request.mimeType.startsWith('image/')) {
       return false;
     }
 
-    return ['VeryHigh', 'High', 'Medium'].includes(request.priority());
+    return ['VeryHigh', 'High', 'Medium'].includes(request.priority);
   }
 
-  static extractChain([networkRecords, mainResource]) {
+  /**
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {LH.Artifacts.NetworkRequest} mainResource
+   * @return {LH.Artifacts.CriticalRequestNode}
+   */
+  static extractChain(networkRecords, mainResource) {
     networkRecords = networkRecords.filter(req => req.finished);
 
     // Build a map of requestID -> Node.
+    /** @type {Map<string, LH.Artifacts.NetworkRequest>} */
     const requestIdToRequests = new Map();
     for (const request of networkRecords) {
       requestIdToRequests.set(request.requestId, request);
     }
 
     // Get all the critical requests.
-    /** @type {!Array<NetworkRequest>} */
+    /** @type {Array<LH.Artifacts.NetworkRequest>} */
     const criticalRequests = networkRecords.filter(request =>
       CriticalRequestChains.isCritical(request, mainResource));
 
     // Create a tree of critical requests.
+    /** @type {LH.Artifacts.CriticalRequestNode} */
     const criticalRequestChains = {};
     for (const request of criticalRequests) {
       // Work back from this request up to the root. If by some weird quirk we are giving request D
       // here, which has ancestors C, B and A (where A is the root), we will build array [C, B, A]
       // during this phase.
+      /** @type {Array<string>} */
       const ancestors = [];
-      let ancestorRequest = request.initiatorRequest();
+      let ancestorRequest = request.initiatorRequest;
+      /** @type {LH.Artifacts.CriticalRequestNode|undefined} */
       let node = criticalRequestChains;
       while (ancestorRequest) {
         const ancestorIsCritical = CriticalRequestChains.isCritical(ancestorRequest, mainResource);
@@ -82,14 +99,18 @@ class CriticalRequestChains extends ComputedArtifact {
           break;
         }
         ancestors.push(ancestorRequest.requestId);
-        ancestorRequest = ancestorRequest.initiatorRequest();
+        ancestorRequest = ancestorRequest.initiatorRequest;
       }
 
       // With the above array we can work from back to front, i.e. A, B, C, and during this process
       // we can build out the tree for any nodes that have yet to be created.
       let ancestor = ancestors.pop();
-      while (ancestor) {
+      while (ancestor && node) {
         const parentRequest = requestIdToRequests.get(ancestor);
+        if (!parentRequest) {
+          throw new Error(`request with id ${ancestor} not found.`);
+        }
+
         const parentRequestId = parentRequest.requestId;
         if (!node[parentRequestId]) {
           node[parentRequestId] = {
@@ -123,16 +144,17 @@ class CriticalRequestChains extends ComputedArtifact {
   }
 
   /**
-   * @param {!DevtoolsLog} devtoolsLog
-   * @param {!ComputedArtifacts} artifacts
-   * @return {!Promise<!Object>}
+   * @param {{URL: LH.Artifacts['URL'], devtoolsLog: LH.DevtoolsLog}} data
+   * @param {LH.ComputedArtifacts} artifacts
+   * @return {Promise<LH.Artifacts.CriticalRequestNode>}
    */
-  compute_(devtoolsLog, artifacts) {
-    return Promise.all([
-      artifacts.requestNetworkRecords(devtoolsLog),
-      artifacts.requestMainResource(devtoolsLog),
-    ])
-      .then(CriticalRequestChains.extractChain);
+  async compute_(data, artifacts) {
+    const [networkRecords, mainResource] = await Promise.all([
+      artifacts.requestNetworkRecords(data.devtoolsLog),
+      artifacts.requestMainResource(data),
+    ]);
+
+    return CriticalRequestChains.extractChain(networkRecords, mainResource);
   }
 }
 

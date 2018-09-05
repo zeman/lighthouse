@@ -9,9 +9,9 @@ const KB = 1024;
 const UnminifiedCssAudit = require('../../../audits/byte-efficiency/unminified-css');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
-const _resourceType = {_name: 'stylesheet'};
+const resourceType = 'Stylesheet';
 describe('Page uses optimized css', () => {
   describe('#computeTokenLength', () => {
     it('should compute length of meaningful content', () => {
@@ -148,18 +148,18 @@ describe('Page uses optimized css', () => {
         ]},
       },
       [
-        {url: 'foo.css', _transferSize: 20 * KB, _resourceType},
-        {url: 'other.css', _transferSize: 50 * KB, _resourceType},
+        {url: 'foo.css', transferSize: 20 * KB, resourceType},
+        {url: 'other.css', transferSize: 50 * KB, resourceType},
       ]
     );
 
-    assert.equal(auditResult.results.length, 2);
-    assert.equal(auditResult.results[0].url, 'foo.css');
-    assert.equal(Math.round(auditResult.results[0].wastedPercent), 65);
-    assert.equal(Math.round(auditResult.results[0].wastedBytes / 1024), 13);
-    assert.equal(auditResult.results[1].url, 'other.css');
-    assert.equal(Math.round(auditResult.results[1].wastedPercent), 8);
-    assert.equal(Math.round(auditResult.results[1].wastedBytes / 1024), 4);
+    assert.equal(auditResult.items.length, 2);
+    assert.equal(auditResult.items[0].url, 'foo.css');
+    assert.equal(Math.round(auditResult.items[0].wastedPercent), 65);
+    assert.equal(Math.round(auditResult.items[0].wastedBytes / 1024), 13);
+    assert.equal(auditResult.items[1].url, 'other.css');
+    assert.equal(Math.round(auditResult.items[1].wastedPercent), 8);
+    assert.equal(Math.round(auditResult.items[1].wastedBytes / 1024), 4);
   });
 
   it('passes when stylesheets are already minified', () => {
@@ -184,12 +184,12 @@ describe('Page uses optimized css', () => {
         ]},
       },
       [
-        {url: 'foo.css', _transferSize: 20 * KB, _resourceType},
-        {url: 'other.css', _transferSize: 512, _resourceType},
-        {url: 'invalid.css', _transferSize: 20 * KB, _resourceType},
+        {url: 'foo.css', transferSize: 20 * KB, resourceType},
+        {url: 'other.css', transferSize: 512, resourceType},
+        {url: 'invalid.css', transferSize: 20 * KB, resourceType},
       ]
     );
 
-    assert.equal(auditResult.results.length, 0);
+    assert.equal(auditResult.items.length, 0);
   });
 });

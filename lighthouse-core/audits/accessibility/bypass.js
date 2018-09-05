@@ -15,15 +15,15 @@ const AxeAudit = require('./axe-audit');
 
 class Bypass extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'bypass',
-      description: 'The page contains a heading, skip link, or landmark region',
-      failureDescription: 'The page does not contain a heading, skip link, or landmark region',
-      helpText: 'Adding ways to bypass repetitive content lets keyboard users navigate the page ' +
-          'more efficiently. ' +
+      id: 'bypass',
+      title: 'The page contains a heading, skip link, or landmark region',
+      failureTitle: 'The page does not contain a heading, skip link, or landmark region',
+      description: 'Adding ways to bypass repetitive content lets keyboard users navigate the ' +
+          'page more efficiently. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/bypass?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],
     };

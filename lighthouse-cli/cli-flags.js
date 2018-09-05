@@ -8,14 +8,12 @@
 /* eslint-disable max-len */
 
 const yargs = require('yargs');
-// @ts-ignore
 const pkg = require('../package.json');
-const Driver = require('../lighthouse-core/gather/driver.js');
 const printer = require('./printer');
 
 /**
  * @param {string=} manualArgv
- * @return {!LH.Flags}
+ * @return {LH.CliFlags}
  */
 function getFlags(manualArgv) {
   // @ts-ignore yargs() is incorrectly typed as not returning itself
@@ -24,7 +22,7 @@ function getFlags(manualArgv) {
       .version(() => pkg.version)
       .showHelpOnFail(false, 'Specify --help for available options')
 
-      .usage('lighthouse <url>')
+      .usage('lighthouse <url> <options>')
       .example(
           'lighthouse <url> --view', 'Opens the HTML report in a browser after the run completes')
       .example(
@@ -34,8 +32,8 @@ function getFlags(manualArgv) {
           'lighthouse <url> --output=json --output-path=./report.json --save-assets',
           'Save trace, screenshots, and named JSON report.')
       .example(
-          'lighthouse <url> --disable-device-emulation --disable-network-throttling',
-          'Disable device emulation')
+          'lighthouse <url> --disable-device-emulation --throttling-method=provided',
+          'Disable device emulation and all throttling')
       .example(
           'lighthouse <url> --chrome-flags="--window-size=412,732"',
           'Launch Chrome with a specific window size')
@@ -59,19 +57,27 @@ function getFlags(manualArgv) {
       .group(
         [
           'save-assets', 'list-all-audits', 'list-trace-categories', 'additional-trace-categories',
-          'config-path', 'chrome-flags', 'perf', 'mixed-content', 'port', 'hostname',
+          'config-path', 'preset', 'chrome-flags', 'port', 'hostname',
           'max-wait-for-load', 'enable-error-reporting', 'gather-mode', 'audit-mode',
+          'only-audits', 'only-categories', 'skip-audits',
         ],
         'Configuration:')
       .describe({
+        // We don't allowlist specific locales. Why? So we can support the user who requests 'es-MX' (unsupported) and we'll fall back to 'es' (supported)
+        'locale': 'The locale/language the report should be formatted in',
         'enable-error-reporting':
             'Enables error reporting, overriding any saved preference. --no-enable-error-reporting will do the opposite. More: https://git.io/vFFTO',
         'blocked-url-patterns': 'Block any network requests to the specified URL patterns',
         'disable-storage-reset':
             'Disable clearing the browser cache and other storage APIs before a run',
         'disable-device-emulation': 'Disable Nexus 5X emulation',
-        'disable-cpu-throttling': 'Disable CPU throttling',
-        'disable-network-throttling': 'Disable network throttling',
+        'throttling-method': 'Controls throttling method',
+        'throttling.rttMs': 'Controls simulated network RTT (TCP layer)',
+        'throttling.throughputKbps': 'Controls simulated network download throughput',
+        'throttling.requestLatencyMs': 'Controls emulated network RTT (HTTP layer)',
+        'throttling.downloadThroughputKbps': 'Controls emulated network download throughput',
+        'throttling.uploadThroughputKbps': 'Controls emulated network upload throughput',
+        'throttling.cpuSlowdownMultiplier': 'Controls simulated + emulated CPU throttling',
         'gather-mode':
             'Collect artifacts from a connected browser and save to disk. (Artifacts folder path may optionally be provided). If audit-mode is not also enabled, the run will quit early.',
         'audit-mode': 'Process saved artifacts from disk. (Artifacts folder path may be provided, otherwise defaults to ./latest-run/)',
@@ -81,16 +87,18 @@ function getFlags(manualArgv) {
         'additional-trace-categories':
             'Additional categories to capture with the trace (comma-delimited).',
         'config-path': 'The path to the config JSON.',
-        'mixed-content': 'Use the mixed-content auditing configuration.',
+        'preset': 'Use a built-in configuration.',
         'chrome-flags':
             `Custom flags to pass to Chrome (space-delimited). For a full list of flags, see http://bit.ly/chrome-flags
-            Additionally, use the CHROME_PATH environment variable to use a specific Chrome binary. Requires Chromium version 54.0 or later. If omitted, any detected Chrome Canary or Chrome stable will be used.`,
-        'perf': 'Use a performance-test-only configuration',
+            Additionally, use the CHROME_PATH environment variable to use a specific Chrome binary. Requires Chromium version 66.0 or later. If omitted, any detected Chrome Canary or Chrome stable will be used.`,
         'hostname': 'The hostname to use for the debugging protocol.',
         'port': 'The port to use for the debugging protocol. Use 0 for a random port',
         'max-wait-for-load':
             'The timeout (in milliseconds) to wait before the page is considered done loading and the run should continue. WARNING: Very high values can lead to large traces and instability',
         'extra-headers': 'Set extra HTTP Headers to pass with request',
+        'only-audits': 'Only run the specified audits',
+        'only-categories': 'Only run the specified categories',
+        'skip-audits': 'Run everything except these audits',
       })
       // set aliases
       .alias({'gather-mode': 'G', 'audit-mode': 'A'})
@@ -108,27 +116,35 @@ function getFlags(manualArgv) {
 
       // boolean values
       .boolean([
-        'disable-storage-reset', 'disable-device-emulation', 'disable-cpu-throttling',
-        'disable-network-throttling', 'save-assets', 'list-all-audits',
-        'list-trace-categories', 'perf', 'view', 'verbose', 'quiet', 'help',
-        'mixed-content',
+        'disable-storage-reset', 'disable-device-emulation', 'save-assets', 'list-all-audits',
+        'list-trace-categories', 'view', 'verbose', 'quiet', 'help',
       ])
       .choices('output', printer.getValidOutputOptions())
+      .choices('throttling-method', ['devtools', 'provided', 'simulate'])
+      .choices('preset', ['full', 'perf', 'mixed-content'])
       // force as an array
-      .array('blocked-url-patterns')
-      .string('extra-headers')
+      // note MUST use camelcase versions or only the kebab-case version will be forced
+      .array('blockedUrlPatterns')
+      .array('onlyAudits')
+      .array('onlyCategories')
+      .array('skipAudits')
+      .array('output')
+      .string('extraHeaders')
 
       // default values
       .default('chrome-flags', '')
-      .default('disable-cpu-throttling', false)
-      .default('output', 'html')
+      .default('output', ['html'])
       .default('port', 0)
       .default('hostname', 'localhost')
-      .default('max-wait-for-load', Driver.MAX_WAIT_FOR_FULLY_LOADED)
-      .check(/** @param {!LH.Flags} argv */ (argv) => {
-        // Make sure lighthouse has been passed a url, or at least one of --list-all-audits
-        // or --list-trace-categories. If not, stop the program and ask for a url
-        if (!argv.listAllAudits && !argv.listTraceCategories && argv._.length === 0) {
+      .default('enable-error-reporting', undefined) // Undefined so prompted by default
+      .check(/** @param {LH.CliFlags} argv */ (argv) => {
+        // Lighthouse doesn't need a URL if...
+        //   - We're in auditMode (and we have artifacts already)
+        //   - We're just listing the available options.
+        // If one of these don't apply, stop the program and ask for a url.
+        const isListMode = argv.listAllAudits || argv.listTraceCategories;
+        const isOnlyAuditMode = !!argv.auditMode && !argv.gatherMode;
+        if (!isListMode && !isOnlyAuditMode && argv._.length === 0) {
           throw new Error('Please provide a url');
         }
 

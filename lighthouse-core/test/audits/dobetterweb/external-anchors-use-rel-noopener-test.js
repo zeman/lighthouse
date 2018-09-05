@@ -11,7 +11,7 @@ const assert = require('assert');
 
 const URL = 'https://google.com/test';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('External anchors use rel="noopener"', () => {
   it('passes when links are from same hosts as the page host', () => {
@@ -74,7 +74,7 @@ describe('External anchors use rel="noopener"', () => {
     assert.equal(auditResult.rawValue, false);
     assert.equal(auditResult.details.items.length, 1);
     assert.equal(auditResult.details.items.length, 1);
-    assert.ok(auditResult.debugString, 'includes debugString');
+    assert.ok(auditResult.warnings.length, 'includes warning');
   });
 
   it('fails when links have href attribute starting with a protocol', () => {
@@ -90,6 +90,6 @@ describe('External anchors use rel="noopener"', () => {
     assert.equal(auditResult.rawValue, false);
     assert.equal(auditResult.details.items.length, 4);
     assert.equal(auditResult.details.items.length, 4);
-    assert.ok(auditResult.debugString, 'includes debugString');
+    assert.equal(auditResult.warnings.length, 4);
   });
 });

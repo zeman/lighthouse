@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const pkg = require('../../package.json');
 const assert = require('assert');
@@ -73,7 +73,7 @@ describe('Module Tests', function() {
     return lighthouse('SOME_URL', {}, {
       passes: [{
         gatherers: [
-          'url',
+          'viewport',
         ],
       }],
       audits: [
@@ -87,28 +87,30 @@ describe('Module Tests', function() {
       });
   });
 
-  it.skip('should return formatted audit results when given no categories', function() {
-    const exampleUrl = 'https://example.com/';
+  it('should return formatted LHR when given no categories', function() {
+    const exampleUrl = 'https://www.reddit.com/r/nba';
     return lighthouse(exampleUrl, {
-      output: 'json',
+      output: 'html',
     }, {
-      auditResults: [{
-        score: 0,
-        displayValue: '',
-        rawValue: true,
-        name: 'viewport',
-        description: 'HTML has a viewport <meta>',
-      }],
+      settings: {
+        auditMode: __dirname + '/fixtures/artifacts/perflog/',
+      },
+      audits: [
+        'viewport',
+      ],
     }).then(results => {
-      assert.ok(results.lighthouseVersion);
-      assert.ok(results.fetchedAt);
-      assert.equal(results.url, exampleUrl);
-      assert.equal(results.initialUrl, exampleUrl);
-      assert.ok(Array.isArray(results.reportCategories));
-      assert.equal(results.reportCategories.length, 0);
-      assert.ok(results.audits.viewport);
-      assert.ok(results.timing);
-      assert.equal(typeof results.timing.total, 'number');
+      assert.ok(/<html/.test(results.report), 'did not create html report');
+      assert.ok(results.artifacts.ViewportDimensions, 'did not set artifacts');
+      assert.ok(results.lhr.lighthouseVersion);
+      assert.ok(results.lhr.fetchTime);
+      assert.equal(results.lhr.finalUrl, exampleUrl);
+      assert.equal(results.lhr.requestedUrl, exampleUrl);
+      assert.equal(Object.values(results.lhr.categories).length, 0);
+      assert.ok(results.lhr.audits.viewport);
+      assert.strictEqual(results.lhr.audits.viewport.score, 0);
+      assert.ok(results.lhr.audits.viewport.explanation);
+      assert.ok(results.lhr.timing);
+      assert.equal(typeof results.lhr.timing.total, 'number');
     });
   });
 

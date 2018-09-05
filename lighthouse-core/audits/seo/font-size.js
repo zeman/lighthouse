@@ -5,17 +5,22 @@
  */
 'use strict';
 
+/** @typedef {LH.Artifacts.FontSize['analyzedFailingNodesData'][0]} FailingNodeData */
+/** @typedef {{Type: {Regular: 'Regular', Inline: 'Inline', Attributes: 'Attributes'}}} WebInspectorCSSStyle */
+
 const URL = require('../../lib/url-shim');
 const Audit = require('../audit');
 const ViewportAudit = require('../viewport');
-const CSSStyleDeclaration = require('../../lib/web-inspector').CSSStyleDeclaration;
+const WebInspector = require('../../lib/web-inspector');
+const CSSStyleDeclaration = /** @type {WebInspectorCSSStyle} */ (WebInspector.CSSStyleDeclaration);
 const MINIMAL_PERCENTAGE_OF_LEGIBLE_TEXT = 60;
 
 /**
- * @param {Array<{cssRule: SimplifiedStyleDeclaration, fontSize: number, textLength: number, node: Node}>} fontSizeArtifact
- * @returns {Array<{cssRule: SimplifiedStyleDeclaration, fontSize: number, textLength: number, node: Node}>}
+ * @param {Array<FailingNodeData>} fontSizeArtifact
+ * @returns {Array<FailingNodeData>}
  */
 function getUniqueFailingRules(fontSizeArtifact) {
+  /** @type {Map<string, FailingNodeData>} */
   const failingRules = new Map();
 
   fontSizeArtifact.forEach(({cssRule, fontSize, textLength, node}) => {
@@ -34,17 +39,17 @@ function getUniqueFailingRules(fontSizeArtifact) {
     }
   });
 
-  return failingRules.valuesArray();
+  return [...failingRules.values()];
 }
 
 /**
- * @param {Array<string>} attributes
+ * @param {Array<string>=} attributes
  * @returns {Map<string, string>}
  */
-function getAttributeMap(attributes) {
+function getAttributeMap(attributes = []) {
   const map = new Map();
 
-  for (let i=0; i<attributes.length; i+=2) {
+  for (let i = 0; i < attributes.length; i += 2) {
     const name = attributes[i].toLowerCase();
     const value = attributes[i + 1].trim();
 
@@ -58,7 +63,7 @@ function getAttributeMap(attributes) {
 
 /**
  * TODO: return unique selector, like axe-core does, instead of just id/class/name of a single node
- * @param {Node} node
+ * @param {FailingNodeData['node']} node
  * @returns {string}
  */
 function getSelector(node) {
@@ -66,19 +71,23 @@ function getSelector(node) {
 
   if (attributeMap.has('id')) {
     return '#' + attributeMap.get('id');
-  } else if (attributeMap.has('class')) {
-    return '.' + attributeMap.get('class').split(/\s+/).join('.');
+  } else {
+    const attrClass = attributeMap.get('class');
+    if (attrClass) {
+      return '.' + attrClass.split(/\s+/).join('.');
+    }
   }
 
   return node.localName.toLowerCase();
 }
 
 /**
- * @param {Node} node
- * @return {{type:string, selector: string, snippet:string}}
+ * @param {FailingNodeData['node']} node
+ * @return {{type: 'node', selector: string, snippet: string}}
  */
 function nodeToTableNode(node) {
-  const attributesString = node.attributes.map((value, idx) =>
+  const attributes = node.attributes || [];
+  const attributesString = attributes.map((value, idx) =>
     (idx % 2 === 0) ? ` ${value}` : `="${value}"`
   ).join('');
 
@@ -91,9 +100,9 @@ function nodeToTableNode(node) {
 
 /**
  * @param {string} baseURL
- * @param {SimplifiedStyleDeclaration} styleDeclaration
- * @param {Node} node
- * @returns {{source:!string, selector:string|object}}
+ * @param {FailingNodeData['cssRule']} styleDeclaration
+ * @param {FailingNodeData['node']} node
+ * @returns {{source: string, selector: string | {type: 'node', selector: string, snippet: string}}}
  */
 function findStyleRuleSource(baseURL, styleDeclaration, node) {
   if (
@@ -102,13 +111,13 @@ function findStyleRuleSource(baseURL, styleDeclaration, node) {
     styleDeclaration.type === CSSStyleDeclaration.Type.Inline
   ) {
     return {
-      source: baseURL,
       selector: nodeToTableNode(node),
+      source: baseURL,
     };
   }
 
   if (styleDeclaration.parentRule &&
-    styleDeclaration.parentRule.origin === global.CSSAgent.StyleSheetOrigin.USER_AGENT) {
+    styleDeclaration.parentRule.origin === 'user-agent') {
     return {
       selector: styleDeclaration.parentRule.selectors.map(item => item.text).join(', '),
       source: 'User Agent Stylesheet',
@@ -149,14 +158,15 @@ function findStyleRuleSource(baseURL, styleDeclaration, node) {
   }
 
   return {
+    selector: '',
     source: 'Unknown',
   };
 }
 
 /**
- * @param {SimplifiedStyleDeclaration} styleDeclaration
- * @param {Node} node
- * @return string
+ * @param {FailingNodeData['cssRule']} styleDeclaration
+ * @param {FailingNodeData['node']} node
+ * @return {string}
  */
 function getFontArtifactId(styleDeclaration, node) {
   if (styleDeclaration && styleDeclaration.type === CSSStyleDeclaration.Type.Regular) {
@@ -170,14 +180,14 @@ function getFontArtifactId(styleDeclaration, node) {
 
 class FontSize extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'font-size',
-      description: 'Document uses legible font sizes',
-      failureDescription: 'Document doesn\'t use legible font sizes',
-      helpText: 'Font sizes less than 12px are too small to be legible and require mobile ' +
+      id: 'font-size',
+      title: 'Document uses legible font sizes',
+      failureTitle: 'Document doesn\'t use legible font sizes',
+      description: 'Font sizes less than 12px are too small to be legible and require mobile ' +
       'visitors to “pinch to zoom” in order to read. Strive to have >60% of page text ≥12px. ' +
       '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/font-sizes).',
       requiredArtifacts: ['FontSize', 'URL', 'Viewport'],
@@ -185,15 +195,15 @@ class FontSize extends Audit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const hasViewportSet = ViewportAudit.audit(artifacts).rawValue;
     if (!hasViewportSet) {
       return {
         rawValue: false,
-        debugString: 'Text is illegible because of a missing viewport config',
+        explanation: 'Text is illegible because of a missing viewport config',
       };
     }
 
@@ -258,10 +268,12 @@ class FontSize extends Audit {
       });
     }
 
+    /** @type {LH.Audit.DisplayValue} */
+    const displayValue = ['%.1d% legible text', percentageOfPassingText];
     const details = Audit.makeTableDetails(headings, tableData);
     const passed = percentageOfPassingText >= MINIMAL_PERCENTAGE_OF_LEGIBLE_TEXT;
-    let debugString;
 
+    let explanation;
     if (!passed) {
       const percentageOfFailingText = parseFloat((100 - percentageOfPassingText).toFixed(2));
       let disclaimer = '';
@@ -272,13 +284,14 @@ class FontSize extends Audit {
         disclaimer = ` (based on ${percentageOfVisitedText.toFixed()}% sample)`;
       }
 
-      debugString = `${percentageOfFailingText}% of text is too small${disclaimer}.`;
+      explanation = `${percentageOfFailingText}% of text is too small${disclaimer}.`;
     }
 
     return {
       rawValue: passed,
       details,
-      debugString,
+      displayValue,
+      explanation,
     };
   }
 }

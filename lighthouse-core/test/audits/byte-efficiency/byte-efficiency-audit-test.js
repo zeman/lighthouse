@@ -6,37 +6,40 @@
 'use strict';
 
 const Runner = require('../../../runner');
-const ByteEfficiencyAudit = require('../../../audits/byte-efficiency/byte-efficiency-audit');
+const ByteEfficiencyAudit_ = require('../../../audits/byte-efficiency/byte-efficiency-audit');
 const NetworkNode = require('../../../lib/dependency-graph/network-node');
 const CPUNode = require('../../../lib/dependency-graph/cpu-node');
+const Simulator = require('../../../lib/dependency-graph/simulator/simulator');
 
 const trace = require('../../fixtures/traces/progressive-app-m60.json');
 const devtoolsLog = require('../../fixtures/traces/progressive-app-m60.devtools.log.json');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Byte efficiency base audit', () => {
   let graph;
+  let simulator;
+
+  const ByteEfficiencyAudit = class extends ByteEfficiencyAudit_ {
+    static get meta() {
+      return {name: 'test'};
+    }
+  };
 
   beforeEach(() => {
     const networkRecord = {
       requestId: 1,
       url: 'http://example.com/',
-      parsedURL: {scheme: 'http'},
-      _transferSize: 400000,
-      _timing: {receiveHeadersEnd: 0},
+      parsedURL: {scheme: 'http', securityOrigin: 'http://example.com'},
+      transferSize: 400000,
+      timing: {receiveHeadersEnd: 0},
     };
-
-    Object.defineProperty(networkRecord, 'transferSize', {
-      get() {
-        return this._transferSize;
-      },
-    });
 
     graph = new NetworkNode(networkRecord);
     // add a CPU node to force improvement to TTI
     graph.addDependent(new CPUNode({tid: 1, ts: 0, dur: 100 * 1000}));
+    simulator = new Simulator({});
   });
 
   const baseHeadings = [
@@ -54,42 +57,43 @@ describe('Byte efficiency base audit', () => {
     });
 
     it('should return transferSize when asset matches', () => {
-      const _resourceType = {_name: 'stylesheet'};
-      const result = estimate({_transferSize: 1234, _resourceType}, 10000, 'stylesheet');
+      const resourceType = 'Stylesheet';
+      const result = estimate({transferSize: 1234, resourceType}, 10000, 'Stylesheet');
       assert.equal(result, 1234);
     });
 
     it('should estimate by network compression ratio when asset does not match', () => {
-      const _resourceType = {_name: 'other'};
-      const result = estimate({_resourceSize: 2000, _transferSize: 1000, _resourceType}, 100);
+      const resourceType = 'Other';
+      const result = estimate({resourceSize: 2000, transferSize: 1000, resourceType}, 100);
       assert.equal(result, 50);
     });
 
     it('should not error when missing resource size', () => {
-      const _resourceType = {_name: 'other'};
-      const result = estimate({_transferSize: 1000, _resourceType}, 100);
+      const resourceType = 'Other';
+      const result = estimate({transferSize: 1000, resourceType}, 100);
       assert.equal(result, 100);
     });
   });
 
   it('should format details', () => {
-    const result = ByteEfficiencyAudit.createAuditResult({
+    const result = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [],
-    }, graph);
+      items: [],
+    }, graph, simulator);
 
     assert.deepEqual(result.details.items, []);
   });
 
   it('should set the rawValue', () => {
-    const result = ByteEfficiencyAudit.createAuditResult(
+    const result = ByteEfficiencyAudit.createAuditProduct(
       {
         headings: baseHeadings,
-        results: [
+        items: [
           {url: 'http://example.com/', wastedBytes: 200 * 1000},
         ],
       },
-      graph
+      graph,
+      simulator
     );
 
     // 900ms savings comes from the graph calculation
@@ -97,25 +101,25 @@ describe('Byte efficiency base audit', () => {
   });
 
   it('should score the wastedMs', () => {
-    const perfectResult = ByteEfficiencyAudit.createAuditResult({
+    const perfectResult = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [{url: 'http://example.com/', wastedBytes: 1 * 1000}],
-    }, graph);
+      items: [{url: 'http://example.com/', wastedBytes: 1 * 1000}],
+    }, graph, simulator);
 
-    const goodResult = ByteEfficiencyAudit.createAuditResult({
+    const goodResult = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [{url: 'http://example.com/', wastedBytes: 20 * 1000}],
-    }, graph);
+      items: [{url: 'http://example.com/', wastedBytes: 20 * 1000}],
+    }, graph, simulator);
 
-    const averageResult = ByteEfficiencyAudit.createAuditResult({
+    const averageResult = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [{url: 'http://example.com/', wastedBytes: 100 * 1000}],
-    }, graph);
+      items: [{url: 'http://example.com/', wastedBytes: 100 * 1000}],
+    }, graph, simulator);
 
-    const failingResult = ByteEfficiencyAudit.createAuditResult({
+    const failingResult = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [{url: 'http://example.com/', wastedBytes: 400 * 1000}],
-    }, graph);
+      items: [{url: 'http://example.com/', wastedBytes: 400 * 1000}],
+    }, graph, simulator);
 
     assert.equal(perfectResult.score, 1, 'scores perfect wastedMs');
     assert.ok(goodResult.score > 0.75 && goodResult.score < 1, 'scores good wastedMs');
@@ -125,21 +129,21 @@ describe('Byte efficiency base audit', () => {
 
   it('should throw on invalid graph', () => {
     assert.throws(() => {
-      ByteEfficiencyAudit.createAuditResult({
+      ByteEfficiencyAudit.createAuditProduct({
         headings: baseHeadings,
-        results: [{wastedBytes: 350, totalBytes: 700, wastedPercent: 50}],
+        items: [{wastedBytes: 350, totalBytes: 700, wastedPercent: 50}],
       }, null);
     });
   });
 
   it('should populate KB', () => {
-    const result = ByteEfficiencyAudit.createAuditResult({
+    const result = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [
+      items: [
         {wastedBytes: 2048, totalBytes: 4096, wastedPercent: 50},
         {wastedBytes: 1986, totalBytes: 5436},
       ],
-    }, graph);
+    }, graph, simulator);
 
     assert.equal(result.details.items[0].wastedBytes, 2048);
     assert.equal(result.details.items[0].totalBytes, 4096);
@@ -148,14 +152,14 @@ describe('Byte efficiency base audit', () => {
   });
 
   it('should sort on wastedBytes', () => {
-    const result = ByteEfficiencyAudit.createAuditResult({
+    const result = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [
+      items: [
         {wastedBytes: 350, totalBytes: 700, wastedPercent: 50},
         {wastedBytes: 450, totalBytes: 1000, wastedPercent: 50},
         {wastedBytes: 400, totalBytes: 450, wastedPercent: 50},
       ],
-    }, graph);
+    }, graph, simulator);
 
     assert.equal(result.details.items[0].wastedBytes, 450);
     assert.equal(result.details.items[1].wastedBytes, 400);
@@ -163,32 +167,94 @@ describe('Byte efficiency base audit', () => {
   });
 
   it('should create a display value', () => {
-    const result = ByteEfficiencyAudit.createAuditResult({
+    const result = ByteEfficiencyAudit.createAuditProduct({
       headings: baseHeadings,
-      results: [
+      items: [
         {wastedBytes: 512, totalBytes: 700, wastedPercent: 50},
         {wastedBytes: 512, totalBytes: 1000, wastedPercent: 50},
         {wastedBytes: 1024, totalBytes: 1200, wastedPercent: 50},
       ],
-    }, graph);
+    }, graph, simulator);
 
-    assert.ok(result.displayValue.includes('2048 bytes'), 'contains correct bytes');
+    expect(result.displayValue).toBeDisplayString(/savings of 2/);
   });
 
-  it('should work on real graphs', () => {
+  it('should work on real graphs', async () => {
+    const throttling = {rttMs: 150, throughputKbps: 1600, cpuSlowdownMultiplier: 1};
+    const settings = {throttlingMethod: 'simulate', throttling};
     const artifacts = Runner.instantiateComputedArtifacts();
-    return artifacts.requestPageDependencyGraph({trace, devtoolsLog}).then(graph => {
-      const result = ByteEfficiencyAudit.createAuditResult(
-        {
-          headings: [{key: 'value', text: 'Label'}],
-          results: [
-            {url: 'https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW', wastedBytes: 30 * 1024},
-          ],
-        },
-        graph
-      );
+    const graph = await artifacts.requestPageDependencyGraph({trace, devtoolsLog});
+    const simulator = await artifacts.requestLoadSimulator({devtoolsLog, settings});
+    const result = ByteEfficiencyAudit.createAuditProduct(
+      {
+        headings: [{key: 'value', text: 'Label'}],
+        items: [
+          {url: 'https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW', wastedBytes: 30 * 1024},
+        ],
+      },
+      graph,
+      simulator
+    );
 
-      assert.equal(result.rawValue, 300);
-    });
+    assert.equal(result.rawValue, 300);
+  });
+
+  it('should create load simulator with the specified settings', async () => {
+    class MockAudit extends ByteEfficiencyAudit {
+      static audit_(artifacts, records) {
+        return {
+          items: records.map(record => ({url: record.url, wastedBytes: record.transferSize})),
+          headings: [],
+        };
+      }
+    }
+
+    const artifacts = Runner.instantiateComputedArtifacts();
+    artifacts.traces = {defaultPass: trace};
+    artifacts.devtoolsLogs = {defaultPass: devtoolsLog};
+
+    const modestThrottling = {rttMs: 150, throughputKbps: 1000, cpuSlowdownMultiplier: 2};
+    const ultraSlowThrottling = {rttMs: 150, throughputKbps: 100, cpuSlowdownMultiplier: 8};
+    let settings = {throttlingMethod: 'simulate', throttling: modestThrottling};
+    let result = await MockAudit.audit(artifacts, {settings});
+    // expect modest savings
+    expect(result.rawValue).toBeLessThan(5000);
+    expect(result.rawValue).toMatchSnapshot();
+
+    settings = {throttlingMethod: 'simulate', throttling: ultraSlowThrottling};
+    result = await MockAudit.audit(artifacts, {settings});
+    // expect lots of savings
+    expect(result.rawValue).not.toBeLessThan(5000);
+    expect(result.rawValue).toMatchSnapshot();
+  });
+
+  it('should allow overriding of computeWasteWithTTIGraph', async () => {
+    class MockAudit extends ByteEfficiencyAudit {
+      static audit_(artifacts, records) {
+        return {
+          items: records.map(record => ({url: record.url, wastedBytes: record.transferSize})),
+          headings: [],
+        };
+      }
+    }
+
+    class MockJustTTIAudit extends MockAudit {
+      static computeWasteWithTTIGraph(results, graph, simulator) {
+        return ByteEfficiencyAudit.computeWasteWithTTIGraph(results, graph, simulator,
+          {includeLoad: false});
+      }
+    }
+
+    const artifacts = Runner.instantiateComputedArtifacts();
+    artifacts.traces = {defaultPass: trace};
+    artifacts.devtoolsLogs = {defaultPass: devtoolsLog};
+
+    const modestThrottling = {rttMs: 150, throughputKbps: 1000, cpuSlowdownMultiplier: 2};
+    const settings = {throttlingMethod: 'simulate', throttling: modestThrottling};
+    const result = await MockAudit.audit(artifacts, {settings});
+    const resultTti = await MockJustTTIAudit.audit(artifacts, {settings});
+    // expect less savings with just TTI
+    expect(resultTti.rawValue).toBeLessThan(result.rawValue);
+    expect({default: result.rawValue, justTTI: resultTti.rawValue}).toMatchSnapshot();
   });
 });

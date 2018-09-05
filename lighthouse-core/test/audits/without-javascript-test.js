@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const withoutJsAudit = require('../../audits/without-javascript.js');
 const assert = require('assert');
@@ -14,31 +14,45 @@ describe('Progressive Enhancement: without javascript audit', () => {
   it('fails when the js-less body is empty', () => {
     const artifacts = {
       HTMLWithoutJavaScript: {
-        value: '',
+        bodyText: '',
+        hasNoScript: false,
       },
     };
 
     const result = withoutJsAudit.audit(artifacts);
     assert.equal(result.rawValue, false);
-    assert.ok(result.debugString);
+    assert.ok(result.explanation);
   });
 
   it('fails when the js-less body is whitespace', () => {
     const artifacts = {
       HTMLWithoutJavaScript: {
-        value: '        ',
+        bodyText: '        ',
+        hasNoScript: false,
       },
     };
 
     const result = withoutJsAudit.audit(artifacts);
     assert.equal(result.rawValue, false);
-    assert.ok(result.debugString);
+    assert.ok(result.explanation);
   });
 
   it('succeeds when the js-less body contains some content', () => {
     const artifacts = {
       HTMLWithoutJavaScript: {
-        value: 'test',
+        bodyText: 'test',
+        hasNoScript: false,
+      },
+    };
+
+    assert.equal(withoutJsAudit.audit(artifacts).rawValue, true);
+  });
+
+  it('succeeds when the js-less body contains noscript', () => {
+    const artifacts = {
+      HTMLWithoutJavaScript: {
+        bodyText: '',
+        hasNoScript: true,
       },
     };
 

@@ -8,7 +8,7 @@
 const ImageAspectRatioAudit = require('../../audits/image-aspect-ratio.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 function generateRecord(url = 'https://google.com/logo.png', mimeType = 'image/png') {
   return {
     url,
@@ -39,7 +39,11 @@ describe('Images: aspect-ratio audit', () => {
       });
 
       assert.strictEqual(result.rawValue, data.rawValue, 'rawValue does not match');
-      assert.strictEqual(result.debugString, data.debugString, 'debugString does not match');
+      if (data.warning) {
+        assert.strictEqual(result.warnings[0], data.warning);
+      } else {
+        assert.ok(!result.warnings || result.warnings.length === 0, 'should not have warnings');
+      }
     });
   }
 
@@ -103,6 +107,16 @@ describe('Images: aspect-ratio audit', () => {
     },
   });
 
+  testImage('is almost the right aspect ratio', {
+    rawValue: true,
+    clientSize: [412, 36],
+    naturalSize: [800, 69],
+    props: {
+      isCss: false,
+      usesObjectFit: false,
+    },
+  });
+
   testImage('aspect ratios match', {
     rawValue: true,
     clientSize: [100, 100],
@@ -125,7 +139,7 @@ describe('Images: aspect-ratio audit', () => {
 
   testImage('has invalid natural sizing information', {
     rawValue: true,
-    debugString: 'Invalid image sizing information https://google.com/logo.png',
+    warning: 'Invalid image sizing information https://google.com/logo.png',
     clientSize: [100, 100],
     naturalSize: [0, 0],
     props: {
@@ -153,6 +167,6 @@ describe('Images: aspect-ratio audit', () => {
     });
 
     assert.strictEqual(result.rawValue, true, 'rawValue does not match');
-    assert.strictEqual(result.debugString, undefined, 'debugString does not match');
+    assert.equal(result.warnings.length, 0, 'should not have warnings');
   });
 });

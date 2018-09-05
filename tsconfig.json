@@ -7,23 +7,25 @@
     "checkJs": true,
     "strict": true,
     // "listFiles": true,
+    // "noErrorTruncation": true,
     "typeRoots": [
       "@types",
       "./typings"
     ],
 
+    "resolveJsonModule": true,
     "diagnostics": true
   },
   "include": [
     "lighthouse-cli/**/*.js",
-    "lighthouse-core/audits/audit.js",
-    "lighthouse-core/lib/dependency-graph/**/*.js",
-    "lighthouse-core/gather/connections/**/*.js",
-    "lighthouse-core/gather/gatherers/gatherer.js",
-    "lighthouse-core/scripts/*.js",
-    "./typings/*.d.ts"
+    "lighthouse-core/**/*.js",
+    "lighthouse-extension/app/src/*.js",
+    "./typings/*.d.ts",
   ],
   "exclude": [
-    "lighthouse-cli/test/**/*.js"
+    "lighthouse-cli/test/**/*.js",
+    "lighthouse-core/test/**/*.js",
+    "lighthouse-core/closure/**/*.js",
+    "lighthouse-core/third_party/src/**/*.js",
   ]
 }

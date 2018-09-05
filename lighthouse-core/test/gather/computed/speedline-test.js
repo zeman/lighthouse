@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 const assert = require('assert');
 const fs = require('fs');
@@ -20,7 +20,7 @@ describe('Speedline gatherer', () => {
     computedArtifacts = Runner.instantiateComputedArtifacts();
   });
 
-  it('returns an error debugString on faulty trace data', () => {
+  it('returns an error message on faulty trace data', () => {
     return computedArtifacts.requestSpeedline({traceEvents: {boo: 'ya'}}).then(_ => {
       assert.fail(true, true, 'Invalid trace did not throw exception in speedline');
     }, err => {
@@ -29,19 +29,28 @@ describe('Speedline gatherer', () => {
     });
   });
 
+  it('throws when no frames', () => {
+    const traceWithNoFrames = pwaTrace.filter(evt => evt.name !== 'Screenshot');
+    return computedArtifacts.requestSpeedline({traceEvents: traceWithNoFrames}).then(_ => {
+      assert.ok(false, 'Invalid trace did not throw exception in speedline');
+    }).catch(err => {
+      assert.equal(err.message, 'NO_SCREENSHOTS');
+    });
+  });
+
   it('measures the pwa.rocks example', () => {
     return computedArtifacts.requestSpeedline({traceEvents: pwaTrace}).then(speedline => {
-      assert.equal(speedline.speedIndex, undefined);
-      assert.equal(Math.floor(speedline.perceptualSpeedIndex), 609);
+      assert.equal(speedline.perceptualSpeedIndex, undefined);
+      assert.equal(Math.floor(speedline.speedIndex), 549);
     });
-  }).timeout(10000);
+  }, 10000);
 
   it('measures SI of 3 frame trace (blank @1s, content @2s, more content @3s)', () => {
     return computedArtifacts.requestSpeedline(threeFrameTrace).then(speedline => {
-      assert.equal(speedline.speedIndex, undefined);
-      assert.equal(Math.floor(speedline.perceptualSpeedIndex), 2030);
+      assert.equal(speedline.perceptualSpeedIndex, undefined);
+      assert.equal(Math.floor(speedline.speedIndex), 2040);
     });
-  }).timeout(10000);
+  }, 10000);
 
   it('uses a cache', () => {
     let start;
@@ -60,9 +69,9 @@ describe('Speedline gatherer', () => {
         assert.ok(Date.now() - start < 50, 'Quick results come from the cache');
         assert.equal(firstResult, speedline, 'Cache match matches');
 
-        return assert.equal(Math.floor(speedline.perceptualSpeedIndex), 609);
+        return assert.equal(Math.floor(speedline.speedIndex), 549);
       });
-  }).timeout(10000);
+  }, 10000);
 
   it('does not change order of events in traces', () => {
     // Use fresh trace in case it has been altered by other require()s.
@@ -78,5 +87,5 @@ describe('Speedline gatherer', () => {
           assert.deepStrictEqual(pwaTrace[i], freshTrace[i]);
         }
       });
-  }).timeout(10000);
+  }, 10000);
 });

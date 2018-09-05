@@ -13,18 +13,17 @@
  */
 class ViewerUIFeatures extends ReportUIFeatures {
   /**
-   * @param {!DOM} dom
-   * @param {?function(!ReportRenderer.ReportJSON)} saveGistCallback
+   * @param {DOM} dom
+   * @param {?function(LH.ReportResult)} saveGistCallback
    */
   constructor(dom, saveGistCallback) {
     super(dom);
 
-    /** @private {?function(!ReportRenderer.ReportJSON)} */
     this._saveGistCallback = saveGistCallback;
   }
 
   /**
-   * @param {!ReportRenderer.ReportJSON} report
+   * @param {LH.ReportResult} report
    * @override
    */
   initFeatures(report) {
@@ -33,7 +32,7 @@ class ViewerUIFeatures extends ReportUIFeatures {
     // Disable option to save as gist if no callback for saving.
     if (!this._saveGistCallback) {
       const saveGistItem = this._dom.find('.lh-export--gist', this._document);
-      saveGistItem.setAttribute('disabled', true);
+      saveGistItem.setAttribute('disabled', 'true');
     }
   }
 
@@ -43,14 +42,7 @@ class ViewerUIFeatures extends ReportUIFeatures {
    * @override
    */
   getReportHtml() {
-    return new ReportGenerator().generateReportHtml(this.json);
-  }
-
-  /**
-   * @override
-   */
-  sendJsonReport() {
-    throw new Error('Cannot send JSON to Viewer from Viewer.');
+    return ReportGenerator.generateReportHtml(this.json);
   }
 
   /**
@@ -66,10 +58,11 @@ class ViewerUIFeatures extends ReportUIFeatures {
 
     // Disable save-as-gist option after saving.
     const saveGistItem = this._dom.find('.lh-export--gist', this._document);
-    saveGistItem.setAttribute('disabled', true);
+    saveGistItem.setAttribute('disabled', 'true');
   }
 }
 
+// @ts-ignore - node export for testing.
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ViewerUIFeatures;
 }

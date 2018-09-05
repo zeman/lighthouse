@@ -6,38 +6,49 @@
 'use strict';
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to remove content from their CSS that isn’t needed immediately and instead load that content at a later time. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Defer unused CSS',
+  /** Description of a Lighthouse audit that tells the user *why* they should defer loading any content in CSS that isn’t needed at page load. This is displayed after a user expands the section to see more. No word length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Remove unused rules from stylesheets to reduce unnecessary ' +
+    'bytes consumed by network activity. ' +
+    '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/unused-css).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
 const PREVIEW_LENGTH = 100;
 
+/** @typedef {LH.Artifacts.CSSStyleSheetInfo & {networkRecord: LH.Artifacts.NetworkRequest, usedRules: Array<LH.Crdp.CSS.RuleUsage>}} StyleSheetInfo */
+
 class UnusedCSSRules extends ByteEfficiencyAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'unused-css-rules',
-      description: 'Unused CSS rules',
-      informative: true,
+      id: 'unused-css-rules',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Remove unused rules from stylesheets to reduce unnecessary ' +
-          'bytes consumed by network activity. ' +
-          '[Learn more](https://developers.google.com/speed/docs/insights/OptimizeCSSDelivery)',
-      requiredArtifacts: ['CSSUsage', 'URL', 'devtoolsLogs'],
+      requiredArtifacts: ['CSSUsage', 'URL', 'devtoolsLogs', 'traces'],
     };
   }
 
   /**
-   * @param {!Array.<{header: {styleSheetId: string}}>} styles The output of the Styles gatherer.
-   * @param {!Array<WebInspector.NetworkRequest>} networkRecords
-   * @return {!Object} A map of styleSheetId to stylesheet information.
+   * @param {Array<LH.Artifacts.CSSStyleSheetInfo>} styles The output of the Styles gatherer.
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @return {Object<string, StyleSheetInfo>} A map of styleSheetId to stylesheet information.
    */
   static indexStylesheetsById(styles, networkRecords) {
     const indexedNetworkRecords = networkRecords
         .reduce((indexed, record) => {
           indexed[record.url] = record;
           return indexed;
-        }, {});
+        }, /** @type {Object<string, LH.Artifacts.NetworkRequest>} */ ({}));
 
     return styles.reduce((indexed, stylesheet) => {
       indexed[stylesheet.header.styleSheetId] = Object.assign({
@@ -45,13 +56,13 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
         networkRecord: indexedNetworkRecords[stylesheet.header.sourceURL],
       }, stylesheet);
       return indexed;
-    }, {});
+    }, /** @type {Object<string, StyleSheetInfo>} */ ({}));
   }
 
   /**
    * Adds used rules to their corresponding stylesheet.
-   * @param {!Array.<{styleSheetId: string, used: boolean}>} rules The output of the CSSUsage gatherer.
-   * @param {!Object} indexedStylesheets Stylesheet information indexed by id.
+   * @param {Array<LH.Crdp.CSS.RuleUsage>} rules The output of the CSSUsage gatherer.
+   * @param {Object<string, StyleSheetInfo>} indexedStylesheets Stylesheet information indexed by id.
    */
   static indexUsedRules(rules, indexedStylesheets) {
     rules.forEach(rule => {
@@ -68,7 +79,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
   }
 
   /**
-   * @param {!Object} stylesheetInfo
+   * @param {StyleSheetInfo} stylesheetInfo
    * @return {{wastedBytes: number, totalBytes: number, wastedPercent: number}}
    */
   static computeUsage(stylesheetInfo) {
@@ -80,7 +91,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
     }
 
     const totalTransferredBytes = ByteEfficiencyAudit.estimateTransferSize(
-        stylesheetInfo.networkRecord, totalUncompressedBytes, 'stylesheet');
+        stylesheetInfo.networkRecord, totalUncompressedBytes, 'Stylesheet');
     const percentUnused = (totalUncompressedBytes - usedUncompressedBytes) / totalUncompressedBytes;
     const wastedBytes = Math.round(percentUnused * totalTransferredBytes);
 
@@ -93,7 +104,7 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
 
   /**
    * Trims stylesheet content down to the first rule-set definition.
-   * @param {?string} content
+   * @param {string=} content
    * @return {string}
    */
   static determineContentPreview(content) {
@@ -128,28 +139,25 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
   }
 
   /**
-   * @param {!Object} stylesheetInfo The stylesheetInfo object.
+   * @param {StyleSheetInfo} stylesheetInfo The stylesheetInfo object.
    * @param {string} pageUrl The URL of the page, used to identify inline styles.
-   * @return {?{url: string, wastedBytes: number, totalBytes: number}}
+   * @return {LH.Audit.ByteEfficiencyItem}
    */
   static mapSheetToResult(stylesheetInfo, pageUrl) {
-    if (stylesheetInfo.isDuplicate) {
-      return null;
-    }
-
     let url = stylesheetInfo.header.sourceURL;
     if (!url || url === pageUrl) {
       const contentPreview = UnusedCSSRules.determineContentPreview(stylesheetInfo.content);
-      url = {type: 'code', value: contentPreview};
+      url = contentPreview;
     }
 
     const usage = UnusedCSSRules.computeUsage(stylesheetInfo);
+    // @ts-ignore TODO(bckenny): fix index signature on ByteEfficiencyItem.
     return Object.assign({url}, usage);
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!Audit.HeadingsResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<ByteEfficiencyAudit.ByteEfficiencyProduct>}
    */
   static audit_(artifacts) {
     const styles = artifacts.CSSUsage.stylesheets;
@@ -161,19 +169,19 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
       const indexedSheets = UnusedCSSRules.indexStylesheetsById(styles, networkRecords);
       UnusedCSSRules.indexUsedRules(usage, indexedSheets);
 
-      const results = Object.keys(indexedSheets)
+      const items = Object.keys(indexedSheets)
           .map(sheetId => UnusedCSSRules.mapSheetToResult(indexedSheets[sheetId], pageUrl))
           .filter(sheet => sheet && sheet.wastedBytes > IGNORE_THRESHOLD_IN_BYTES);
 
+      /** @type {LH.Result.Audit.OpportunityDetails['headings']} */
       const headings = [
-        {key: 'url', itemType: 'url', text: 'URL'},
-        {key: 'totalBytes', itemType: 'bytes', displayUnit: 'kb', granularity: 1, text: 'Original'},
-        {key: 'wastedBytes', itemType: 'bytes', displayUnit: 'kb', granularity: 1,
-          text: 'Potential Savings'},
+        {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+        {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+        {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
       ];
 
       return {
-        results,
+        items,
         headings,
       };
     });
@@ -181,3 +189,4 @@ class UnusedCSSRules extends ByteEfficiencyAudit {
 }
 
 module.exports = UnusedCSSRules;
+module.exports.UIStrings = UIStrings;

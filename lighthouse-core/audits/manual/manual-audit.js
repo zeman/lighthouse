@@ -14,18 +14,17 @@ const Audit = require('../audit');
 
 class ManualAudit extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {Pick<LH.Audit.Meta, 'scoreDisplayMode'|'requiredArtifacts'>}
    */
-  static get meta() {
+  static get partialMeta() {
     return {
-      informative: true,
-      manual: true,
+      scoreDisplayMode: Audit.SCORING_MODES.MANUAL,
       requiredArtifacts: [],
     };
   }
 
   /**
-   * @return {!AuditResult}
+   * @return {LH.Audit.Product}
    */
   static audit() {
     return {

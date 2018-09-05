@@ -10,37 +10,37 @@ const Audit = require('./audit');
 
 class WorksOffline extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'works-offline',
-      description: 'Responds with a 200 when offline',
-      failureDescription: 'Does not respond with a 200 when offline',
-      helpText: 'If you\'re building a Progressive Web App, consider using a service worker so ' +
-          'that your app can work offline. ' +
+      id: 'works-offline',
+      title: 'Responds with a 200 when offline',
+      failureTitle: 'Does not respond with a 200 when offline',
+      description: 'If you\'re building a Progressive Web App, consider using a service worker ' +
+          'so that your app can work offline. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/http-200-when-offline).',
       requiredArtifacts: ['Offline', 'URL'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
-    let debugString;
+    const warnings = [];
     const passed = artifacts.Offline === 200;
     if (!passed &&
-        !URL.equalWithExcludedFragments(artifacts.URL.initialUrl, artifacts.URL.finalUrl)) {
-      debugString = 'WARNING: You may be failing this check because your test URL ' +
-          `(${artifacts.URL.initialUrl}) was redirected to "${artifacts.URL.finalUrl}". ` +
-          'Try testing the second URL directly.';
+        !URL.equalWithExcludedFragments(artifacts.URL.requestedUrl, artifacts.URL.finalUrl)) {
+      warnings.push('You may be not loading offline because your test URL ' +
+          `(${artifacts.URL.requestedUrl}) was redirected to "${artifacts.URL.finalUrl}". ` +
+          'Try testing the second URL directly.');
     }
 
     return {
       rawValue: passed,
-      debugString,
+      warnings,
     };
   }
 }

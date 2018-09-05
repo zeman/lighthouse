@@ -12,26 +12,26 @@
  */
 
 const Audit = require('./audit');
-const Util = require('../report/v2/renderer/util');
+const Util = require('../report/html/renderer/util');
 
 class Deprecations extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'deprecations',
-      description: 'Avoids deprecated APIs',
-      failureDescription: 'Uses deprecated API\'s',
-      helpText: 'Deprecated APIs will eventually be removed from the browser. ' +
+      id: 'deprecations',
+      title: 'Avoids deprecated APIs',
+      failureTitle: 'Uses deprecated API\'s',
+      description: 'Deprecated APIs will eventually be removed from the browser. ' +
           '[Learn more](https://www.chromestatus.com/features#deprecated).',
       requiredArtifacts: ['ChromeConsoleMessages'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const entries = artifacts.ChromeConsoleMessages;

@@ -13,113 +13,95 @@
  */
 module.exports = [
   {
-    initialUrl: 'http://localhost:10200/byte-efficiency/tester.html',
-    url: 'http://localhost:10200/byte-efficiency/tester.html',
+    requestedUrl: 'http://localhost:10200/byte-efficiency/tester.html',
+    finalUrl: 'http://localhost:10200/byte-efficiency/tester.html',
     audits: {
       'unminified-css': {
-        extendedInfo: {
-          value: {
-            wastedKb: 17,
-            results: {
-              length: 1,
-            },
+        details: {
+          overallSavingsBytes: '>17000',
+          items: {
+            length: 1,
           },
         },
       },
       'unminified-javascript': {
         score: '<1',
-        extendedInfo: {
-          value: {
-            wastedKb: 45,
-            wastedMs: '>500',
-            results: {
-              length: 1,
-            },
+        details: {
+          overallSavingsBytes: '>45000',
+          overallSavingsMs: '>500',
+          items: {
+            length: 1,
           },
         },
       },
       'unused-css-rules': {
-        extendedInfo: {
-          value: {
-            wastedKb: 39,
-            results: {
-              length: 2,
-            },
+        details: {
+          overallSavingsBytes: '>39000',
+          items: {
+            length: 2,
           },
         },
       },
       'unused-javascript': {
         score: '<1',
-        extendedInfo: {
-          value: {
-            wastedKb: '>=25',
-            wastedMs: '>500',
-            results: {
-              length: 2,
-            },
+        details: {
+          overallSavingsBytes: '>=25000',
+          overallSavingsMs: '>300',
+          items: {
+            length: 2,
           },
         },
       },
       'offscreen-images': {
-        score: '<1', // big enough savings to interfere with download of script.js
-        extendedInfo: {
-          value: {
-            results: [
-              {
-                url: /lighthouse-unoptimized.jpg$/,
-              }, {
-                url: /lighthouse-480x320.webp$/,
-              }, {
-                url: /lighthouse-480x320.webp\?invisible$/,
-              }, {
-                url: /large.svg$/,
-              },
-            ],
-          },
+        details: {
+          items: [
+            {
+              url: /lighthouse-unoptimized.jpg$/,
+            }, {
+              url: /lighthouse-480x320.webp$/,
+            }, {
+              url: /lighthouse-480x320.webp\?invisible$/,
+            }, {
+              url: /large.svg$/,
+            },
+          ],
         },
       },
       'uses-webp-images': {
-        score: '<1', // big enough savings to interfere with download of script.js
-        extendedInfo: {
-          value: {
-            wastedKb: '>60',
-            wastedMs: '>200',
-            results: {
-              length: 4,
-            },
+        details: {
+          overallSavingsBytes: '>60000',
+          items: {
+            length: 4,
           },
         },
       },
       'uses-text-compression': {
-        extendedInfo: {
-          value: {
-            wastedMs: '>700',
-            wastedKb: '>50',
-            results: {
-              length: 2,
-            },
+        score: '<1',
+        details: {
+          overallSavingsMs: '>700',
+          overallSavingsBytes: '>50000',
+          items: {
+            length: 2,
           },
         },
       },
       'uses-optimized-images': {
-        extendedInfo: {
-          value: {
-            wastedKb: '>10',
-            results: {
-              length: 1,
-            },
+        details: {
+          overallSavingsBytes: '>10000',
+          items: {
+            length: 1,
           },
         },
       },
       'uses-responsive-images': {
-        extendedInfo: {
-          value: {
-            wastedKb: '>50',
-            wastedMs: '>100',
-            results: {
-              length: 3,
-            },
-          },
+        displayValue: 'Potential savings of 75\xa0KB',
+        details: {
+          overallSavingsBytes: '>75000',
+          items: [
+            {wastedPercent: '<60'},
+            {wastedPercent: '<60'},
+            {wastedPercent: '<60'},
+          ],
         },
       },
     },

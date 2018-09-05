@@ -8,11 +8,11 @@
 const UnusedJavaScript = require('../../../audits/byte-efficiency/unused-javascript');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
-function generateRecord(url, _transferSize, _resourceType) {
+function generateRecord(url, transferSize, resourceType) {
   url = `https://google.com/${url}`;
-  return {url, _transferSize, _resourceType};
+  return {url, transferSize, resourceType};
 }
 
 function generateScript(url, ranges, transferSize = 1000) {
@@ -76,9 +76,9 @@ describe('UnusedJavaScript audit', () => {
     const scriptB = generateScript('scriptB.js', [[0, 200, true], [0, 50, false]]);
     const inlineA = generateScript('inline.html', [[0, 5000, true], [5000, 6000, false]]);
     const inlineB = generateScript('inline.html', [[0, 15000, true], [0, 5000, false]]);
-    const recordA = generateRecord('scriptA.js', 35000, {_name: 'script'});
-    const recordB = generateRecord('scriptB.js', 50000, {_name: 'script'});
-    const recordInline = generateRecord('inline.html', 1000000, {_name: 'document'});
+    const recordA = generateRecord('scriptA.js', 35000, 'Script');
+    const recordB = generateRecord('scriptB.js', 50000, 'Script');
+    const recordInline = generateRecord('inline.html', 1000000, 'Document');
 
     const result = UnusedJavaScript.audit_(
       {JsUsage: [scriptA, scriptB, scriptUnknown, inlineA, inlineB]},
@@ -86,14 +86,14 @@ describe('UnusedJavaScript audit', () => {
     );
 
     it('should merge duplicates', () => {
-      assert.equal(result.results.length, 2);
+      assert.equal(result.items.length, 2);
 
-      const scriptBWaste = result.results[0];
+      const scriptBWaste = result.items[0];
       assert.equal(scriptBWaste.totalBytes, 50000);
       assert.equal(scriptBWaste.wastedBytes, 12500);
       assert.equal(scriptBWaste.wastedPercent, 25);
 
-      const inlineWaste = result.results[1];
+      const inlineWaste = result.items[1];
       assert.equal(inlineWaste.totalBytes, 21000);
       assert.equal(inlineWaste.wastedBytes, 6000);
       assert.equal(Math.round(inlineWaste.wastedPercent), 29);

@@ -6,7 +6,7 @@
 'use strict';
 
 const statistics = require('../lib/statistics');
-const Util = require('../report/v2/renderer/util');
+const Util = require('../report/html/renderer/util');
 
 const DEFAULT_PASS = 'defaultPass';
 
@@ -26,12 +26,16 @@ class Audit {
   }
 
   /**
-   * @return {LH.Audit.ScoringModes}
+   * @return {LH.Audit.ScoreDisplayModes}
    */
   static get SCORING_MODES() {
     return {
       NUMERIC: 'numeric',
       BINARY: 'binary',
+      MANUAL: 'manual',
+      INFORMATIVE: 'informative',
+      NOT_APPLICABLE: 'not-applicable',
+      ERROR: 'error',
     };
   }
 
@@ -41,6 +45,27 @@ class Audit {
   static get meta() {
     throw new Error('Audit meta information must be overridden.');
   }
+
+  /**
+   * @return {Object}
+   */
+  static get defaultOptions() {
+    return {};
+  }
+
+  /* eslint-disable no-unused-vars */
+
+  /**
+   *
+   * @param {LH.Artifacts} artifacts
+   * @param {LH.Audit.Context} context
+   * @return {LH.Audit.Product|Promise<LH.Audit.Product>}
+   */
+  static audit(artifacts, context) {
+    throw new Error('audit() method must be overriden');
+  }
+
+  /* eslint-enable no-unused-vars */
 
   /**
    * Computes a clamped score between 0 and 1 based on the measured value. Score is determined by
@@ -66,21 +91,20 @@ class Audit {
 
   /**
    * @param {typeof Audit} audit
-   * @param {string} debugString
+   * @param {string} errorMessage
    * @return {LH.Audit.Result}
    */
-  static generateErrorAuditResult(audit, debugString) {
+  static generateErrorAuditResult(audit, errorMessage) {
     return Audit.generateAuditResult(audit, {
       rawValue: null,
-      error: true,
-      debugString,
+      errorMessage,
     });
   }
 
   /**
    * @param {Array<LH.Audit.Heading>} headings
-   * @param {Array<Object<string, string>>} results
-   * @param {LH.Audit.DetailsRendererDetailsSummary} summary
+   * @param {Array<Object<string, LH.Audit.DetailsItem>>} results
+   * @param {LH.Audit.DetailsRendererDetailsSummary=} summary
    * @return {LH.Audit.DetailsRendererDetailsJSON}
    */
   static makeTableDetails(headings, results, summary) {
@@ -102,17 +126,34 @@ class Audit {
   }
 
   /**
+   * @param {Array<LH.ResultLite.Audit.ColumnHeading>} headings
+   * @param {Array<LH.ResultLite.Audit.WastedBytesDetailsItem>|Array<LH.ResultLite.Audit.WastedTimeDetailsItem>} items
+   * @param {number} overallSavingsMs
+   * @param {number=} overallSavingsBytes
+   * @return {LH.Result.Audit.OpportunityDetails}
+   */
+  static makeOpportunityDetails(headings, items, overallSavingsMs, overallSavingsBytes) {
+    return {
+      type: 'opportunity',
+      headings: items.length === 0 ? [] : headings,
+      items,
+      overallSavingsMs,
+      overallSavingsBytes,
+    };
+  }
+
+  /**
    * @param {typeof Audit} audit
    * @param {LH.Audit.Product} result
-   * @return {{score: number, scoreDisplayMode: LH.Audit.ScoringModeValue}}
+   * @return {{score: number|null, scoreDisplayMode: LH.Audit.ScoreDisplayMode}}
    */
   static _normalizeAuditScore(audit, result) {
     // Cast true/false to 1/0
     let score = result.score === undefined ? Number(result.rawValue) : result.score;
 
     if (!Number.isFinite(score)) throw new Error(`Invalid score: ${score}`);
-    if (score > 1) throw new Error(`Audit score for ${audit.meta.name} is > 1`);
-    if (score < 0) throw new Error(`Audit score for ${audit.meta.name} is < 0`);
+    if (score > 1) throw new Error(`Audit score for ${audit.meta.id} is > 1`);
+    if (score < 0) throw new Error(`Audit score for ${audit.meta.id} is < 0`);
 
     score = clampTo2Decimals(score);
 
@@ -134,40 +175,45 @@ class Audit {
       throw new Error('generateAuditResult requires a rawValue');
     }
 
-    // eslint-disable-next-line prefer-const
+    // TODO(bckenny): cleanup the flow of notApplicable/error/binary/numeric
     let {score, scoreDisplayMode} = Audit._normalizeAuditScore(audit, result);
 
-    // If the audit was determined to not apply to the page, we'll reset it as informative only
-    let informative = audit.meta.informative;
+    // If the audit was determined to not apply to the page, set score display mode appropriately
     if (result.notApplicable) {
-      score = 1;
-      informative = true;
+      scoreDisplayMode = Audit.SCORING_MODES.NOT_APPLICABLE;
       result.rawValue = true;
     }
 
-    const displayValue = result.displayValue ? `${result.displayValue}` : '';
+    if (result.errorMessage) {
+      scoreDisplayMode = Audit.SCORING_MODES.ERROR;
+    }
 
-    let auditDescription = audit.meta.description;
-    if (audit.meta.failureDescription) {
-      if (score < Util.PASS_THRESHOLD) {
-        auditDescription = audit.meta.failureDescription;
+    let auditTitle = audit.meta.title;
+    if (audit.meta.failureTitle) {
+      if (Number(score) < Util.PASS_THRESHOLD) {
+        auditTitle = audit.meta.failureTitle;
       }
     }
 
+    if (scoreDisplayMode !== Audit.SCORING_MODES.BINARY &&
+        scoreDisplayMode !== Audit.SCORING_MODES.NUMERIC) {
+      score = null;
+    }
+
     return {
+      id: audit.meta.id,
+      title: auditTitle,
+      description: audit.meta.description,
+
       score,
-      displayValue,
-      rawValue: result.rawValue,
-      error: result.error,
-      debugString: result.debugString,
-      extendedInfo: result.extendedInfo,
       scoreDisplayMode,
-      informative,
-      manual: audit.meta.manual,
-      notApplicable: result.notApplicable,
-      name: audit.meta.name,
-      description: auditDescription,
-      helpText: audit.meta.helpText,
+      rawValue: result.rawValue,
+
+      displayValue: result.displayValue,
+      explanation: result.explanation,
+      errorMessage: result.errorMessage,
+      warnings: result.warnings,
+
       details: result.details,
     };
   }

@@ -6,7 +6,7 @@
 'use strict';
 
 const ComputedArtifact = require('./computed-artifact');
-const speedline = require('speedline');
+const speedline = require('speedline-core');
 const LHError = require('../../lib/errors');
 
 class Speedline extends ComputedArtifact {
@@ -15,7 +15,9 @@ class Speedline extends ComputedArtifact {
   }
 
   /**
-   * @return {!Promise}
+   * @param {LH.Trace} trace
+   * @param {LH.ComputedArtifacts} computedArtifacts
+   * @return {Promise<LH.Artifacts.Speedline>}
    */
   compute_(trace, computedArtifacts) {
     // speedline() may throw without a promise, so we resolve immediately
@@ -30,7 +32,7 @@ class Speedline extends ComputedArtifact {
       return speedline(traceEvents, {
         timeOrigin: navStart,
         fastMode: true,
-        include: 'perceptualSpeedIndex',
+        include: 'speedIndex',
       });
     }).catch(err => {
       if (/No screenshots found in trace/.test(err.message)) {
@@ -38,6 +40,16 @@ class Speedline extends ComputedArtifact {
       }
 
       throw err;
+    }).then(speedline => {
+      if (speedline.frames.length === 0) {
+        throw new LHError(LHError.errors.NO_SPEEDLINE_FRAMES);
+      }
+
+      if (speedline.speedIndex === 0) {
+        throw new LHError(LHError.errors.SPEEDINDEX_OF_ZERO);
+      }
+
+      return speedline;
     });
   }
 }

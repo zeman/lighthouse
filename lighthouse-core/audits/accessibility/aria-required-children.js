@@ -15,15 +15,15 @@ const AxeAudit = require('./axe-audit');
 
 class AriaRequiredChildren extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'aria-required-children',
-      description: 'Elements with `[role]` that require specific children `[role]`s, are present',
-      failureDescription: 'Elements with `[role]` that require specific children `[role]`s, ' +
+      id: 'aria-required-children',
+      title: 'Elements with `[role]` that require specific children `[role]`s, are present',
+      failureTitle: 'Elements with `[role]` that require specific children `[role]`s, ' +
           'are missing.',
-      helpText: 'Some ARIA parent roles must contain specific child roles to perform ' +
+      description: 'Some ARIA parent roles must contain specific child roles to perform ' +
           'their intended accessibility functions. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/aria-required-children?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],

@@ -5,9 +5,9 @@
  */
 'use strict';
 
-const Node = require('./node');
+const BaseNode = require('./base-node');
 
-class CPUNode extends Node {
+class CPUNode extends BaseNode {
   /**
    * @param {LH.TraceEvent} parentEvent
    * @param {LH.TraceEvent[]=} childEvents
@@ -20,11 +20,8 @@ class CPUNode extends Node {
     this._childEvents = childEvents;
   }
 
-  /**
-   * @return {string}
-   */
   get type() {
-    return Node.TYPES.CPU;
+    return BaseNode.TYPES.CPU;
   }
 
   /**
@@ -71,7 +68,7 @@ class CPUNode extends Node {
   isEvaluateScriptFor(urls) {
     return this._childEvents.some(evt => {
       return evt.name === 'EvaluateScript' &&
-        evt.args.data &&
+        !!evt.args.data && !!evt.args.data.url &&
         urls.has(evt.args.data.url);
     });
   }

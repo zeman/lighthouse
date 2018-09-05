@@ -8,7 +8,7 @@
 const NoWebSQLAudit = require('../../../audits/dobetterweb/no-websql.js');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('No websql audit', () => {
   it('passes when no database is created', () => {
@@ -28,6 +28,6 @@ describe('No websql audit', () => {
     });
 
     assert.equal(auditResult.rawValue, false);
-    assert.ok(auditResult.debugString.match(/Found database "db-name", version: 1.0/));
+    assert.ok(auditResult.displayValue.match(/db-name.*1.0/));
   });
 });

@@ -2,6 +2,7 @@ node_modules
 .DS_Store
 npm-debug.log
 .vscode
+.tmp
 
 lighthouse-extension/dist
 lighthouse-core/third_party/src
@@ -21,13 +22,17 @@ last-run-results.html
 *.report.html
 *.report.dom.html
 *.report.json
+*.report.csv
 *.report.pretty
 *.artifacts.log
 
 !lighthouse-core/test/results/artifacts/*.trace.json
 !lighthouse-core/test/results/artifacts/*.devtoolslog.json
+!lighthouse-core/test/fixtures/artifacts/**/*.trace.json
+!lighthouse-core/test/fixtures/artifacts/**/*.devtoolslog.json
 
 latest-run
+lantern-data
 
 closure-error.log
 yarn-error.log

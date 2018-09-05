@@ -30,7 +30,11 @@ class ExtensionConnection extends Connection {
   _onEvent(source, method, params) {
     // log events received
     log.log('<=', method, params);
-    this.emitNotification(method, params);
+
+    // Warning: type cast, assuming that debugger API is giving us a valid protocol event.
+    // Must be cast together since types of `params` and `method` come as a pair.
+    const eventMessage = /** @type {LH.Protocol.RawEventMessage} */({method, params});
+    this.emitProtocolEvent(eventMessage);
   }
 
   /**
@@ -105,12 +109,15 @@ class ExtensionConnection extends Connection {
 
   /**
    * Call protocol methods.
-   * @override
-   * @param {string} method
-   * @param {object=} params
-   * @return {Promise<*>}
+   * @template {keyof LH.CrdpCommands} C
+   * @param {C} method
+   * @param {LH.CrdpCommands[C]['paramsType']} paramArgs,
+   * @return {Promise<LH.CrdpCommands[C]['returnType']>}
    */
-  sendCommand(method, params) {
+  sendCommand(method, ...paramArgs) {
+    // Reify params since we need it as a property so can't just spread again.
+    const params = paramArgs.length ? paramArgs[0] : undefined;
+
     return new Promise((resolve, reject) => {
       log.formatProtocol('method => browser', {method, params}, 'verbose');
       if (!this._tabId) {
@@ -118,7 +125,7 @@ class ExtensionConnection extends Connection {
         return reject(new Error('No tabId set for sendCommand'));
       }
 
-      chrome.debugger.sendCommand({tabId: this._tabId}, method, params, result => {
+      chrome.debugger.sendCommand({tabId: this._tabId}, method, params || {}, result => {
         if (chrome.runtime.lastError) {
           // The error from the extension has a `message` property that is the
           // stringified version of the actual protocol error object.
@@ -154,14 +161,23 @@ class ExtensionConnection extends Connection {
         if (chrome.runtime.lastError) {
           return reject(chrome.runtime.lastError);
         }
+
+        const errMessage = 'Couldn\'t resolve current tab. Check your URL, reload, and try again.';
         if (tabs.length === 0) {
-          const message = 'Couldn\'t resolve current tab. Check your URL, reload, and try again.';
-          return reject(new Error(message));
+          return reject(new Error(errMessage));
         }
         if (tabs.length > 1) {
           log.warn('ExtensionConnection', '_queryCurrentTab returned multiple tabs');
         }
-        resolve(tabs[0]);
+
+        const firstUrledTab = tabs.find(tab => !!tab.url);
+        if (!firstUrledTab) {
+          const tabIds = tabs.map(tab => tab.id).join(', ');
+          const message = errMessage + ` Found ${tabs.length} tab(s) with id(s) [${tabIds}].`;
+          return reject(new Error(message));
+        }
+
+        resolve(firstUrledTab);
       }));
     });
   }

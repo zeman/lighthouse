@@ -15,15 +15,15 @@ const AxeAudit = require('./axe-audit');
 
 class ColorContrast extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'color-contrast',
-      description: 'Background and foreground colors have a sufficient contrast ratio',
-      failureDescription: 'Background and foreground colors do not have a ' +
+      id: 'color-contrast',
+      title: 'Background and foreground colors have a sufficient contrast ratio',
+      failureTitle: 'Background and foreground colors do not have a ' +
           'sufficient contrast ratio.',
-      helpText: 'Low-contrast text is difficult or impossible for many users to read. ' +
+      description: 'Low-contrast text is difficult or impossible for many users to read. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/color-contrast?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],
     };

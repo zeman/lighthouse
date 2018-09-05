@@ -26,6 +26,7 @@ const SAMPLED_ERRORS = [
   {pattern: /(IDLE_PERIOD|FMP_TOO_LATE)/, rate: 0.1},
   {pattern: /^NO_.*/, rate: 0.1},
   // Message based sampling
+  {pattern: /Could not load stylesheet/, rate: 0.01},
   {pattern: /Failed to decode/, rate: 0.1},
   {pattern: /All image optimizations failed/, rate: 0.1},
   {pattern: /No.*resource with given/, rate: 0.01},
@@ -82,12 +83,11 @@ sentryDelegate.init = function init(opts) {
     );
   }
 
-  const context = {
+  const context = Object.assign({
     url: opts.url,
     deviceEmulation: !opts.flags.disableDeviceEmulation,
-    networkThrottling: !opts.flags.disableNetworkThrottling,
-    cpuThrottling: !opts.flags.disableCpuThrottling,
-  };
+    throttlingMethod: opts.flags.throttlingMethod,
+  }, opts.flags.throttling);
 
   sentryDelegate.mergeContext({extra: Object.assign({}, environmentData.extra, context)});
   return context;

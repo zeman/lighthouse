@@ -56,40 +56,49 @@ function getPrimaryDomain(url) {
 
 class Canonical extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'canonical',
-      description: 'Document has a valid `rel=canonical`',
-      failureDescription: 'Document does not have a valid `rel=canonical`',
-      helpText: 'Canonical links suggest which URL to show in search results. ' +
+      id: 'canonical',
+      title: 'Document has a valid `rel=canonical`',
+      failureTitle: 'Document does not have a valid `rel=canonical`',
+      description: 'Canonical links suggest which URL to show in search results. ' +
         '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/canonical).',
-      requiredArtifacts: ['Canonical', 'Hreflang'],
+      requiredArtifacts: ['Canonical', 'Hreflang', 'URL'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<LH.Audit.Product>}
    */
   static audit(artifacts) {
-    const devtoolsLogs = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
 
-    return artifacts.requestMainResource(devtoolsLogs)
+    return artifacts.requestMainResource({devtoolsLog, URL: artifacts.URL})
       .then(mainResource => {
         const baseURL = new URL(mainResource.url);
+        /** @type {Array<string>} */
         let canonicals = [];
+        /** @type {Array<string>} */
         let hreflangs = [];
 
-        mainResource.responseHeaders
+        mainResource.responseHeaders && mainResource.responseHeaders
           .filter(h => h.name.toLowerCase() === LINK_HEADER)
           .forEach(h => {
             canonicals = canonicals.concat(getCanonicalLinksFromHeader(h.value));
             hreflangs = hreflangs.concat(getHreflangsFromHeader(h.value));
           });
 
-        canonicals = canonicals.concat(artifacts.Canonical);
+        for (const canonical of artifacts.Canonical) {
+          if (canonical !== null) {
+            canonicals.push(canonical);
+          }
+        }
+        // we should only fail if there are multiple conflicting URLs
+        // see: https://github.com/GoogleChrome/lighthouse/issues/3178#issuecomment-381181762
+        canonicals = Array.from(new Set(canonicals));
 
         artifacts.Hreflang.forEach(({href}) => hreflangs.push(href));
 
@@ -107,7 +116,7 @@ class Canonical extends Audit {
         if (canonicals.length > 1) {
           return {
             rawValue: false,
-            debugString: `Multiple URLs (${canonicals.join(', ')})`,
+            explanation: `Multiple conflicting URLs (${canonicals.join(', ')})`,
           };
         }
 
@@ -116,14 +125,14 @@ class Canonical extends Audit {
         if (!isValidRelativeOrAbsoluteURL(canonical)) {
           return {
             rawValue: false,
-            debugString: `Invalid URL (${canonical})`,
+            explanation: `Invalid URL (${canonical})`,
           };
         }
 
         if (!URL.isValid(canonical)) {
           return {
             rawValue: false,
-            debugString: `Relative URL (${canonical})`,
+            explanation: `Relative URL (${canonical})`,
           };
         }
 
@@ -134,7 +143,7 @@ class Canonical extends Audit {
           baseURL.href !== canonicalURL.href) {
           return {
             rawValue: false,
-            debugString: `Points to another hreflang location (${baseURL.href})`,
+            explanation: `Points to another hreflang location (${baseURL.href})`,
           };
         }
 
@@ -143,7 +152,7 @@ class Canonical extends Audit {
         if (getPrimaryDomain(canonicalURL) !== getPrimaryDomain(baseURL)) {
           return {
             rawValue: false,
-            debugString: `Points to a different domain (${canonicalURL})`,
+            explanation: `Points to a different domain (${canonicalURL})`,
           };
         }
 
@@ -152,7 +161,7 @@ class Canonical extends Audit {
           canonicalURL.pathname === '/' && baseURL.pathname !== '/') {
           return {
             rawValue: false,
-            debugString: 'Points to a root of the same origin',
+            explanation: 'Points to a root of the same origin',
           };
         }
 

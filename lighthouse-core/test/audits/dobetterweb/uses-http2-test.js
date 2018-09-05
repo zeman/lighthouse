@@ -10,9 +10,8 @@ const assert = require('assert');
 
 const URL = 'https://webtide.com/http2-push-demo/';
 const networkRecords = require('../../fixtures/networkRecords-mix.json');
-const h2Records = require('../../fixtures/networkRecords-h2push.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('Resources are fetched over http/2', () => {
   it('fails when some resources were requested via http/1.x', () => {
@@ -22,8 +21,9 @@ describe('Resources are fetched over http/2', () => {
       requestNetworkRecords: () => Promise.resolve(networkRecords),
     }).then(auditResult => {
       assert.equal(auditResult.rawValue, false);
-      assert.ok(auditResult.displayValue.match('4 requests were not'));
-      assert.equal(auditResult.details.items.length, 4);
+      assert.ok(auditResult.displayValue.match('3 requests not'));
+      assert.equal(auditResult.details.items.length, 3);
+      assert.equal(auditResult.details.items[0].url, 'https://webtide.com/wp-content/plugins/wp-pagenavi/pagenavi-css.css?ver=2.70');
       const headers = auditResult.details.headings;
       assert.equal(headers[0].text, 'URL', 'table headings are correct and in order');
       assert.equal(headers[1].text, 'Protocol', 'table headings are correct and in order');
@@ -37,11 +37,16 @@ describe('Resources are fetched over http/2', () => {
       devtoolsLogs: {[UsesHTTP2Audit.DEFAULT_PASS]: []},
       requestNetworkRecords: () => Promise.resolve(entryWithHTTP1),
     }).then(auditResult => {
-      assert.ok(auditResult.displayValue.match('1 request was not'));
+      assert.ok(auditResult.displayValue.match('1 request not'));
     });
   });
 
   it('passes when all resources were requested via http/2', () => {
+    const h2Records = JSON.parse(JSON.stringify(networkRecords));
+    h2Records.forEach(record => {
+      record.protocol = 'h2';
+    });
+
     return UsesHTTP2Audit.audit({
       URL: {finalUrl: URL},
       devtoolsLogs: {[UsesHTTP2Audit.DEFAULT_PASS]: []},

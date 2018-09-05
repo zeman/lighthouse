@@ -7,7 +7,7 @@ Setup:
 ```sh
 # get node 6
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - &&\
-sudo apt-get install -y nodejs
+sudo apt-get install -y nodejs npm
 
 # get chromium (stable)
 apt-get install chromium-browser
@@ -27,9 +27,9 @@ lighthouse --chrome-flags="--headless" https://github.com
 Alternatively, you can run full Chrome + xvfb instead of headless mode. These steps worked on Debian Jessie:
 
 ```sh
-# get node 6
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-sudo apt-get install -y nodejs
+# get node 8
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+sudo apt-get install -y nodejs npm
 
 # get chromium (stable) and Xvfb
 apt-get install chromium-browser xvfb

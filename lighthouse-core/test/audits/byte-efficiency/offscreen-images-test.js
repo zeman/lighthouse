@@ -7,9 +7,11 @@
 
 const UnusedImages =
     require('../../../audits/byte-efficiency/offscreen-images.js');
+const NetworkNode = require('../../../lib/dependency-graph/network-node');
+const CPUNode = require('../../../lib/dependency-graph/cpu-node');
 const assert = require('assert');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 function generateRecord(resourceSizeInKb, startTime = 0, mimeType = 'image/png') {
   return {
     mimeType,
@@ -49,7 +51,12 @@ function generateInteractiveFunc(desiredTimeInSeconds) {
 }
 
 describe('OffscreenImages audit', () => {
+  let context;
   const DEFAULT_DIMENSIONS = {innerWidth: 1920, innerHeight: 1080};
+
+  beforeEach(() => {
+    context = {settings: {throttlingMethod: 'devtools'}};
+  });
 
   it('handles images without network record', () => {
     return UnusedImages.audit_({
@@ -58,9 +65,10 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(100, 100), [0, 0]),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 0);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 0);
     });
   });
 
@@ -75,9 +83,10 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(400, 400), [1720, 1080], generateRecord(3), urlC),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 0);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 0);
     });
   });
 
@@ -98,9 +107,10 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(1000, 1000), [0, -500], generateRecord(100), url('E')),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 4);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 4);
     });
   });
 
@@ -111,9 +121,11 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(0, 0), [0, 0], generateRecord(100)),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 1);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 1);
+      assert.equal(auditResult.items[0].wastedBytes, 100 * 1024);
     });
   });
 
@@ -128,9 +140,10 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(400, 400), [0, 1500], generateRecord(90), urlB),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 1);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 1);
     });
   });
 
@@ -142,9 +155,39 @@ describe('OffscreenImages audit', () => {
         generateImage(generateSize(200, 200), [3000, 0], generateRecord(100, 3)),
       ],
       traces: {},
-      requestFirstInteractive: generateInteractiveFunc(2),
-    }).then(auditResult => {
-      assert.equal(auditResult.results.length, 0);
+      devtoolsLogs: {},
+      requestInteractive: generateInteractiveFunc(2),
+    }, [], context, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 0);
+    });
+  });
+
+  it('disregards images loaded after last long task (Lantern)', () => {
+    context = {settings: {throttlingMethod: 'simulate'}};
+    const recordA = {url: 'a', resourceSize: 100 * 1024, requestId: 'a'};
+    const recordB = {url: 'b', resourceSize: 100 * 1024, requestId: 'b'};
+
+    const networkA = new NetworkNode(recordA);
+    const networkB = new NetworkNode(recordB);
+    const cpu = new CPUNode({}, []);
+    const timings = new Map([
+      [networkA, {startTime: 1000}],
+      [networkB, {startTime: 2000}],
+      [cpu, {startTime: 1975, endTime: 2025, duration: 50}],
+    ]);
+
+    return UnusedImages.audit_({
+      ViewportDimensions: DEFAULT_DIMENSIONS,
+      ImageUsage: [
+        generateImage(generateSize(0, 0), [0, 0], recordA, recordA.url),
+        generateImage(generateSize(200, 200), [3000, 0], recordB, recordB.url),
+      ],
+      traces: {},
+      devtoolsLogs: {},
+      requestInteractive: async () => ({pessimisticEstimate: {nodeTimings: timings}}),
+    }, [], context, [], context).then(auditResult => {
+      assert.equal(auditResult.items.length, 1);
+      assert.equal(auditResult.items[0].url, 'a');
     });
   });
 });

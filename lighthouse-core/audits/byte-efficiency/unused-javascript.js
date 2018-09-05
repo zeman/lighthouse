@@ -6,26 +6,35 @@
 'use strict';
 
 const ByteEfficiencyAudit = require('./byte-efficiency-audit');
+const i18n = require('../../lib/i18n');
+
+const UIStrings = {
+  /** Imperative title of a Lighthouse audit that tells the user to remove JavaScript that is never evaluated during page load. This is displayed in a list of audit titles that Lighthouse generates. */
+  title: 'Remove unused JavaScript',
+  /** Description of a Lighthouse audit that tells the user *why* they should remove JavaScript that is never needed/evaluated by the browser. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Remove unused JavaScript to reduce bytes consumed by network activity.',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 const IGNORE_THRESHOLD_IN_BYTES = 2048;
 
 class UnusedJavaScript extends ByteEfficiencyAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'unused-javascript',
-      description: 'Unused JavaScript',
-      informative: true,
+      id: 'unused-javascript',
+      title: str_(UIStrings.title),
+      description: str_(UIStrings.description),
       scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
-      helpText: 'Remove unused JavaScript to reduce bytes consumed by network activity.',
-      requiredArtifacts: ['JsUsage', 'devtoolsLogs'],
+      requiredArtifacts: ['JsUsage', 'devtoolsLogs', 'traces'],
     };
   }
 
   /**
-   * @param {!JsUsageArtifact} script
+   * @param {LH.Crdp.Profiler.ScriptCoverage} script
    * @return {{unusedLength: number, contentLength: number}}
    */
   static computeWaste(script) {
@@ -61,9 +70,9 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
   }
 
   /**
-   * @param {!Array<{unusedLength: number, contentLength: number}>} wasteData
-   * @param {!WebInspector.NetworkRequest} networkRecord
-   * @return {{url: string, totalBytes: number, wastedBytes: number, wastedPercent: number}}
+   * @param {Array<{unusedLength: number, contentLength: number}>} wasteData
+   * @param {LH.Artifacts.NetworkRequest} networkRecord
+   * @return {LH.Audit.ByteEfficiencyItem}
    */
   static mergeWaste(wasteData, networkRecord) {
     let unusedLength = 0;
@@ -74,7 +83,7 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
     }
 
     const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, contentLength,
-        'script');
+        'Script');
     const wastedRatio = (unusedLength / contentLength) || 0;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -87,10 +96,12 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!Audit.HeadingsResult}
+   * @param {LH.Artifacts} artifacts
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @return {ByteEfficiencyAudit.ByteEfficiencyProduct}
    */
   static audit_(artifacts, networkRecords) {
+    /** @type {Map<string, Array<LH.Crdp.Profiler.ScriptCoverage>>} */
     const scriptsByUrl = new Map();
     for (const script of artifacts.JsUsage) {
       const scripts = scriptsByUrl.get(script.url) || [];
@@ -98,26 +109,26 @@ class UnusedJavaScript extends ByteEfficiencyAudit {
       scriptsByUrl.set(script.url, scripts);
     }
 
-    const results = [];
+    const items = [];
     for (const [url, scripts] of scriptsByUrl.entries()) {
       const networkRecord = networkRecords.find(record => record.url === url);
       if (!networkRecord) continue;
       const wasteData = scripts.map(UnusedJavaScript.computeWaste);
-      const result = UnusedJavaScript.mergeWaste(wasteData, networkRecord);
-      if (result.wastedBytes <= IGNORE_THRESHOLD_IN_BYTES) continue;
-      results.push(result);
+      const item = UnusedJavaScript.mergeWaste(wasteData, networkRecord);
+      if (item.wastedBytes <= IGNORE_THRESHOLD_IN_BYTES) continue;
+      items.push(item);
     }
 
     return {
-      results,
+      items,
       headings: [
-        {key: 'url', itemType: 'url', text: 'URL'},
-        {key: 'totalBytes', itemType: 'bytes', displayUnit: 'kb', granularity: 1, text: 'Original'},
-        {key: 'wastedBytes', itemType: 'bytes', displayUnit: 'kb', granularity: 1,
-          text: 'Potential Savings'},
+        {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+        {key: 'totalBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnSize)},
+        {key: 'wastedBytes', valueType: 'bytes', label: str_(i18n.UIStrings.columnWastedBytes)},
       ],
     };
   }
 }
 
 module.exports = UnusedJavaScript;
+module.exports.UIStrings = UIStrings;

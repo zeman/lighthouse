@@ -14,31 +14,36 @@
 const Audit = require('./audit');
 
 const URL = require('../lib/url-shim');
-const THRESHOLD = 0.05;
+const THRESHOLD_PX = 2;
+
+/** @typedef {Required<LH.Artifacts.SingleImageUsage>} WellDefinedImage */
 
 class ImageAspectRatio extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'image-aspect-ratio',
-      description: 'Displays images with correct aspect ratio',
-      failureDescription: 'Displays images with incorrect aspect ratio',
-      helpText: 'Image display dimensions should match natural aspect ratio.',
+      id: 'image-aspect-ratio',
+      title: 'Displays images with correct aspect ratio',
+      failureTitle: 'Displays images with incorrect aspect ratio',
+      description: 'Image display dimensions should match natural aspect ratio. ' +
+        '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/aspect-ratio).',
       requiredArtifacts: ['ImageUsage'],
     };
   }
 
   /**
-   * @param {!Object} image
-   * @return {?Object}
+   * @param {WellDefinedImage} image
+   * @return {Error|{url: string, displayedAspectRatio: string, actualAspectRatio: string, doRatiosMatch: boolean}}
    */
   static computeAspectRatios(image) {
     const url = URL.elideDataURI(image.src);
     const actualAspectRatio = image.naturalWidth / image.naturalHeight;
     const displayedAspectRatio = image.width / image.height;
-    const doRatiosMatch = Math.abs(actualAspectRatio - displayedAspectRatio) < THRESHOLD;
+
+    const targetDisplayHeight = image.width / actualAspectRatio;
+    const doRatiosMatch = Math.abs(targetDisplayHeight - image.height) < THRESHOLD_PX;
 
     if (!Number.isFinite(actualAspectRatio) ||
       !Number.isFinite(displayedAspectRatio)) {
@@ -56,13 +61,15 @@ class ImageAspectRatio extends Audit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const images = artifacts.ImageUsage;
 
-    let debugString;
+    /** @type {string[]} */
+    const warnings = [];
+    /** @type {Array<{url: string, displayedAspectRatio: string, actualAspectRatio: string, doRatiosMatch: boolean}>} */
     const results = [];
     images.filter(image => {
       // - filter out images that don't have following properties:
@@ -74,9 +81,10 @@ class ImageAspectRatio extends Audit {
         image.height &&
         !image.usesObjectFit;
     }).forEach(image => {
-      const processed = ImageAspectRatio.computeAspectRatios(image);
+      const wellDefinedImage = /** @type {WellDefinedImage} */ (image);
+      const processed = ImageAspectRatio.computeAspectRatios(wellDefinedImage);
       if (processed instanceof Error) {
-        debugString = processed.message;
+        warnings.push(processed.message);
         return;
       }
 
@@ -92,7 +100,7 @@ class ImageAspectRatio extends Audit {
 
     return {
       rawValue: results.length === 0,
-      debugString,
+      warnings,
       details: Audit.makeTableDetails(headings, results),
     };
   }

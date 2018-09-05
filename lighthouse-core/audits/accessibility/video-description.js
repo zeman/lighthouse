@@ -14,15 +14,15 @@ const AxeAudit = require('./axe-audit');
 
 class VideoDescription extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'video-description',
-      description: '`<video>` elements contain a `<track>` element with `[kind="description"]`',
-      failureDescription: '`<video>` elements do not contain a `<track>` element with ' +
+      id: 'video-description',
+      title: '`<video>` elements contain a `<track>` element with `[kind="description"]`',
+      failureTitle: '`<video>` elements do not contain a `<track>` element with ' +
           '`[kind="description"]`.',
-      helpText: 'Audio descriptions provide relevant information for videos that dialogue ' +
+      description: 'Audio descriptions provide relevant information for videos that dialogue ' +
           'cannot, such as facial expressions and scenes. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/video-description?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],

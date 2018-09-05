@@ -7,39 +7,40 @@
 
 const Gatherer = require('./gatherer');
 const manifestParser = require('../../lib/manifest-parser');
+const Driver = require('../driver.js'); // eslint-disable-line no-unused-vars
 
 class StartUrl extends Gatherer {
   /**
    * Grab the manifest, extract it's start_url, attempt to `fetch()` it while offline
-   * @param {*} options
-   * @return {{statusCode: number, debugString?: string}}
+   * @param {LH.Gatherer.PassContext} passContext
+   * @return {Promise<LH.Artifacts['StartUrl']>}
    */
-  afterPass(options) {
-    const driver = options.driver;
-    return driver.goOnline(options)
+  afterPass(passContext) {
+    const driver = passContext.driver;
+    return driver.goOnline(passContext)
       .then(() => driver.getAppManifest())
-      .then(response => driver.goOffline(options).then(() => response))
-      .then(response => response && manifestParser(response.data, response.url, options.url))
+      .then(response => driver.goOffline().then(() => response))
+      .then(response => response && manifestParser(response.data, response.url, passContext.url))
       .then(manifest => {
-        const {isReadFailure, reason, startUrl} = this._readManifestStartUrl(manifest);
-        if (isReadFailure) {
-          return {statusCode: -1, debugString: reason};
+        const startUrlInfo = this._readManifestStartUrl(manifest);
+        if (startUrlInfo.isReadFailure) {
+          return {statusCode: -1, explanation: startUrlInfo.reason};
         }
 
-        return this._attemptManifestFetch(options.driver, startUrl);
+        return this._attemptManifestFetch(passContext.driver, startUrlInfo.startUrl);
       }).catch(() => {
-        return {statusCode: -1, debugString: 'Unable to fetch start URL via service worker'};
+        return {statusCode: -1, explanation: 'Unable to fetch start URL via service worker'};
       });
   }
 
   /**
    * Read the parsed manifest and return failure reasons or the startUrl
-   * @param {Manifest} manifest
+   * @param {?{value?: {start_url: {value?: string, warning?: string}}, warning?: string}} manifest
    * @return {{isReadFailure: true, reason: string}|{isReadFailure: false, startUrl: string}}
    */
   _readManifestStartUrl(manifest) {
     if (!manifest || !manifest.value) {
-      const detailedMsg = manifest && manifest.debugString;
+      const detailedMsg = manifest && manifest.warning;
 
       if (detailedMsg) {
         return {isReadFailure: true, reason: `Error fetching web app manifest: ${detailedMsg}`};
@@ -49,26 +50,27 @@ class StartUrl extends Gatherer {
     }
 
     // Even if the start URL had an error, the browser will still supply a fallback URL.
-    // Therefore, we only set the debugString here and continue with the fetch.
-    if (manifest.value.start_url.debugString) {
-      return {isReadFailure: true, reason: manifest.value.start_url.debugString};
+    // Therefore, we only set the warning here and continue with the fetch.
+    if (manifest.value.start_url.warning) {
+      return {isReadFailure: true, reason: manifest.value.start_url.warning};
     }
 
+    // @ts-ignore - TODO(bckenny): should actually be testing value above, not warning
     return {isReadFailure: false, startUrl: manifest.value.start_url.value};
   }
 
   /**
    * Try to `fetch(start_url)`, return true if fetched by SW
    * Resolves when we have a matched network request
-   * @param {!Driver} driver
-   * @param {!string} startUrl
-   * @return {Promise<{statusCode: ?number, debugString: ?string}>}
+   * @param {Driver} driver
+   * @param {string} startUrl
+   * @return {Promise<{statusCode: number, explanation: string}>}
    */
   _attemptManifestFetch(driver, startUrl) {
     // Wait up to 3s to get a matched network request from the fetch() to work
     const timeoutPromise = new Promise(resolve =>
       setTimeout(
-        () => resolve({statusCode: -1, debugString: 'Timed out waiting for fetched start_url'}),
+        () => resolve({statusCode: -1, explanation: 'Timed out waiting for fetched start_url'}),
         3000
       )
     );
@@ -76,7 +78,9 @@ class StartUrl extends Gatherer {
     const fetchPromise = new Promise(resolve => {
       driver.on('Network.responseReceived', onResponseReceived);
 
-      function onResponseReceived({response}) {
+      /** @param {LH.Crdp.Network.ResponseReceivedEvent} responseEvent */
+      function onResponseReceived(responseEvent) {
+        const {response} = responseEvent;
         // ignore mismatched URLs
         if (response.url !== startUrl) return;
         driver.off('Network.responseReceived', onResponseReceived);
@@ -84,7 +88,7 @@ class StartUrl extends Gatherer {
         if (!response.fromServiceWorker) {
           return resolve({
             statusCode: -1,
-            debugString: 'Unable to fetch start URL via service worker',
+            explanation: 'Unable to fetch start URL via service worker',
           });
         }
         // Successful SW-served fetch of the start_URL
@@ -93,7 +97,7 @@ class StartUrl extends Gatherer {
     });
 
     return driver
-      .evaluateAsync(`fetch('${startUrl}')`)
+      .evaluateAsync(`window.location = '${startUrl}'`)
       .then(() => Promise.race([fetchPromise, timeoutPromise]));
   }
 }

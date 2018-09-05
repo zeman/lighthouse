@@ -15,14 +15,14 @@ const ViolationAudit = require('../violation-audit');
 
 class NotificationOnStart extends ViolationAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'notification-on-start',
-      description: 'Avoids requesting the notification permission on page load',
-      failureDescription: 'Requests the notification permission on page load',
-      helpText: 'Users are mistrustful of or confused by sites that request to send ' +
+      id: 'notification-on-start',
+      title: 'Avoids requesting the notification permission on page load',
+      failureTitle: 'Requests the notification permission on page load',
+      description: 'Users are mistrustful of or confused by sites that request to send ' +
           'notifications without context. Consider tying the request to user gestures ' +
           'instead. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/notifications-on-load).',
       requiredArtifacts: ['ChromeConsoleMessages'],
@@ -30,8 +30,8 @@ class NotificationOnStart extends ViolationAudit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const results = ViolationAudit.getViolationResults(artifacts, /notification permission/);
@@ -40,6 +40,7 @@ class NotificationOnStart extends ViolationAudit {
       {key: 'url', itemType: 'url', text: 'URL'},
       {key: 'label', itemType: 'text', text: 'Location'},
     ];
+    // TODO(bckenny): see TODO in geolocation-on-start
     const details = ViolationAudit.makeTableDetails(headings, results);
 
     return {

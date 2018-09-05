@@ -9,15 +9,14 @@ const Audit = require('./audit');
 
 class ManifestShortNameLength extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'manifest-short-name-length',
-      description: 'Manifest\'s `short_name` won\'t be truncated when displayed on homescreen',
-      failureDescription: 'Manifest\'s `short_name` will be truncated when displayed ' +
-          'on homescreen',
-      helpText: 'Make your app\'s `short_name` fewer than 12 characters to ' +
+      id: 'manifest-short-name-length',
+      title: 'The `short_name` won\'t be truncated on the homescreen',
+      failureTitle: 'The `short_name` will be truncated on the homescreen',
+      description: 'Make your app\'s `short_name` fewer than 12 characters to ' +
           'ensure that it\'s not truncated on homescreens. [Learn ' +
           'more](https://developers.google.com/web/tools/lighthouse/audits/manifest-short_name-is-not-truncated).',
       requiredArtifacts: ['Manifest'],
@@ -25,30 +24,40 @@ class ManifestShortNameLength extends Audit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<LH.Audit.Product>}
    */
-  static audit(artifacts) {
-    return artifacts.requestManifestValues(artifacts.Manifest).then(manifestValues => {
-      if (manifestValues.isParseFailure) {
-        return {
-          rawValue: false,
-        };
-      }
-
-      const hasShortName = manifestValues.allChecks.find(i => i.id === 'hasShortName').passing;
-      if (!hasShortName) {
-        return {
-          rawValue: false,
-          debugString: 'No short_name found in manifest.',
-        };
-      }
-
-      const isShortEnough = manifestValues.allChecks.find(i => i.id === 'shortNameLength').passing;
+  static async audit(artifacts) {
+    const manifestValues = await artifacts.requestManifestValues(artifacts.Manifest);
+    // If there's no valid manifest, this audit is not applicable
+    if (manifestValues.isParseFailure) {
       return {
-        rawValue: isShortEnough,
+        rawValue: true,
+        notApplicable: true,
       };
-    });
+    }
+
+    const shortNameCheck = manifestValues.allChecks.find(i => i.id === 'hasShortName');
+    const shortNameLengthCheck = manifestValues.allChecks.find(i => i.id === 'shortNameLength');
+
+    // If there's no short_name present, this audit is not applicable
+    if (shortNameCheck && !shortNameCheck.passing) {
+      return {
+        rawValue: true,
+        notApplicable: true,
+      };
+    }
+    // Shortname is present, but it's too long
+    if (shortNameLengthCheck && !shortNameLengthCheck.passing) {
+      return {
+        rawValue: false,
+        explanation: `Failure: ${shortNameLengthCheck.failureText}.`,
+      };
+    }
+    // Has a shortname that's under the threshold
+    return {
+      rawValue: true,
+    };
   }
 }
 

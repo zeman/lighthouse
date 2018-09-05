@@ -14,31 +14,30 @@ const Audit = require('../audit');
 
 class AppCacheManifestAttr extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'appcache-manifest',
-      description: 'Avoids Application Cache',
-      failureDescription: 'Uses Application Cache',
-      helpText: 'Application Cache is deprecated. ' +
+      id: 'appcache-manifest',
+      title: 'Avoids Application Cache',
+      failureTitle: 'Uses Application Cache',
+      description: 'Application Cache is deprecated. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/appcache).',
       requiredArtifacts: ['AppCacheManifest'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const usingAppcache = artifacts.AppCacheManifest !== null;
-    const debugString = usingAppcache ?
-        `Found <html manifest="${artifacts.AppCacheManifest}">.` : '';
+    const displayValue = usingAppcache ? `Found "${artifacts.AppCacheManifest}"` : '';
 
     return {
       rawValue: !usingAppcache,
-      debugString,
+      displayValue,
     };
   }
 }

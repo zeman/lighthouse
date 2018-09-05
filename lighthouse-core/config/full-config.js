@@ -5,8 +5,10 @@
  */
 'use strict';
 
-module.exports = {
+/** @type {LH.Config.Json} */
+const fullConfig = {
   extends: 'lighthouse:default',
+  settings: {},
   passes: [
     {
       passName: 'extraPass',
@@ -18,11 +20,14 @@ module.exports = {
   audits: [
     'byte-efficiency/unused-javascript',
   ],
+  // @ts-ignore TODO(bckenny): type extended Config where e.g. category.title isn't required
   categories: {
     'performance': {
-      audits: [
-        {id: 'unused-javascript', weight: 0, group: 'perf-hint'},
+      auditRefs: [
+        {id: 'unused-javascript', weight: 0, group: 'load-opportunities'},
       ],
     },
   },
 };
+
+module.exports = fullConfig;

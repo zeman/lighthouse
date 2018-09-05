@@ -13,23 +13,38 @@ const fs = require('fs');
 const puppeteer = require('../../node_modules/puppeteer/index.js');
 
 const lighthouseExtensionPath = path.resolve(__dirname, '../dist');
-const config = require(path.resolve(__dirname, '../../lighthouse-core/config/default.js'));
+const config = require(path.resolve(__dirname, '../../lighthouse-core/config/default-config.js'));
 
-const getAuditsOfCategory = category => config.categories[category].audits;
+const getAuditsOfCategory = category => config.categories[category].auditRefs;
 
 describe('Lighthouse chrome extension', function() {
+  // eslint-disable-next-line no-console
+  console.log('\n✨ Be sure to have recently run this: yarn build-extension');
+
   const manifestLocation = path.join(lighthouseExtensionPath, 'manifest.json');
   const lighthouseCategories = Object.keys(config.categories);
   let browser;
   let extensionPage;
   let originalManifest;
 
-  function getAuditElementsCount({category, selector}) {
+  function getAuditElementsIds({category, selector}) {
     return extensionPage.evaluate(
-      ({category, selector}) =>
-        document.querySelector(`#${category}`).parentNode.querySelectorAll(selector).length,
-      {category, selector}
+      ({category, selector}) => {
+        const elems = document.querySelector(`#${category}`).parentNode.querySelectorAll(selector);
+        return Array.from(elems).map(el => el.id);
+      }, {category, selector}
     );
+  }
+
+  function getCategoryElementsIds() {
+    return extensionPage.evaluate(
+      () => {
+        const elems = Array.from(document.querySelectorAll(`.lh-category`));
+        return elems.map(el => {
+          const permalink = el.querySelector('.lh-permalink');
+          return permalink && permalink.id;
+        });
+      });
   }
 
   before(async function() {
@@ -76,6 +91,9 @@ describe('Lighthouse chrome extension', function() {
     });
 
     if (lighthouseResult.exceptionDetails) {
+      // Log the full result if there was an error, since the relevant information may not be found
+      // in the error message alone.
+      console.error(lighthouseResult); // eslint-disable-line no-console
       if (lighthouseResult.exceptionDetails.exception) {
         throw new Error(lighthouseResult.exceptionDetails.exception.description);
       }
@@ -99,31 +117,31 @@ describe('Lighthouse chrome extension', function() {
 
 
   const selectors = {
-    audits: '.lh-audit,.lh-timeline-metric,.lh-perf-hint',
-    titles: '.lh-score__title, .lh-perf-hint__title, .lh-timeline-metric__title',
+    audits: '.lh-audit, .lh-metric',
+    titles: '.lh-audit__title, .lh-metric__title',
   };
 
   it('should contain all categories', async () => {
-    const categories = await extensionPage.$$(`#${lighthouseCategories.join(',#')}`);
-    assert.equal(
-      categories.length,
-      lighthouseCategories.length,
-      `${categories.join(' ')} does not match ${lighthouseCategories.join(' ')}`
+    const categories = await getCategoryElementsIds();
+    assert.deepStrictEqual(
+      categories.sort(),
+      lighthouseCategories.sort(),
+      `all categories not found`
     );
   });
 
   it('should contain audits of all categories', async () => {
     for (const category of lighthouseCategories) {
-      let expected = getAuditsOfCategory(category).length;
+      let expected = getAuditsOfCategory(category);
       if (category === 'performance') {
-        expected = getAuditsOfCategory(category).filter(a => !!a.group).length;
+        expected = getAuditsOfCategory(category).filter(a => !!a.group);
       }
+      expected = expected.map(audit => audit.id);
+      const elementIds = await getAuditElementsIds({category, selector: selectors.audits});
 
-      const elementCount = await getAuditElementsCount({category, selector: selectors.audits});
-
-      assert.equal(
-        expected,
-        elementCount,
+      assert.deepStrictEqual(
+        elementIds.sort(),
+        expected.sort(),
         `${category} does not have the correct amount of audits`
       );
     }
@@ -136,19 +154,25 @@ describe('Lighthouse chrome extension', function() {
   });
 
   it('should not have any audit errors', async () => {
-    function getDebugStrings(elems, selectors) {
+    function getErrors(elems, selectors) {
       return elems.map(el => {
         const audit = el.closest(selectors.audits);
         const auditTitle = audit && audit.querySelector(selectors.titles);
         return {
-          debugString: el.textContent,
+          explanation: el.textContent,
           title: auditTitle ? auditTitle.textContent : 'Audit title unvailable',
         };
       });
     }
 
-    const auditErrors = await extensionPage.$$eval('.lh-debug', getDebugStrings, selectors);
-    const errors = auditErrors.filter(item => item.debugString.includes('Audit error:'));
+    const errorSelectors = '.lh-audit-explanation, .tooltip--error';
+    const auditErrors = await extensionPage.$$eval(errorSelectors, getErrors, selectors);
+    const errors = auditErrors.filter(item => item.explanation.includes('Audit error:'));
     assert.deepStrictEqual(errors, [], 'Audit errors found within the report');
+  });
+
+  it('should pass the is-crawlable audit', async () => {
+    // this audit has regressed in the extension twice, so make sure it passes
+    assert.ok(await extensionPage.$('#is-crawlable.lh-audit--pass'), 'did not pass is-crawlable');
   });
 });

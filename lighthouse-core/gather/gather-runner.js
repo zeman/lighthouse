@@ -3,19 +3,24 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
-// @ts-nocheck
 'use strict';
 
 const log = require('lighthouse-logger');
-const Audit = require('../audits/audit');
 const LHError = require('../lib/errors');
 const URL = require('../lib/url-shim');
 const NetworkRecorder = require('../lib/network-recorder.js');
+const constants = require('../config/constants');
 
+const Driver = require('../gather/driver.js'); // eslint-disable-line no-unused-vars
+
+/** @typedef {import('./gatherers/gatherer.js').PhaseResult} PhaseResult */
 /**
- * @typedef {!Object<string, !Array<!Promise<*>>>} GathererResults
+ * Each entry in each gatherer result array is the output of a gatherer phase:
+ * `beforePass`, `pass`, and `afterPass`. Flattened into an `LH.Artifacts` in
+ * `collectArtifacts`.
+ * @typedef {Record<keyof LH.GathererArtifacts, Array<PhaseResult|Promise<PhaseResult>>>} GathererResults
  */
-
+/** @typedef {Array<[keyof GathererResults, GathererResults[keyof GathererResults]]>} GathererResultsEntries */
 /**
  * Class that drives browser to load the page and runs gatherer lifecycle hooks.
  * Execution sequence when GatherRunner.run() is called:
@@ -60,60 +65,59 @@ class GatherRunner {
    * not let a service worker take over, we navigate away and then come back to
    * reload. We do not `waitForLoad` on about:blank since a page load event is
    * never fired on it.
-   * @param {!Driver} driver
-   * @param {url=} url
+   * @param {Driver} driver
+   * @param {string=} url
    * @param {number=} duration
-   * @return {!Promise}
+   * @return {Promise<void>}
    */
-  static loadBlank(driver, url = 'about:blank', duration = 300) {
-    return driver.gotoURL(url).then(_ => new Promise(resolve => setTimeout(resolve, duration)));
+  static async loadBlank(
+      driver,
+      url = constants.defaultPassConfig.blankPage,
+      duration = constants.defaultPassConfig.blankDuration
+  ) {
+    await driver.gotoURL(url);
+    await new Promise(resolve => setTimeout(resolve, duration));
   }
 
   /**
    * Loads options.url with specified options. If the main document URL
    * redirects, options.url will be updated accordingly. As such, options.url
-   * will always represent the post-redirected URL. options.initialUrl is the
+   * will always represent the post-redirected URL. options.requestedUrl is the
    * pre-redirect starting URL.
-   * @param {!Driver} driver
-   * @param {!Object} options
-   * @return {!Promise}
+   * @param {Driver} driver
+   * @param {LH.Gatherer.PassContext} passContext
+   * @return {Promise<void>}
    */
-  static loadPage(driver, options) {
-    return driver.gotoURL(options.url, {
+  static async loadPage(driver, passContext) {
+    const finalUrl = await driver.gotoURL(passContext.url, {
       waitForLoad: true,
-      disableJavaScript: !!options.disableJavaScript,
-      flags: options.flags,
-      config: options.config,
-    }).then(finalUrl => {
-      options.url = finalUrl;
+      passContext,
     });
+    passContext.url = finalUrl;
   }
 
   /**
-   * @param {!Driver} driver
-   * @param {!GathererResults} gathererResults
-   * @param {!Object} options
-   * @return {!Promise}
+   * @param {Driver} driver
+   * @param {{requestedUrl: string, settings: LH.Config.Settings}} options
+   * @return {Promise<void>}
    */
-  static setupDriver(driver, gathererResults, options) {
+  static async setupDriver(driver, options) {
     log.log('status', 'Initializing…');
-    const resetStorage = !options.flags.disableStorageReset;
-    // Enable emulation based on flags
-    return driver.assertNoSameOriginServiceWorkerClients(options.url)
-      .then(_ => driver.getUserAgent())
-      .then(userAgent => {
-        gathererResults.UserAgent = [userAgent];
-        GatherRunner.warnOnHeadless(userAgent, gathererResults);
-        gathererResults.fetchedAt = [(new Date()).toJSON()];
-      })
-      .then(_ => driver.beginEmulation(options.flags))
-      .then(_ => driver.enableRuntimeEvents())
-      .then(_ => driver.cacheNatives())
-      .then(_ => driver.registerPerformanceObserver())
-      .then(_ => driver.dismissJavaScriptDialogs())
-      .then(_ => resetStorage && driver.clearDataForOrigin(options.url));
+    const resetStorage = !options.settings.disableStorageReset;
+    // Enable emulation based on settings
+    await driver.assertNoSameOriginServiceWorkerClients(options.requestedUrl);
+    await driver.beginEmulation(options.settings);
+    await driver.enableRuntimeEvents();
+    await driver.cacheNatives();
+    await driver.registerPerformanceObserver();
+    await driver.dismissJavaScriptDialogs();
+    if (resetStorage) await driver.clearDataForOrigin(options.requestedUrl);
   }
 
+  /**
+   * @param {Driver} driver
+   * @return {Promise<void>}
+   */
   static disposeDriver(driver) {
     log.log('status', 'Disconnecting from browser...');
     return driver.disconnect().catch(err => {
@@ -128,8 +132,8 @@ class GatherRunner {
   /**
    * Test any error output from the promise, absorbing non-fatal errors and
    * throwing on fatal ones so that run is stopped.
-   * @param {!Promise<*>} promise
-   * @return {!Promise<*>}
+   * @param {Promise<*>} promise
+   * @return {Promise<void>}
    */
   static recoverOrThrow(promise) {
     return promise.catch(err => {
@@ -142,8 +146,8 @@ class GatherRunner {
   /**
    * Returns an error if the original network request failed or wasn't found.
    * @param {string} url The URL of the original requested page.
-   * @param {!Array<WebInspector.NetworkRequest>} networkRecords
-   * @return {?Error}
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @return {LHError|undefined}
    */
   static getPageLoadError(url, networkRecords) {
     const mainRecord = networkRecords.find(record => {
@@ -168,171 +172,148 @@ class GatherRunner {
   }
 
   /**
-   * Add run warning if running in Headless Chrome.
-   * @param {string} userAgent
-   * @param {!GathererResults} gathererResults
-   */
-  static warnOnHeadless(userAgent, gathererResults) {
-    const chromeVersion = userAgent.split(/HeadlessChrome\/(.*) /)[1];
-    // Headless Chrome gained throttling support in Chrome 63.
-    // https://chromium.googlesource.com/chromium/src/+/8931a104b145ccf92390f6f48fba6553a1af92e4
-    const minVersion = '63.0.3239.0';
-    if (chromeVersion && chromeVersion < minVersion) {
-      gathererResults.LighthouseRunWarnings.push('Your site\'s mobile performance may be ' +
-          'worse than the numbers presented in this report. Lighthouse could not test on a ' +
-          'mobile connection because Headless Chrome does not support network throttling ' +
-          'prior to version ' + minVersion + '. The version used was ' + chromeVersion);
-    }
-  }
-
-  /**
    * Navigates to about:blank and calls beforePass() on gatherers before tracing
    * has started and before navigation to the target page.
-   * @param {!Object} passContext
-   * @param {!GathererResults} gathererResults
-   * @return {!Promise}
+   * @param {LH.Gatherer.PassContext} passContext
+   * @param {Partial<GathererResults>} gathererResults
+   * @return {Promise<void>}
    */
-  static beforePass(passContext, gathererResults) {
-    const blockedUrls = (passContext.config.blockedUrlPatterns || [])
-      .concat(passContext.flags.blockedUrlPatterns || []);
-    const blankPage = passContext.config.blankPage;
-    const blankDuration = passContext.config.blankDuration;
-    const pass = GatherRunner.loadBlank(passContext.driver, blankPage, blankDuration)
-        // Set request blocking before any network activity
-        // No "clearing" is done at the end of the pass since blockUrlPatterns([]) will unset all if
-        // neccessary at the beginning of the next pass.
-        .then(() => passContext.driver.blockUrlPatterns(blockedUrls))
-        .then(() => passContext.driver.setExtraHTTPHeaders(passContext.flags.extraHeaders));
+  static async beforePass(passContext, gathererResults) {
+    const blockedUrls = (passContext.passConfig.blockedUrlPatterns || [])
+      .concat(passContext.settings.blockedUrlPatterns || []);
+    const blankPage = passContext.passConfig.blankPage;
+    const blankDuration = passContext.passConfig.blankDuration;
+    await GatherRunner.loadBlank(passContext.driver, blankPage, blankDuration);
+    // Set request blocking before any network activity
+    // No "clearing" is done at the end of the pass since blockUrlPatterns([]) will unset all if
+    // neccessary at the beginning of the next pass.
+    await passContext.driver.blockUrlPatterns(blockedUrls);
+    await passContext.driver.setExtraHTTPHeaders(passContext.settings.extraHeaders);
 
-    return passContext.config.gatherers.reduce((chain, gathererDefn) => {
-      return chain.then(_ => {
-        const gatherer = gathererDefn.instance;
-        // Abuse the passContext to pass through gatherer options
-        passContext.options = gathererDefn.options || {};
-        const artifactPromise = Promise.resolve().then(_ => gatherer.beforePass(passContext));
-        gathererResults[gatherer.name] = [artifactPromise];
-        return GatherRunner.recoverOrThrow(artifactPromise);
-      });
-    }, pass);
+    for (const gathererDefn of passContext.passConfig.gatherers) {
+      const gatherer = gathererDefn.instance;
+      // Abuse the passContext to pass through gatherer options
+      passContext.options = gathererDefn.options || {};
+      const artifactPromise = Promise.resolve().then(_ => gatherer.beforePass(passContext));
+      gathererResults[gatherer.name] = [artifactPromise];
+      await GatherRunner.recoverOrThrow(artifactPromise);
+    }
   }
 
   /**
    * Navigates to requested URL and then runs pass() on gatherers while trace
    * (if requested) is still being recorded.
-   * @param {!Object} passContext
-   * @param {!GathererResults} gathererResults
-   * @return {!Promise}
+   * @param {LH.Gatherer.PassContext} passContext
+   * @param {Partial<GathererResults>} gathererResults
+   * @return {Promise<void>}
    */
-  static pass(passContext, gathererResults) {
+  static async pass(passContext, gathererResults) {
     const driver = passContext.driver;
-    const config = passContext.config;
+    const config = passContext.passConfig;
+    const settings = passContext.settings;
     const gatherers = config.gatherers;
 
     const recordTrace = config.recordTrace;
-    const isPerfRun = !passContext.flags.disableStorageReset && recordTrace && config.useThrottling;
+    const isPerfRun = !settings.disableStorageReset && recordTrace && config.useThrottling;
 
     const gatherernames = gatherers.map(g => g.instance.name).join(', ');
     const status = 'Loading page & waiting for onload';
     log.log('status', status, gatherernames);
 
-    const pass = Promise.resolve()
-      // Clear disk & memory cache if it's a perf run
-      .then(_ => isPerfRun && driver.cleanBrowserCaches())
-      // Always record devtoolsLog
-      .then(_ => driver.beginDevtoolsLog())
-      // Begin tracing if requested by config.
-      .then(_ => recordTrace && driver.beginTrace(passContext.flags))
-      // Navigate.
-      .then(_ => GatherRunner.loadPage(driver, passContext))
-      .then(_ => log.log('statusEnd', status));
+    // Clear disk & memory cache if it's a perf run
+    if (isPerfRun) await driver.cleanBrowserCaches();
+    // Always record devtoolsLog
+    await driver.beginDevtoolsLog();
+    // Begin tracing if requested by config.
+    if (recordTrace) await driver.beginTrace(settings);
 
-    return gatherers.reduce((chain, gathererDefn) => {
-      return chain.then(_ => {
-        const gatherer = gathererDefn.instance;
-        // Abuse the passContext to pass through gatherer options
-        passContext.options = gathererDefn.options || {};
-        const artifactPromise = Promise.resolve().then(_ => gatherer.pass(passContext));
-        gathererResults[gatherer.name].push(artifactPromise);
-        return GatherRunner.recoverOrThrow(artifactPromise);
-      });
-    }, pass);
+    // Navigate.
+    await GatherRunner.loadPage(driver, passContext);
+    log.log('statusEnd', status);
+
+    for (const gathererDefn of gatherers) {
+      const gatherer = gathererDefn.instance;
+      // Abuse the passContext to pass through gatherer options
+      passContext.options = gathererDefn.options || {};
+      const artifactPromise = Promise.resolve().then(_ => gatherer.pass(passContext));
+
+      const gathererResult = gathererResults[gatherer.name] || [];
+      gathererResult.push(artifactPromise);
+      gathererResults[gatherer.name] = gathererResult;
+      await GatherRunner.recoverOrThrow(artifactPromise);
+    }
   }
 
   /**
    * Ends tracing and collects trace data (if requested for this pass), and runs
    * afterPass() on gatherers with trace data passed in. Promise resolves with
    * object containing trace and network data.
-   * @param {!Object} passContext
-   * @param {!GathererResults} gathererResults
-   * @return {!Promise}
+   * @param {LH.Gatherer.PassContext} passContext
+   * @param {Partial<GathererResults>} gathererResults
+   * @return {Promise<LH.Gatherer.LoadData>}
    */
-  static afterPass(passContext, gathererResults) {
+  static async afterPass(passContext, gathererResults) {
     const driver = passContext.driver;
-    const config = passContext.config;
+    const config = passContext.passConfig;
     const gatherers = config.gatherers;
-    const passData = {};
 
-    let pass = Promise.resolve();
-    let pageLoadError;
-
+    let trace;
     if (config.recordTrace) {
-      pass = pass.then(_ => {
-        log.log('status', 'Retrieving trace');
-        return driver.endTrace();
-      }).then(traceContents => {
-        // Before Chrome 54.0.2816 (codereview.chromium.org/2161583004),
-        // traceContents was an array of trace events; after, traceContents is
-        // an object with a traceEvents property. Normalize to object form.
-        passData.trace = Array.isArray(traceContents) ?
-            {traceEvents: traceContents} : traceContents;
-        log.verbose('statusEnd', 'Retrieving trace');
-      });
+      log.log('status', 'Retrieving trace');
+      trace = await driver.endTrace();
+      log.verbose('statusEnd', 'Retrieving trace');
     }
 
-    pass = pass.then(_ => {
-      const status = 'Retrieving devtoolsLog and network records';
-      log.log('status', status);
-      const devtoolsLog = driver.endDevtoolsLog();
-      const networkRecords = NetworkRecorder.recordsFromLogs(devtoolsLog);
-      log.verbose('statusEnd', status);
+    const status = 'Retrieving devtoolsLog and network records';
+    log.log('status', status);
+    const devtoolsLog = driver.endDevtoolsLog();
+    const networkRecords = NetworkRecorder.recordsFromLogs(devtoolsLog);
+    log.verbose('statusEnd', status);
 
-      pageLoadError = GatherRunner.getPageLoadError(passContext.url, networkRecords);
-      // If the driver was offline, a page load error is expected, so do not save it.
-      if (!driver.online) pageLoadError = null;
+    let pageLoadError = GatherRunner.getPageLoadError(passContext.url, networkRecords);
+    // If the driver was offline, a page load error is expected, so do not save it.
+    if (!driver.online) pageLoadError = undefined;
 
-      if (pageLoadError) {
-        gathererResults.LighthouseRunWarnings.push('Lighthouse was unable to reliably load the ' +
-          'page you requested. Make sure you are testing the correct URL and that the server is ' +
-          'properly responding to all requests.');
-      }
+    if (pageLoadError) {
+      passContext.LighthouseRunWarnings.push('Lighthouse was unable to reliably load the ' +
+        'page you requested. Make sure you are testing the correct URL and that the server is ' +
+        'properly responding to all requests.');
+    }
 
-      // Expose devtoolsLog and networkRecords to gatherers
-      passData.devtoolsLog = devtoolsLog;
-      passData.networkRecords = networkRecords;
-    });
+    // Expose devtoolsLog, networkRecords, and trace (if present) to gatherers
+    /** @type {LH.Gatherer.LoadData} */
+    const passData = {
+      networkRecords,
+      devtoolsLog,
+      trace,
+    };
 
     // Disable throttling so the afterPass analysis isn't throttled
-    pass = pass.then(_ => driver.setThrottling(passContext.flags, {useThrottling: false}));
+    await driver.setThrottling(passContext.settings, {useThrottling: false});
 
-    pass = gatherers.reduce((chain, gathererDefn) => {
+    for (const gathererDefn of gatherers) {
       const gatherer = gathererDefn.instance;
       const status = `Retrieving: ${gatherer.name}`;
-      return chain.then(_ => {
-        log.log('status', status);
-        // Abuse the passContext to pass through gatherer options
-        passContext.options = gathererDefn.options || {};
-        const artifactPromise = pageLoadError ?
-          Promise.reject(pageLoadError) :
-          Promise.resolve().then(_ => gatherer.afterPass(passContext, passData));
-        gathererResults[gatherer.name].push(artifactPromise);
-        return GatherRunner.recoverOrThrow(artifactPromise);
-      }).then(_ => {
-        log.verbose('statusEnd', status);
-      });
-    }, pass);
+      log.log('status', status);
+
+      // Add gatherer options to the passContext.
+      passContext.options = gathererDefn.options || {};
+
+      // If there was a pageLoadError, fail every afterPass with it rather than bail completely.
+      const artifactPromise = pageLoadError ?
+        Promise.reject(pageLoadError) :
+        // Wrap gatherer response in promise, whether rejected or not.
+        Promise.resolve().then(_ => gatherer.afterPass(passContext, passData));
+
+      const gathererResult = gathererResults[gatherer.name] || [];
+      gathererResult.push(artifactPromise);
+      gathererResults[gatherer.name] = gathererResult;
+      await GatherRunner.recoverOrThrow(artifactPromise);
+      log.verbose('statusEnd', status);
+    }
 
     // Resolve on tracing data using passName from config.
-    return pass.then(_ => passData);
+    return passData;
   }
 
   /**
@@ -340,119 +321,136 @@ class GatherRunner {
    * last produced value (that's not undefined) as the artifact for that
    * gatherer. If a non-fatal error was rejected from a gatherer phase,
    * uses that error object as the artifact instead.
-   * @param {!GathererResults} gathererResults
-   * @return {!Promise<!Artifacts>}
+   * @param {Partial<GathererResults>} gathererResults
+   * @param {LH.BaseArtifacts} baseArtifacts
+   * @return {Promise<LH.Artifacts>}
    */
-  static collectArtifacts(gathererResults) {
-    const artifacts = {};
-
-    // Nest LighthouseRunWarnings, if any, so they will be collected into artifact.
-    const uniqueWarnings = Array.from(new Set(gathererResults.LighthouseRunWarnings));
-    gathererResults.LighthouseRunWarnings = [uniqueWarnings];
+  static async collectArtifacts(gathererResults, baseArtifacts) {
+    /** @type {Partial<LH.GathererArtifacts>} */
+    const gathererArtifacts = {};
 
     const pageLoadFailures = [];
-    return Object.keys(gathererResults).reduce((chain, gathererName) => {
-      return chain.then(_ => {
-        const phaseResultsPromises = gathererResults[gathererName];
-        return Promise.all(phaseResultsPromises).then(phaseResults => {
-          // Take last defined pass result as artifact.
-          const definedResults = phaseResults.filter(element => element !== undefined);
-          const artifact = definedResults[definedResults.length - 1];
-          if (artifact === undefined) {
-            throw new Error(`${gathererName} failed to provide an artifact.`);
-          }
-          artifacts[gathererName] = artifact;
-        }, err => {
-          // To reach this point, all errors are non-fatal, so return err to
-          // runner to handle turning it into an error audit.
-          artifacts[gathererName] = err;
-          // Track page load errors separately, so we can fail loudly if needed.
-          if (LHError.isPageLoadError(err)) pageLoadFailures.push(err);
-        });
-      });
-    }, Promise.resolve()).then(_ => {
-      // Fail the run if more than 50% of all artifacts failed due to page load failure.
-      if (pageLoadFailures.length > Object.keys(artifacts).length * .5) {
-        throw pageLoadFailures[0];
+    const resultsEntries = /** @type {GathererResultsEntries} */ (Object.entries(gathererResults));
+    for (const [gathererName, phaseResultsPromises] of resultsEntries) {
+      if (gathererArtifacts[gathererName] !== undefined) continue;
+
+      try {
+        const phaseResults = await Promise.all(phaseResultsPromises);
+        // Take last defined pass result as artifact.
+        const definedResults = phaseResults.filter(element => element !== undefined);
+        const artifact = definedResults[definedResults.length - 1];
+        // Typecast pretends artifact always provided here, but checked below for top-level `throw`.
+        gathererArtifacts[gathererName] = /** @type {NonVoid<PhaseResult>} */ (artifact);
+      } catch (err) {
+        // An error result must be non-fatal to not have caused an exit by now,
+        // so return it to runner to handle turning it into an error audit.
+        gathererArtifacts[gathererName] = err;
+        // Track page load errors separately, so we can fail loudly if needed.
+        if (LHError.isPageLoadError(err)) pageLoadFailures.push(err);
       }
 
-      return artifacts;
-    });
+      if (gathererArtifacts[gathererName] === undefined) {
+        throw new Error(`${gathererName} failed to provide an artifact.`);
+      }
+
+      // Fail the run if more than 50% of all artifacts failed due to page load failure.
+      if (pageLoadFailures.length > Object.keys(gathererArtifacts).length * 0.5) {
+        throw pageLoadFailures[0];
+      }
+    }
+
+    // Take only unique LighthouseRunWarnings.
+    baseArtifacts.LighthouseRunWarnings = Array.from(new Set(baseArtifacts.LighthouseRunWarnings));
+
+    // TODO(bckenny): drop cast when ComputedArtifacts not included in Artifacts
+    return /** @type {LH.Artifacts} */ ({...baseArtifacts, ...gathererArtifacts});
   }
 
-  static run(passes, options) {
-    const driver = options.driver;
-    const tracingData = {
+  /**
+   * @param {{driver: Driver, requestedUrl: string, settings: LH.Config.Settings}} options
+   * @return {Promise<LH.BaseArtifacts>}
+   */
+  static async getBaseArtifacts(options) {
+    return {
+      fetchTime: (new Date()).toJSON(),
+      LighthouseRunWarnings: [],
+      HostUserAgent: await options.driver.getUserAgent(),
+      NetworkUserAgent: '', // updated later
+      BenchmarkIndex: 0, // updated later
       traces: {},
       devtoolsLogs: {},
+      settings: options.settings,
+      URL: {requestedUrl: options.requestedUrl, finalUrl: ''},
     };
+  }
 
-    if (typeof options.url !== 'string' || options.url.length === 0) {
-      return Promise.reject(new Error('You must provide a url to the gather-runner'));
-    }
+  /**
+   * @param {Array<LH.Config.Pass>} passes
+   * @param {{driver: Driver, requestedUrl: string, settings: LH.Config.Settings}} options
+   * @return {Promise<LH.Artifacts>}
+   */
+  static async run(passes, options) {
+    const driver = options.driver;
 
-    if (typeof options.flags === 'undefined') {
-      options.flags = {};
-    }
+    /** @type {Partial<GathererResults>} */
+    const gathererResults = {};
 
-    if (typeof options.config === 'undefined') {
-      return Promise.reject(new Error('You must provide a config'));
-    }
-
-    if (typeof options.flags.disableCpuThrottling === 'undefined') {
-      options.flags.disableCpuThrottling = false;
-    }
-
-    const gathererResults = {
-      LighthouseRunWarnings: [],
-    };
-
-    return driver.connect()
-      .then(_ => GatherRunner.loadBlank(driver))
-      .then(_ => GatherRunner.setupDriver(driver, gathererResults, options))
+    try {
+      await driver.connect();
+      const baseArtifacts = await GatherRunner.getBaseArtifacts(options);
+      await GatherRunner.loadBlank(driver);
+      baseArtifacts.BenchmarkIndex = await options.driver.getBenchmarkIndex();
+      await GatherRunner.setupDriver(driver, options);
 
       // Run each pass
-      .then(_ => {
-        // If the main document redirects, we'll update this to keep track
-        let urlAfterRedirects;
-        return passes.reduce((chain, config, passIndex) => {
-          const passContext = Object.assign({}, options, {config});
-          return chain
-            .then(_ => driver.setThrottling(options.flags, config))
-            .then(_ => GatherRunner.beforePass(passContext, gathererResults))
-            .then(_ => GatherRunner.pass(passContext, gathererResults))
-            .then(_ => GatherRunner.afterPass(passContext, gathererResults))
-            .then(passData => {
-              const passName = config.passName || Audit.DEFAULT_PASS;
+      let firstPass = true;
+      for (const passConfig of passes) {
+        const passContext = {
+          driver: options.driver,
+          // If the main document redirects, we'll update this to keep track
+          url: options.requestedUrl,
+          settings: options.settings,
+          passConfig,
+          // *pass() functions and gatherers can push to this warnings array.
+          LighthouseRunWarnings: baseArtifacts.LighthouseRunWarnings,
+        };
 
-              // networkRecords are discarded and not added onto artifacts.
-              tracingData.devtoolsLogs[passName] = passData.devtoolsLog;
+        await driver.setThrottling(options.settings, passConfig);
+        await GatherRunner.beforePass(passContext, gathererResults);
+        await GatherRunner.pass(passContext, gathererResults);
+        const passData = await GatherRunner.afterPass(passContext, gathererResults);
 
-              // If requested by config, add trace to pass's tracingData
-              if (config.recordTrace) {
-                tracingData.traces[passName] = passData.trace;
-              }
+        // Save devtoolsLog, but networkRecords are discarded and not added onto artifacts.
+        baseArtifacts.devtoolsLogs[passConfig.passName] = passData.devtoolsLog;
 
-              if (passIndex === 0) {
-                urlAfterRedirects = passContext.url;
-              }
-            });
-        }, Promise.resolve()).then(_ => {
-          options.url = urlAfterRedirects;
-        });
-      })
-      .then(_ => GatherRunner.disposeDriver(driver))
-      .then(_ => GatherRunner.collectArtifacts(gathererResults))
-      .then(artifacts => {
-        // Add tracing data to the artifacts object.
-        return Object.assign(artifacts, tracingData);
-      })
+        const userAgentEntry = passData.devtoolsLog.find(entry =>
+          entry.method === 'Network.requestWillBeSent' &&
+          !!entry.params.request.headers['User-Agent']
+        );
+
+        if (userAgentEntry && !baseArtifacts.NetworkUserAgent) {
+          // @ts-ignore - guaranteed to exist by the find above
+          baseArtifacts.NetworkUserAgent = userAgentEntry.params.request.headers['User-Agent'];
+        }
+
+        // If requested by config, save pass's trace.
+        if (passData.trace) {
+          baseArtifacts.traces[passConfig.passName] = passData.trace;
+        }
+
+        if (firstPass) {
+          // Copy redirected URL to artifact in the first pass only.
+          baseArtifacts.URL.finalUrl = passContext.url;
+          firstPass = false;
+        }
+      }
+      await GatherRunner.disposeDriver(driver);
+      return GatherRunner.collectArtifacts(gathererResults, baseArtifacts);
+    } catch (err) {
       // cleanup on error
-      .catch(err => {
-        GatherRunner.disposeDriver(driver);
-
-        throw err;
-      });
+      GatherRunner.disposeDriver(driver);
+      throw err;
+    }
   }
 }
 

@@ -14,26 +14,27 @@ const Audit = require('./audit');
 
 class ErrorLogs extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'errors-in-console',
-      description: 'No browser errors logged to the console',
-      helpText: 'Errors logged to the console indicate unresolved problems. ' +
+      id: 'errors-in-console',
+      title: 'No browser errors logged to the console',
+      description: 'Errors logged to the console indicate unresolved problems. ' +
         'They can come from network request failures and other browser concerns.',
-      failureDescription: 'Browser errors were logged to the console',
+      failureTitle: 'Browser errors were logged to the console',
       requiredArtifacts: ['ChromeConsoleMessages', 'RuntimeExceptions'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const consoleEntries = artifacts.ChromeConsoleMessages;
     const runtimeExceptions = artifacts.RuntimeExceptions;
+    /** @type {Array<{source: string, description: string|undefined, url: string|undefined}>} */
     const consoleRows =
       consoleEntries.filter(log => log.entry && log.entry.level === 'error')
       .map(item => {

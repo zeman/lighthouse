@@ -38,7 +38,8 @@ yarn install-all
 
 # * Bump it *
 yarn version --no-git-tag-version
-# then manually bump extension v in extension/app/manifest.json
+# manually bump extension v in extension/app/manifest.json
+yarn update:sample-json
 
 # * Build it *
 yarn build-all
@@ -108,34 +109,4 @@ yarn deploy-viewer
 
 # * Tell the world!!! *
 echo "Complete the _Release publicity_ tasks documented above"
-```
-
-### Extension Canary release
-
-```sh
-# Pull latest in a clean non-dev clone.
-
-yarn install-all
-
-# Update manifest_canary.json w/ version bumps.
-
-# branch and commit
-git commmit -m "bump extension canary to 2.0.0.X"
-
-npm version prerelease # this will commit
-
-
-# overwrite extension's manifest w/ manifest_canary.
-
-yarn build-all
-
-cd lighthouse-extension/
-gulp package
-# upload zip to CWS and publish
-
-# verify you build-all'd for the typescript compile
-# ...
-
-# publish to canary tag!
-npm publish --tag canary
 ```

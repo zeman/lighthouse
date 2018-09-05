@@ -12,7 +12,7 @@ const CSSStyleDeclaration = require('../../../lib/web-inspector').CSSStyleDeclar
 const URL = 'https://example.com';
 const validViewport = 'width=device-width';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 
 describe('SEO: Font size audit', () => {
   it('fails when viewport is not set', () => {
@@ -24,7 +24,7 @@ describe('SEO: Font size audit', () => {
 
     const auditResult = FontSizeAudit.audit(artifacts);
     assert.equal(auditResult.rawValue, false);
-    assert.ok(auditResult.debugString.includes('missing viewport'));
+    assert.ok(auditResult.explanation.includes('missing viewport'));
   });
 
   it('fails when less than 60% of text is legible', () => {
@@ -45,7 +45,7 @@ describe('SEO: Font size audit', () => {
 
     const auditResult = FontSizeAudit.audit(artifacts);
     assert.equal(auditResult.rawValue, false);
-    assert.ok(auditResult.debugString.includes('41%'));
+    assert.ok(auditResult.explanation.includes('41%'));
   });
 
   it('passes when there is no text', () => {
@@ -162,6 +162,6 @@ describe('SEO: Font size audit', () => {
     };
     const auditResult = FontSizeAudit.audit(artifacts);
     assert.equal(auditResult.rawValue, false);
-    assert.ok(auditResult.debugString.includes('50%'));
+    assert.ok(auditResult.explanation.includes('50%'));
   });
 });

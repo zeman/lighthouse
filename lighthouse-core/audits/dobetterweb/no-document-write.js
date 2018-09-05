@@ -14,14 +14,14 @@ const ViolationAudit = require('../violation-audit');
 
 class NoDocWriteAudit extends ViolationAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'no-document-write',
-      description: 'Avoids `document.write()`',
-      failureDescription: 'Uses `document.write()`',
-      helpText: 'For users on slow connections, external scripts dynamically injected via ' +
+      id: 'no-document-write',
+      title: 'Avoids `document.write()`',
+      failureTitle: 'Uses `document.write()`',
+      description: 'For users on slow connections, external scripts dynamically injected via ' +
           '`document.write()` can delay page load by tens of seconds. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/document-write).',
       requiredArtifacts: ['ChromeConsoleMessages'],
@@ -29,8 +29,8 @@ class NoDocWriteAudit extends ViolationAudit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const results = ViolationAudit.getViolationResults(artifacts, /document\.write/);
@@ -39,6 +39,7 @@ class NoDocWriteAudit extends ViolationAudit {
       {key: 'url', itemType: 'url', text: 'URL'},
       {key: 'label', itemType: 'text', text: 'Location'},
     ];
+    // TODO(bckenny): see TODO in geolocation-on-start
     const details = ViolationAudit.makeTableDetails(headings, results);
 
     return {

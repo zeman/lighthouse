@@ -5,7 +5,7 @@
  */
 'use strict';
 
-/* eslint-env mocha */
+/* eslint-env jest */
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
@@ -28,22 +28,37 @@ describe('CLI run', function() {
     const timeoutFlag = `--max-wait-for-load=${9000}`;
     const flags = getFlags(`--output=json --output-path=${filename} ${timeoutFlag} ${url}`);
     return run.runLighthouse(url, flags, fastConfig).then(passedResults => {
+      const {lhr} = passedResults;
       assert.ok(fs.existsSync(filename));
       const results = JSON.parse(fs.readFileSync(filename, 'utf-8'));
       assert.equal(results.audits.viewport.rawValue, false);
 
       // passed results match saved results
-      assert.strictEqual(results.fetchedAt, passedResults.fetchedAt);
-      assert.strictEqual(results.url, passedResults.url);
-      assert.strictEqual(results.audits.viewport.rawValue, passedResults.audits.viewport.rawValue);
+      assert.strictEqual(results.fetchTime, lhr.fetchTime);
+      assert.strictEqual(results.url, lhr.url);
+      assert.strictEqual(results.audits.viewport.rawValue, lhr.audits.viewport.rawValue);
       assert.strictEqual(
           Object.keys(results.audits).length,
-          Object.keys(passedResults.audits).length);
-      assert.deepStrictEqual(results.timing, passedResults.timing);
+          Object.keys(lhr.audits).length);
+      assert.deepStrictEqual(results.timing, lhr.timing);
 
       fs.unlinkSync(filename);
     });
-  }).timeout(20 * 1000);
+  }, 20 * 1000);
+});
+
+describe('flag coercing', () => {
+  it('should force to array', () => {
+    assert.deepStrictEqual(getFlags(`--only-audits foo chrome://version`).onlyAudits, ['foo']);
+  });
+});
+
+
+describe('saveResults', () => {
+  it('will quit early if we\'re in gather mode', async () => {
+    const result = await run.saveResults(undefined, {gatherMode: true});
+    assert.equal(result, undefined);
+  });
 });
 
 describe('Parsing --chrome-flags', () => {
@@ -53,10 +68,6 @@ describe('Parsing --chrome-flags', () => {
 
   it('returns boolean flags that are false with value', () => {
     assert.deepStrictEqual(parseChromeFlags('--debug=false'), ['--debug=false']);
-  });
-
-  it('returns empty when passed undefined', () => {
-    assert.deepStrictEqual(parseChromeFlags(), []);
   });
 
   it('keeps --no-flags untouched, #3003', () => {

@@ -9,14 +9,14 @@ const Audit = require('./audit');
 
 class ContentWidth extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'content-width',
-      description: 'Content is sized correctly for the viewport',
-      failureDescription: 'Content is not sized correctly for the viewport',
-      helpText: 'If the width of your app\'s content doesn\'t match the width ' +
+      id: 'content-width',
+      title: 'Content is sized correctly for the viewport',
+      failureTitle: 'Content is not sized correctly for the viewport',
+      description: 'If the width of your app\'s content doesn\'t match the width ' +
           'of the viewport, your app might not be optimized for mobile screens. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/content-sized-correctly-for-viewport).',
       requiredArtifacts: ['ViewportDimensions'],
@@ -24,8 +24,8 @@ class ContentWidth extends Audit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const viewportWidth = artifacts.ViewportDimensions.innerWidth;
@@ -34,11 +34,16 @@ class ContentWidth extends Audit {
 
     return {
       rawValue: widthsMatch,
-      debugString: this.createDebugString(widthsMatch, artifacts.ViewportDimensions),
+      explanation: this.createExplanation(widthsMatch, artifacts.ViewportDimensions),
     };
   }
 
-  static createDebugString(match, artifact) {
+  /**
+   * @param {boolean} match
+   * @param {LH.Artifacts.ViewportDimensions} artifact
+   * @return {string}
+   */
+  static createExplanation(match, artifact) {
     if (match) {
       return '';
     }

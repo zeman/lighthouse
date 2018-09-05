@@ -8,10 +8,10 @@
 const Metrics = require('../../../lib/traces/pwmetrics-events');
 const assert = require('assert');
 
-const dbwTrace = require('../../fixtures/traces/dbw_tester.json');
-const dbwResults = require('../../fixtures/dbw_tester-perf-results.json');
+const dbwTrace = require('../../results/artifacts/defaultPass.trace.json');
+const dbwResults = require('../../results/sample_v2.json');
 
-/* eslint-env mocha */
+/* eslint-env jest */
 describe('metrics events class', () => {
   it('exposes metric definitions', () => {
     assert.ok(Metrics.metricsDefinitions.length > 5, 'metrics not exposed');
@@ -36,7 +36,7 @@ describe('metrics events class', () => {
 
   it('generates fake trace events that are valid', () => {
     const evts = new Metrics(dbwTrace.traceEvents, dbwResults.audits).generateFakeEvents();
-    const vizCompleteEvts = evts.filter(e => e.name.includes('Visually Complete 100'));
+    const vizCompleteEvts = evts.filter(e => e.name.includes('Speed Index'));
     assert.equal(vizCompleteEvts.length, 2, 'Two visually complete 100% events not found');
     assert.equal(vizCompleteEvts[0].id, vizCompleteEvts[1].id, 'UT trace ids don\'t match');
 

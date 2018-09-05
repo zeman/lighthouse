@@ -1,8 +1,20 @@
 // generated on 2016-03-19 using generator-chrome-extension 0.5.4
 
 'use strict';
+
 const fs = require('fs');
-const path = require('path');
+// HACK: patch astw before it's required to use acorn with ES2018
+// We add the right acorn version to package.json deps, resolve the path to it here,
+// and then inject the modified require statement into astw's code.
+// see https://github.com/GoogleChrome/lighthouse/issues/5152
+const acornPath = require.resolve('acorn');
+const astwPath = require.resolve('astw/index.js');
+const astwOriginalContent = fs.readFileSync(astwPath, 'utf8');
+const astwPatchedContent = astwOriginalContent
+  .replace('ecmaVersion: opts.ecmaVersion || 8', 'ecmaVersion: 2018')
+  .replace(`require('acorn')`, `require(${JSON.stringify(acornPath)})`);
+fs.writeFileSync(astwPath, astwPatchedContent);
+
 const del = require('del');
 const gutil = require('gulp-util');
 const runSequence = require('run-sequence');
@@ -35,9 +47,7 @@ const audits = LighthouseRunner.getAuditList()
 const gatherers = LighthouseRunner.getGathererList()
     .map(f => '../lighthouse-core/gather/gatherers/' + f.replace(/\.js$/, ''));
 
-const computedArtifacts = fs.readdirSync(
-    path.join(__dirname, '../lighthouse-core/gather/computed/'))
-    .filter(f => /\.js$/.test(f))
+const computedArtifacts = LighthouseRunner.getComputedGathererList()
     .map(f => '../lighthouse-core/gather/computed/' + f.replace(/\.js$/, ''));
 
 gulp.task('extras', () => {
@@ -87,9 +97,6 @@ gulp.task('chromeManifest', () => {
     buildnumber: false,
     background: {
       target: 'scripts/lighthouse-ext-background.js',
-      exclude: [
-        'scripts/chromereload.js',
-      ],
     },
   };
   return gulp.src('app/manifest.json')
@@ -101,7 +108,7 @@ function applyBrowserifyTransforms(bundle) {
   // Fix an issue with imported speedline code that doesn't brfs well.
   return bundle.transform('./fs-transform', {global: true})
   // Transform the fs.readFile etc, but do so in all the modules.
-  .transform('brfs', {global: true})
+  .transform('brfs', {global: true, parserOpts: {ecmaVersion: 9}})
   // Strip everything out of package.json includes except for the version.
   .transform('package-json-versionify');
 }
@@ -115,18 +122,22 @@ gulp.task('browserify-lighthouse', () => {
       let bundle = browserify(file.path); // , {debug: true}); // for sourcemaps
       bundle = applyBrowserifyTransforms(bundle);
 
-      // lighthouse-background will need some additional transforms, ignores and requires…
-
-      // Do the additional transform to convert references of devtools-timeline-model
-      // to the modified version internal to Lighthouse.
-      bundle.transform('./dtm-transform.js', {global: true})
-      .ignore('source-map')
-      .ignore('url')
+      // scripts will need some additional transforms, ignores and requires…
+      bundle.ignore('source-map')
       .ignore('debug/node')
+      .ignore('intl')
       .ignore('raven')
       .ignore('mkdirp')
       .ignore('rimraf')
       .ignore('pako/lib/zlib/inflate.js');
+
+      // Don't include the desktop protocol connection.
+      bundle.ignore(require.resolve('../lighthouse-core/gather/connections/cri.js'));
+
+      // Prevent the DevTools background script from getting the stringified HTML.
+      if (/lighthouse-background/.test(file.path)) {
+        bundle.ignore(require.resolve('../lighthouse-core/report/html/html-report-assets.js'));
+      }
 
       // Expose the audits, gatherers, and computed artifacts so they can be dynamically loaded.
       const corePath = '../lighthouse-core/';
@@ -141,6 +152,12 @@ gulp.task('browserify-lighthouse', () => {
         bundle = bundle.require(artifact, {expose: artifact.replace(corePath, './')});
       });
 
+      // browerify's url shim doesn't work with .URL in node_modules,
+      // and within robots-parser, it does `var URL = require('url').URL`, so we expose our own.
+      // @see https://github.com/GoogleChrome/lighthouse/issues/5273
+      const pathToURLShim = require.resolve('../lighthouse-core/lib/url-shim.js');
+      bundle = bundle.require(pathToURLShim, {expose: 'url'});
+
       // Inject the new browserified contents back into our gulp pipeline
       file.contents = bundle.bundle();
     }))
@@ -151,7 +168,6 @@ gulp.task('browserify-lighthouse', () => {
 gulp.task('browserify-other', () => {
   return gulp.src([
     'app/src/popup.js',
-    'app/src/chromereload.js',
   ], {read: false})
     .pipe(tap(file => {
       let bundle = browserify(file.path); // , {debug: true}); // for sourcemaps
@@ -175,6 +191,9 @@ gulp.task('compilejs', () => {
     retainLines: true, // Keep things on the same line (looks wonky but helps with stacktraces)
     comments: false, // Don't output comments
     shouldPrintComment: _ => false, // Don't include @license or @preserve comments either
+    plugins: [
+      'syntax-object-rest-spread',
+    ],
     // sourceMaps: 'both'
   };
 

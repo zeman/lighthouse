@@ -10,39 +10,36 @@ const Audit = require('../audit');
 
 class ExternalAnchorsUseRelNoopenerAudit extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'external-anchors-use-rel-noopener',
-      description: 'Opens external anchors using `rel="noopener"`',
-      failureDescription: 'Does not open external anchors using `rel="noopener"`',
-      helpText: 'Open new tabs using `rel="noopener"` to improve performance and ' +
-          'prevent security vulnerabilities. ' +
+      id: 'external-anchors-use-rel-noopener',
+      title: 'Links to cross-origin destinations are safe',
+      failureTitle: 'Links to cross-origin destinations are unsafe',
+      description: 'Add `rel="noopener"` or `rel="noreferrer"` to any external links to improve ' +
+          'performance and prevent security vulnerabilities. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/noopener).',
       requiredArtifacts: ['URL', 'AnchorsWithNoRelNoopener'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
-    let debugString;
+    /** @type {string[]} */
+    const warnings = [];
     const pageHost = new URL(artifacts.URL.finalUrl).host;
     // Filter usages to exclude anchors that are same origin
-    // TODO: better extendedInfo for anchors with no href attribute:
-    // https://github.com/GoogleChrome/lighthouse/issues/1233
-    // https://github.com/GoogleChrome/lighthouse/issues/1345
     const failingAnchors = artifacts.AnchorsWithNoRelNoopener
       .filter(anchor => {
         try {
           return new URL(anchor.href).host !== pageHost;
         } catch (err) {
-          debugString = 'Lighthouse was unable to determine the destination ' +
-              'of some anchor tags. If they are not used as hyperlinks, ' +
-              'consider removing the _blank target.';
+          warnings.push(`Unable to determine the destination for anchor (${anchor.outerHTML}). ` +
+            'If not used as a hyperlink, consider removing target=_blank.');
           return true;
         }
       })
@@ -54,10 +51,7 @@ class ExternalAnchorsUseRelNoopenerAudit extends Audit {
           href: anchor.href || 'Unknown',
           target: anchor.target || '',
           rel: anchor.rel || '',
-          url: '<a' +
-              (anchor.href ? ` href="${anchor.href}"` : '') +
-              (anchor.target ? ` target="${anchor.target}"` : '') +
-              (anchor.rel ? ` rel="${anchor.rel}"` : '') + '>',
+          outerHTML: anchor.outerHTML || '',
         };
       });
 
@@ -75,7 +69,7 @@ class ExternalAnchorsUseRelNoopenerAudit extends Audit {
         value: failingAnchors,
       },
       details,
-      debugString,
+      warnings,
     };
   }
 }

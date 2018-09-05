@@ -10,14 +10,14 @@ const Audit = require('./audit');
 
 class ServiceWorker extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'service-worker',
-      description: 'Registers a service worker',
-      failureDescription: 'Does not register a service worker',
-      helpText: 'The service worker is the technology that enables your app to use many ' +
+      id: 'service-worker',
+      title: 'Registers a service worker',
+      failureTitle: 'Does not register a service worker',
+      description: 'The service worker is the technology that enables your app to use many ' +
          'Progressive Web App features, such as offline, add to homescreen, and push ' +
          'notifications. [Learn more](https://developers.google.com/web/tools/lighthouse/audits/registered-service-worker).',
       requiredArtifacts: ['URL', 'ServiceWorker'],
@@ -25,8 +25,8 @@ class ServiceWorker extends Audit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     // Find active service worker for this URL. Match against

@@ -14,13 +14,13 @@ class PushedRequests extends ComputedArtifact {
 
   /**
    * Return list of network requests that were pushed.
-   * @param {!DevtoolsLog} devtoolsLog
-   * @param {!ComputedArtifacts} artifacts
-   * @return {!Promise<!Array<!WebInspector.NetworkRequest>>}
+   * @param {LH.DevtoolsLog} devtoolsLog
+   * @param {LH.ComputedArtifacts} artifacts
+   * @return {Promise<Array<LH.Artifacts.NetworkRequest>>}
    */
   compute_(devtoolsLog, artifacts) {
     return artifacts.requestNetworkRecords(devtoolsLog).then(records => {
-      const pushedRecords = records.filter(r => r._timing && !!r._timing.pushStart);
+      const pushedRecords = records.filter(r => r.timing && !!r.timing.pushStart);
       return pushedRecords;
     });
   }

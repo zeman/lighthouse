@@ -11,35 +11,49 @@
 'use strict';
 
 const Gatherer = require('../gatherer');
+const URL = require('../../../lib/url-shim');
+const Sentry = require('../../../lib/sentry');
+const NetworkRequest = require('../../../lib/network-request');
 const gzip = require('zlib').gzip;
 
+const CHROME_EXTENSION_PROTOCOL = 'chrome-extension:';
 const compressionHeaders = ['content-encoding', 'x-original-content-encoding'];
 const compressionTypes = ['gzip', 'br', 'deflate'];
 const binaryMimeTypes = ['image', 'audio', 'video'];
-const CHROME_EXTENSION_PROTOCOL = 'chrome-extension:';
+/** @type {Array<LH.Crdp.Page.ResourceType>} */
+const textResourceTypes = [
+  NetworkRequest.TYPES.Document,
+  NetworkRequest.TYPES.Script,
+  NetworkRequest.TYPES.Stylesheet,
+  NetworkRequest.TYPES.XHR,
+  NetworkRequest.TYPES.Fetch,
+  NetworkRequest.TYPES.EventSource,
+];
 
 class ResponseCompression extends Gatherer {
   /**
-   * @param {!NetworkRecords} networkRecords
-   * @return {!Array<{url: string, isBase64DataUri: boolean, mimeType: string, resourceSize: number}>}
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @return {LH.Artifacts['ResponseCompression']}
    */
   static filterUnoptimizedResponses(networkRecords) {
+    /** @type {LH.Artifacts['ResponseCompression']} */
     const unoptimizedResponses = [];
 
     networkRecords.forEach(record => {
       const mimeType = record.mimeType;
-      const resourceType = record.resourceType();
+      const resourceType = record.resourceType || NetworkRequest.TYPES.Other;
+      const resourceSize = record.resourceSize;
 
       const isBinaryResource = mimeType && binaryMimeTypes.some(type => mimeType.startsWith(type));
-      const isTextBasedResource = !isBinaryResource && resourceType && resourceType.isTextType();
+      const isTextResource = !isBinaryResource && textResourceTypes.includes(resourceType);
       const isChromeExtensionResource = record.url.startsWith(CHROME_EXTENSION_PROTOCOL);
 
-      if (!isTextBasedResource || !record.resourceSize || !record.finished ||
+      if (!isTextResource || !resourceSize || !record.finished ||
         isChromeExtensionResource || !record.transferSize || record.statusCode === 304) {
         return;
       }
 
-      const isContentEncoded = record.responseHeaders.find(header =>
+      const isContentEncoded = (record.responseHeaders || []).find(header =>
         compressionHeaders.includes(header.name.toLowerCase()) &&
         compressionTypes.includes(header.value)
       );
@@ -48,9 +62,10 @@ class ResponseCompression extends Gatherer {
         unoptimizedResponses.push({
           requestId: record.requestId,
           url: record.url,
-          mimeType: record.mimeType,
+          mimeType: mimeType,
           transferSize: record.transferSize,
-          resourceSize: record.resourceSize,
+          resourceSize: resourceSize,
+          gzipSize: 0,
         });
       }
     });
@@ -58,19 +73,20 @@ class ResponseCompression extends Gatherer {
     return unoptimizedResponses;
   }
 
-  afterPass(options, traceData) {
-    const networkRecords = traceData.networkRecords;
+  /**
+   * @param {LH.Gatherer.PassContext} passContext
+   * @param {LH.Gatherer.LoadData} loadData
+   * @return {Promise<LH.Artifacts['ResponseCompression']>}
+   */
+  afterPass(passContext, loadData) {
+    const networkRecords = loadData.networkRecords;
     const textRecords = ResponseCompression.filterUnoptimizedResponses(networkRecords);
 
-    const driver = options.driver;
+    const driver = passContext.driver;
     return Promise.all(textRecords.map(record => {
-      const contentPromise = driver.getRequestContent(record.requestId);
-      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
-      return Promise.race([contentPromise, timeoutPromise]).then(content => {
-        // if we don't have any content gzipSize is set to 0
+      return driver.getRequestContent(record.requestId).then(content => {
+        // if we don't have any content, gzipSize is already set to 0
         if (!content) {
-          record.gzipSize = 0;
-
           return record;
         }
 
@@ -86,6 +102,16 @@ class ResponseCompression extends Gatherer {
             resolve(record);
           });
         });
+      }).catch(err => {
+        // @ts-ignore TODO(bckenny): Sentry type checking
+        Sentry.captureException(err, {
+          tags: {gatherer: 'ResponseCompression'},
+          extra: {url: URL.elideDataURI(record.url)},
+          level: 'warning',
+        });
+
+        record.gzipSize = undefined;
+        return record;
       });
     }));
   }

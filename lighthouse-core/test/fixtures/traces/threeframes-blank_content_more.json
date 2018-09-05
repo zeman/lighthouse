@@ -20,7 +20,7 @@
 				"tid": 1295,
 				"ts": 900000000000,
 				"ph": "X",
-				"cat": "toplevel",
+				"cat": "devtools.timeline",
 				"name": "TracingStartedInPage",
 				"args": {
 					"data": {
@@ -44,6 +44,18 @@
 				"dur": 189,
 				"tdur": 186,
 				"tts": 4516530
+			},
+			{
+				"pid": 93449,
+				"tid": 1295,
+				"ts": 900001000000,
+				"ph": "R",
+				"cat": "loading,rail,devtools.timeline",
+				"name": "firstContentfulPaint",
+				"args": {
+					"frame": "dummy"
+				},
+				"tts": 63259760
 			},
 			{
 				"pid": 93267,

@@ -14,14 +14,14 @@ const AxeAudit = require('./axe-audit');
 
 class FrameTitle extends AxeAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'frame-title',
-      description: '`<frame>` or `<iframe>` elements have a title',
-      failureDescription: '`<frame>` or `<iframe>` elements do not have a title',
-      helpText: 'Screen reader users rely on frame titles to describe the contents of frames. ' +
+      id: 'frame-title',
+      title: '`<frame>` or `<iframe>` elements have a title',
+      failureTitle: '`<frame>` or `<iframe>` elements do not have a title',
+      description: 'Screen reader users rely on frame titles to describe the contents of frames. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/2.2/frame-title?application=lighthouse).',
       requiredArtifacts: ['Accessibility'],
     };

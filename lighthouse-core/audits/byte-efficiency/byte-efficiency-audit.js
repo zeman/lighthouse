@@ -6,13 +6,29 @@
 'use strict';
 
 const Audit = require('../audit');
-const PredictivePerf = require('../predictive-perf');
-const LoadSimulator = require('../../lib/dependency-graph/simulator/simulator.js');
+const linearInterpolation = require('../../lib/statistics').linearInterpolation;
+const Interactive = require('../../gather/computed/metrics/lantern-interactive');
+const i18n = require('../../lib/i18n');
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, {});
+
+/** @typedef {import('../../lib/dependency-graph/simulator/simulator')} Simulator */
+/** @typedef {import('../../lib/dependency-graph/base-node.js').Node} Node */
 
 const KB_IN_BYTES = 1024;
 
 const WASTED_MS_FOR_AVERAGE = 300;
 const WASTED_MS_FOR_POOR = 750;
+const WASTED_MS_FOR_SCORE_OF_ZERO = 5000;
+
+/**
+ * @typedef {object} ByteEfficiencyProduct
+ * @property {Array<LH.Audit.ByteEfficiencyItem>} items
+ * @property {LH.Result.Audit.OpportunityDetails['headings']} headings
+ * @property {string} [displayValue]
+ * @property {string} [explanation]
+ * @property {Array<string>} [warnings]
+ */
 
 /**
  * @overview Used as the base for all byte efficiency audits. Computes total bytes
@@ -20,20 +36,30 @@ const WASTED_MS_FOR_POOR = 750;
  */
 class UnusedBytes extends Audit {
   /**
+   * Creates a score based on the wastedMs value using linear interpolation between control points.
+   *
    * @param {number} wastedMs
    * @return {number}
    */
   static scoreForWastedMs(wastedMs) {
-    if (wastedMs === 0) return 1;
-    else if (wastedMs < WASTED_MS_FOR_AVERAGE) return 0.9;
-    else if (wastedMs < WASTED_MS_FOR_POOR) return 0.65;
-    else return 0;
+    if (wastedMs === 0) {
+      return 1;
+    } else if (wastedMs < WASTED_MS_FOR_AVERAGE) {
+      return linearInterpolation(0, 1, WASTED_MS_FOR_AVERAGE, 0.75, wastedMs);
+    } else if (wastedMs < WASTED_MS_FOR_POOR) {
+      return linearInterpolation(WASTED_MS_FOR_AVERAGE, 0.75, WASTED_MS_FOR_POOR, 0.5, wastedMs);
+    } else {
+      return Math.max(
+        0,
+        linearInterpolation(WASTED_MS_FOR_POOR, 0.5, WASTED_MS_FOR_SCORE_OF_ZERO, 0, wastedMs)
+      );
+    }
   }
 
   /**
    * @param {number} bytes
    * @param {number} networkThroughput measured in bytes/second
-   * @return {string}
+   * @return {number}
    */
   static bytesToMs(bytes, networkThroughput) {
     const milliseconds = bytes / networkThroughput * 1000;
@@ -42,11 +68,11 @@ class UnusedBytes extends Audit {
 
   /**
    * Estimates the number of bytes this network record would have consumed on the network based on the
-   * uncompressed size (totalBytes), uses the actual transfer size from the network record if applicable.
+   * uncompressed size (totalBytes). Uses the actual transfer size from the network record if applicable.
    *
-   * @param {?WebInspector.NetworkRequest} networkRecord
+   * @param {LH.Artifacts.NetworkRequest=} networkRecord
    * @param {number} totalBytes Uncompressed size of the resource
-   * @param {string=} resourceType
+   * @param {LH.Crdp.Page.ResourceType=} resourceType
    * @param {number=} compressionRatio
    * @return {number}
    */
@@ -56,110 +82,129 @@ class UnusedBytes extends Audit {
       // roughly the size of the content gzipped.
       // See https://discuss.httparchive.org/t/file-size-and-compression-savings/145 for multipliers
       return Math.round(totalBytes * compressionRatio);
-    } else if (networkRecord._resourceType && networkRecord._resourceType._name === resourceType) {
+    } else if (networkRecord.resourceType === resourceType) {
       // This was a regular standalone asset, just use the transfer size.
-      return networkRecord._transferSize;
+      return networkRecord.transferSize || 0;
     } else {
       // This was an asset that was inlined in a different resource type (e.g. HTML document).
       // Use the compression ratio of the resource to estimate the total transferred bytes.
-      const compressionRatio = networkRecord._transferSize / networkRecord._resourceSize || 1;
+      const transferSize = networkRecord.transferSize || 0;
+      const resourceSize = networkRecord.resourceSize;
+      const compressionRatio = resourceSize !== undefined ? (transferSize / resourceSize) : 1;
       return Math.round(totalBytes * compressionRatio);
     }
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!Promise<!AuditResult>}
+   * @param {LH.Artifacts} artifacts
+   * @param {LH.Audit.Context} context
+   * @return {Promise<LH.Audit.Product>}
    */
-  static audit(artifacts) {
+  static audit(artifacts, context) {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    const settings = context && context.settings || {};
+    const simulatorOptions = {
+      devtoolsLog,
+      settings,
+    };
+
     return artifacts
       .requestNetworkRecords(devtoolsLog)
       .then(networkRecords =>
         Promise.all([
-          this.audit_(artifacts, networkRecords),
+          this.audit_(artifacts, networkRecords, context),
           artifacts.requestPageDependencyGraph({trace, devtoolsLog}),
+          artifacts.requestLoadSimulator(simulatorOptions),
         ])
       )
-      .then(([result, graph]) => this.createAuditResult(result, graph));
+      .then(([result, graph, simulator]) => this.createAuditProduct(result, graph, simulator));
   }
 
   /**
-   * Computes the estimated effect of all the byte savings on the last long task
-   * in the provided graph.
+   * Computes the estimated effect of all the byte savings on the maximum of the following:
    *
-   * @param {!Array<{url: string, wastedBytes: number}>} results The array of byte savings results per resource
-   * @param {!Node} graph
+   * - end time of the last long task in the provided graph
+   * - (if includeLoad is true or not provided) end time of the last node in the graph
+   *
+   * @param {Array<LH.Audit.ByteEfficiencyItem>} results The array of byte savings results per resource
+   * @param {Node} graph
+   * @param {Simulator} simulator
+   * @param {{includeLoad?: boolean, label?: string}=} options
    * @return {number}
    */
-  static computeWasteWithTTIGraph(results, graph, simulator) {
-    const simulationBeforeChanges = simulator.simulate();
+  static computeWasteWithTTIGraph(results, graph, simulator, options) {
+    options = Object.assign({includeLoad: true, label: this.meta.id}, options);
+    const beforeLabel = `${options.label}-before`;
+    const afterLabel = `${options.label}-after`;
+
+    const simulationBeforeChanges = simulator.simulate(graph, {label: beforeLabel});
+    /** @type {Map<string, LH.Audit.ByteEfficiencyItem>} */
     const resultsByUrl = new Map();
     for (const result of results) {
       resultsByUrl.set(result.url, result);
     }
 
     // Update all the transfer sizes to reflect implementing our recommendations
+    /** @type {Map<string, number>} */
+    const originalTransferSizes = new Map();
     graph.traverse(node => {
       if (node.type !== 'network') return;
-      if (!resultsByUrl.has(node.record.url)) return;
+      const result = resultsByUrl.get(node.record.url);
+      if (!result) return;
+
       const original = node.record.transferSize;
-      const wastedBytes = resultsByUrl.get(node.record.url).wastedBytes;
-      // cloning NetworkRequest objects is difficult, so just stash the original transfer size
-      node.record._originalTransferSize = original;
-      node.record._transferSize = Math.max(original - wastedBytes, 0);
+      originalTransferSizes.set(node.record.requestId, original);
+
+      const wastedBytes = result.wastedBytes;
+      node.record.transferSize = Math.max(original - wastedBytes, 0);
     });
 
-    const simulationAfterChanges = simulator.simulate();
+    const simulationAfterChanges = simulator.simulate(graph, {label: afterLabel});
+
     // Restore the original transfer size after we've done our simulation
     graph.traverse(node => {
       if (node.type !== 'network') return;
-      if (!node.record._originalTransferSize) return;
-      node.record._transferSize = node.record._originalTransferSize;
+      const originalTransferSize = originalTransferSizes.get(node.record.requestId);
+      if (originalTransferSize === undefined) return;
+      node.record.transferSize = originalTransferSize;
     });
 
-    const savingsOnTTI = Math.max(
-      PredictivePerf.getLastLongTaskEndTime(simulationBeforeChanges.nodeTiming) -
-        PredictivePerf.getLastLongTaskEndTime(simulationAfterChanges.nodeTiming),
-      0
-    );
+    const savingsOnOverallLoad = simulationBeforeChanges.timeInMs - simulationAfterChanges.timeInMs;
+    const savingsOnTTI = Interactive.getLastLongTaskEndTime(simulationBeforeChanges.nodeTimings) -
+      Interactive.getLastLongTaskEndTime(simulationAfterChanges.nodeTimings);
+
+    let savings = savingsOnTTI;
+    if (options.includeLoad) savings = Math.max(savings, savingsOnOverallLoad);
 
     // Round waste to nearest 10ms
-    return Math.round(savingsOnTTI / 10) * 10;
+    return Math.round(Math.max(savings, 0) / 10) * 10;
   }
 
   /**
-   * @param {!Audit.HeadingsResult} result
-   * @param {!Node} graph
-   * @return {!AuditResult}
+   * @param {ByteEfficiencyProduct} result
+   * @param {Node} graph
+   * @param {Simulator} simulator
+   * @return {LH.Audit.Product}
    */
-  static createAuditResult(result, graph) {
-    const simulatorOptions = PredictivePerf.computeRTTAndServerResponseTime(graph);
-    // TODO: calibrate multipliers, see https://github.com/GoogleChrome/lighthouse/issues/820
-    Object.assign(simulatorOptions, {cpuTaskMultiplier: 1, layoutTaskMultiplier: 1});
-    const simulator = new LoadSimulator(graph, simulatorOptions);
-
-    const debugString = result.debugString;
-    const results = result.results.sort((itemA, itemB) => itemB.wastedBytes - itemA.wastedBytes);
+  static createAuditProduct(result, graph, simulator) {
+    const results = result.items.sort((itemA, itemB) => itemB.wastedBytes - itemA.wastedBytes);
 
     const wastedBytes = results.reduce((sum, item) => sum + item.wastedBytes, 0);
     const wastedKb = Math.round(wastedBytes / KB_IN_BYTES);
-    const wastedMs = UnusedBytes.computeWasteWithTTIGraph(results, graph, simulator);
+    const wastedMs = this.computeWasteWithTTIGraph(results, graph, simulator);
 
+    /** @type {LH.Audit.DisplayValue} */
     let displayValue = result.displayValue || '';
     if (typeof result.displayValue === 'undefined' && wastedBytes) {
-      displayValue = `Potential savings of ${wastedBytes} bytes`;
+      displayValue = str_(i18n.UIStrings.displayValueByteSavings, {wastedBytes});
     }
 
-    const summary = {
-      wastedMs,
-      wastedBytes,
-    };
-    const details = Audit.makeTableDetails(result.headings, results, summary);
+    const details = Audit.makeOpportunityDetails(result.headings, results, wastedMs, wastedBytes);
 
     return {
-      debugString,
+      explanation: result.explanation,
+      warnings: result.warnings,
       displayValue,
       rawValue: wastedMs,
       score: UnusedBytes.scoreForWastedMs(wastedMs),
@@ -174,13 +219,19 @@ class UnusedBytes extends Audit {
     };
   }
 
+  /* eslint-disable no-unused-vars */
+
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!Audit.HeadingsResult}
+   * @param {LH.Artifacts} artifacts
+   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {LH.Audit.Context} context
+   * @return {ByteEfficiencyProduct|Promise<ByteEfficiencyProduct>}
    */
-  static audit_() {
+  static audit_(artifacts, networkRecords, context) {
     throw new Error('audit_ unimplemented');
   }
+
+  /* eslint-enable no-unused-vars */
 }
 
 module.exports = UnusedBytes;

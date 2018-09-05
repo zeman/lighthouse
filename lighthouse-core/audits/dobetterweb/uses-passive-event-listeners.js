@@ -15,14 +15,14 @@ const ViolationAudit = require('../violation-audit');
 
 class PassiveEventsAudit extends ViolationAudit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'uses-passive-event-listeners',
-      description: 'Uses passive listeners to improve scrolling performance',
-      failureDescription: 'Does not use passive listeners to improve scrolling performance',
-      helpText: 'Consider marking your touch and wheel event listeners as `passive` ' +
+      id: 'uses-passive-event-listeners',
+      title: 'Uses passive listeners to improve scrolling performance',
+      failureTitle: 'Does not use passive listeners to improve scrolling performance',
+      description: 'Consider marking your touch and wheel event listeners as `passive` ' +
           'to improve your page\'s scroll performance. ' +
           '[Learn more](https://developers.google.com/web/tools/lighthouse/audits/passive-event-listeners).',
       requiredArtifacts: ['ChromeConsoleMessages'],
@@ -30,8 +30,8 @@ class PassiveEventsAudit extends ViolationAudit {
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {LH.Audit.Product}
    */
   static audit(artifacts) {
     const results = ViolationAudit.getViolationResults(artifacts, /passive event listener/);
@@ -40,6 +40,7 @@ class PassiveEventsAudit extends ViolationAudit {
       {key: 'url', itemType: 'url', text: 'URL'},
       {key: 'label', itemType: 'text', text: 'Location'},
     ];
+    // TODO(bckenny): see TODO in geolocation-on-start
     const details = ViolationAudit.makeTableDetails(headings, results);
 
     return {

@@ -6,28 +6,40 @@
 'use strict';
 
 const Audit = require('./audit');
-const WebInspector = require('../lib/web-inspector');
+const NetworkRequest = require('../lib/network-request');
 const allowedFontFaceDisplays = ['block', 'fallback', 'optional', 'swap'];
+const i18n = require('../lib/i18n');
+
+const UIStrings = {
+  /** Title of a diagnostic audit that provides detail on if all the text on a webpage was visible while the page was loading its webfonts. This descriptive title is shown to users when the amount is acceptable and no user action is required. */
+  title: 'All text remains visible during webfont loads',
+  /** Title of a diagnostic audit that provides detail on the load of the page's webfonts. Often the text is invisible for seconds before the webfont resource is loaded. This imperative title is shown to users when there is a significant amount of execution time that could be reduced. */
+  failureTitle: 'Ensure text remains visible during webfont load',
+  /** Description of a Lighthouse audit that tells the user *why* they should use the font-display CSS feature. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  description: 'Leverage the font-display CSS feature to ensure text is user-visible while ' +
+    'webfonts are loading. ' +
+    '[Learn more](https://developers.google.com/web/updates/2016/02/font-display).',
+};
+
+const str_ = i18n.createMessageInstanceIdFn(__filename, UIStrings);
 
 class FontDisplay extends Audit {
   /**
-   * @return {!AuditMeta}
+   * @return {LH.Audit.Meta}
    */
   static get meta() {
     return {
-      name: 'font-display',
-      description: 'All text remains visible during webfont loads',
-      failureDescription: 'Avoid invisible text while webfonts are loading',
-      helpText: 'Leverage the font-display CSS feature to ensure text is user-visible while ' +
-        'webfonts are loading. ' +
-        '[Learn more](https://developers.google.com/web/updates/2016/02/font-display).',
+      id: 'font-display',
+      title: str_(UIStrings.title),
+      failureTitle: str_(UIStrings.failureTitle),
+      description: str_(UIStrings.description),
       requiredArtifacts: ['devtoolsLogs', 'Fonts'],
     };
   }
 
   /**
-   * @param {!Artifacts} artifacts
-   * @return {!AuditResult}
+   * @param {LH.Artifacts} artifacts
+   * @return {Promise<LH.Audit.Product>}
    */
   static audit(artifacts) {
     const devtoolsLogs = artifacts.devtoolsLogs[this.DEFAULT_PASS];
@@ -40,31 +52,31 @@ class FontDisplay extends Audit {
 
     return artifacts.requestNetworkRecords(devtoolsLogs).then((networkRecords) => {
       const results = networkRecords.filter(record => {
-        const isFont = record._resourceType === WebInspector.resourceTypes.Font;
+        const isFont = record.resourceType === NetworkRequest.TYPES.Font;
 
         return isFont;
       })
         .filter(fontRecord => {
           // find the fontRecord of a font
           return !!fontsWithoutProperDisplay.find(fontFace => {
-            return fontFace.src.find(src => fontRecord.url === src);
+            return !!fontFace.src && !!fontFace.src.find(src => fontRecord.url === src);
           });
         })
         // calculate wasted time
         .map(record => {
           // In reality the end time should be calculated with paint time included
           // all browsers wait 3000ms to block text so we make sure 3000 is our max wasted time
-          const wastedTime = Math.min((record._endTime - record._startTime) * 1000, 3000);
+          const wastedMs = Math.min((record.endTime - record.startTime) * 1000, 3000);
 
           return {
             url: record.url,
-            wastedTime,
+            wastedMs,
           };
         });
 
       const headings = [
-        {key: 'url', itemType: 'url', text: 'Font URL'},
-        {key: 'wastedTime', itemType: 'ms', granularity: 1, text: 'Font download time'},
+        {key: 'url', itemType: 'url', text: str_(i18n.UIStrings.columnURL)},
+        {key: 'wastedMs', itemType: 'ms', text: str_(i18n.UIStrings.columnWastedMs)},
       ];
       const details = Audit.makeTableDetails(headings, results);
 
@@ -78,3 +90,4 @@ class FontDisplay extends Audit {
 }
 
 module.exports = FontDisplay;
+module.exports.UIStrings = UIStrings;

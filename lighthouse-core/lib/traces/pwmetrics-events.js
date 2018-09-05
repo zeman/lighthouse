@@ -8,20 +8,16 @@
 
 const log = require('lighthouse-logger');
 
-/**
- * @param {!Object} object
- * @param {string} path
- * @return {*}
- */
-function safeGet(object, path) {
-  const components = path.split('.');
-  for (const component of components) {
-    if (!object) {
-      return null;
-    }
-    object = object[component];
-  }
-  return object;
+// TODO: rework this file to not need this function
+// see https://github.com/GoogleChrome/lighthouse/pull/5101/files#r186168840
+function findValueInMetricsAuditFn(metricName) {
+  return auditResults => {
+    const metricsAudit = auditResults.metrics;
+    if (!metricsAudit || !metricsAudit.details || !metricsAudit.details.items) return;
+
+    const values = metricsAudit.details.items[0];
+    return values && values[metricName];
+  };
 }
 
 class Metrics {
@@ -39,134 +35,68 @@ class Metrics {
       {
         name: 'Navigation Start',
         id: 'navstart',
-        getTs: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timestamps.navStart');
-        },
-        getTiming: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timings.navStart');
-        },
+        getTs: findValueInMetricsAuditFn('observedNavigationStartTs'),
+        getTiming: findValueInMetricsAuditFn('observedNavigationStart'),
       },
       {
         name: 'First Contentful Paint',
         id: 'ttfcp',
-        getTs: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timestamps.fCP');
-        },
-        getTiming: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timings.fCP');
-        },
+        getTs: findValueInMetricsAuditFn('observedFirstContentfulPaintTs'),
+        getTiming: findValueInMetricsAuditFn('observedFirstContentfulPaint'),
       },
       {
         name: 'First Meaningful Paint',
         id: 'ttfmp',
-        getTs: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timestamps.fMP');
-        },
-        getTiming: auditResults => {
-          const fmpExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(fmpExt, 'value.timings.fMP');
-        },
+        getTs: findValueInMetricsAuditFn('observedFirstMeaningfulPaintTs'),
+        getTiming: findValueInMetricsAuditFn('observedFirstMeaningfulPaint'),
       },
       {
-        name: 'Perceptual Speed Index',
-        id: 'psi',
-        getTs: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timestamps.perceptualSpeedIndex');
-        },
-        getTiming: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timings.perceptualSpeedIndex');
-        },
+        name: 'Speed Index',
+        id: 'si',
+        getTs: findValueInMetricsAuditFn('observedSpeedIndexTs'),
+        getTiming: findValueInMetricsAuditFn('observedSpeedIndex'),
       },
       {
         name: 'First Visual Change',
         id: 'fv',
-        getTs: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timestamps.firstVisualChange');
-        },
-        getTiming: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timings.firstVisualChange');
-        },
-      },
-      {
-        name: 'Visually Complete 85%',
-        id: 'vc85',
-        getTs: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timestamps.visuallyReady');
-        },
-        getTiming: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timings.visuallyReady');
-        },
+        getTs: findValueInMetricsAuditFn('observedFirstVisualChangeTs'),
+        getTiming: findValueInMetricsAuditFn('observedFirstVisualChange'),
       },
       {
         name: 'Visually Complete 100%',
         id: 'vc100',
-        getTs: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timestamps.visuallyComplete');
-        },
-        getTiming: auditResults => {
-          const siExt = auditResults['speed-index-metric'].extendedInfo;
-          return safeGet(siExt, 'value.timings.visuallyComplete');
-        },
+        getTs: findValueInMetricsAuditFn('observedLastVisualChangeTs'),
+        getTiming: findValueInMetricsAuditFn('observedLastVisualChange'),
       },
       {
-        name: 'First Interactive (vBeta)',
+        name: 'First CPU Idle',
         id: 'ttfi',
-        getTs: auditResults => {
-          const ttfiExt = auditResults['first-interactive'].extendedInfo;
-          return safeGet(ttfiExt, 'value.timestamp');
-        },
-        getTiming: auditResults => {
-          const ttfiExt = auditResults['first-interactive'].extendedInfo;
-          return safeGet(ttfiExt, 'value.timeInMs');
-        },
+        getTs: findValueInMetricsAuditFn('firstCPUIdleTs'),
+        getTiming: findValueInMetricsAuditFn('firstCPUIdle'),
       },
       {
-        name: 'Time to Consistently Interactive (vBeta)',
-        id: 'ttci',
-        getTs: auditResults => {
-          const ttiExt = auditResults['consistently-interactive'].extendedInfo;
-          return safeGet(ttiExt, 'value.timestamp');
-        },
-        getTiming: auditResults => {
-          const ttiExt = auditResults['consistently-interactive'].extendedInfo;
-          return safeGet(ttiExt, 'value.timeInMs');
-        },
+        name: 'Interactive',
+        id: 'tti',
+        getTs: findValueInMetricsAuditFn('interactiveTs'),
+        getTiming: findValueInMetricsAuditFn('interactive'),
       },
       {
         name: 'End of Trace',
         id: 'eot',
-        getTs: auditResults => {
-          const ttiExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(ttiExt, 'value.timestamps.endOfTrace');
-        },
-        getTiming: auditResults => {
-          const ttiExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(ttiExt, 'value.timings.endOfTrace');
-        },
+        getTs: findValueInMetricsAuditFn('observedTraceEndTs'),
+        getTiming: findValueInMetricsAuditFn('observedTraceEnd'),
       },
       {
         name: 'On Load',
         id: 'onload',
-        getTs: auditResults => {
-          const ttiExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(ttiExt, 'value.timestamps.onLoad');
-        },
-        getTiming: auditResults => {
-          const ttiExt = auditResults['first-meaningful-paint'].extendedInfo;
-          return safeGet(ttiExt, 'value.timings.onLoad');
-        },
+        getTs: findValueInMetricsAuditFn('observedLoadTs'),
+        getTiming: findValueInMetricsAuditFn('observedLoad'),
+      },
+      {
+        name: 'DOM Content Loaded',
+        id: 'dcl',
+        getTs: findValueInMetricsAuditFn('observedDomContentLoadedTs'),
+        getTiming: findValueInMetricsAuditFn('observedDomContentLoaded'),
       },
     ];
   }
@@ -235,7 +165,7 @@ class Metrics {
   }
 
   /**
-   * @returns {!Array} User timing raw trace event pairs
+   * @returns {Array<LH.TraceEvent>} User timing raw trace event pairs
    */
   generateFakeEvents() {
     const fakeEvents = [];
