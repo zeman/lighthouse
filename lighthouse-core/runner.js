@@ -196,9 +196,9 @@ class Runner {
       const normalizedAuditSettings = Object.assign({}, settings, overrides);
 
       // TODO(phulce): allow change of throttling method to `simulate`
-      // if (!isDeepEqual(normalizedGatherSettings, normalizedAuditSettings)) {
-      //   throw new Error('Cannot change settings between gathering and auditing');
-      // }
+      if (!isDeepEqual(normalizedGatherSettings, normalizedAuditSettings)) {
+        throw new Error('Cannot change settings between gathering and auditing');
+      }
     }
 
     // Run each audit sequentially
