@@ -131,9 +131,6 @@ gulp.task('browserify-lighthouse', () => {
       .ignore('rimraf')
       .ignore('pako/lib/zlib/inflate.js');
 
-      console.log(require.resolve('../lighthouse-core/lib/locales/en-US.json'));
-      // bundle.ignore('')
-
       // Don't include the desktop protocol connection.
       bundle.ignore(require.resolve('../lighthouse-core/gather/connections/cri.js'));
 
@@ -247,7 +244,7 @@ gulp.task('package', function() {
 
 gulp.task('build', cb => {
   runSequence(
-    'browserify', 'chromeManifest',
+    'lint', 'browserify', 'chromeManifest',
     ['html', 'images', 'css', 'extras'], cb);
 });
 
