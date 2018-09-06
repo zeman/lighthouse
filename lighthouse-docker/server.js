@@ -42,17 +42,15 @@ function createOutputOptions(params) {
   const format = params.output || params.format || 'html';
   const fileName = `report.${Date.now()}.${format}`;
   const outputPath = `./home/chrome/reports/${fileName}`;
-  return { format, fileName, outputPath };
+  return {format, fileName, outputPath};
 }
 
 // Handler for CI.
 function runLH(params, req, res, next) {
-
   if (!params.url) {
     res.status(400).send('Please provide a URL.');
     return;
   }
-
   const outputOptions = createOutputOptions(params);
   const log = req.method === 'GET' && !('nolog' in params);
   const child = startLighthouseProcess(outputOptions, params.url);
@@ -106,12 +104,10 @@ function runLH(params, req, res, next) {
 
 // Serve sent event handler.
 function runLighthouseAsEventStream(req, res) {
-
   if (!req.query.url) {
     res.status(400).send('Please provide a URL.');
     return;
   }
-
   const outputOptions = createOutputOptions(req.query);
   const child = startLighthouseProcess(outputOptions, req.query.url);
 
