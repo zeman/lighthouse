@@ -11,7 +11,7 @@ const GatherRunner = require('./gather/gather-runner');
 const ReportScoring = require('./scoring');
 const Audit = require('./audits/audit');
 const log = require('lighthouse-logger');
-const i18n = require('./lib/i18n');
+const i18n = require('./lib/i18n/i18n.js');
 const assetSaver = require('./lib/asset-saver');
 const fs = require('fs');
 const path = require('path');
@@ -196,9 +196,9 @@ class Runner {
       const normalizedAuditSettings = Object.assign({}, settings, overrides);
 
       // TODO(phulce): allow change of throttling method to `simulate`
-      if (!isDeepEqual(normalizedGatherSettings, normalizedAuditSettings)) {
-        throw new Error('Cannot change settings between gathering and auditing');
-      }
+      // if (!isDeepEqual(normalizedGatherSettings, normalizedAuditSettings)) {
+      //   throw new Error('Cannot change settings between gathering and auditing');
+      // }
     }
 
     // Run each audit sequentially
