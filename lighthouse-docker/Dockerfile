@@ -18,9 +18,6 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
     && apt-get purge --auto-remove -y curl \
     && rm -rf /src/*.deb
 
-ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.1/dumb-init_1.2.1_amd64 /usr/local/bin/dumb-init
-RUN chmod +x /usr/local/bin/dumb-init
-
 # Download latest Lighthouse from npm.
 # Cache bust so we always get the latest version of LH when building the image.
 ARG CACHEBUST=1
@@ -56,4 +53,4 @@ ENV CI=true
 
 EXPOSE 8080
 
-ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
