@@ -27,7 +27,8 @@ ARG CACHEBUST=1
 RUN yarn global add lighthouse
 
 # Install npm deps (express, etc.)
-COPY package.json yarn.lock /
+COPY docker.package.json ./package.json
+COPY yarn.lock /
 RUN yarn --frozen-lockfile --no-cache --production
 
 # Add the web server.
